@@ -1,0 +1,6 @@
+services:
+  zugtafel:
+    build: .
+    container_name: zugtafel
+    restart: unless-stopped
+    env_file: .env
