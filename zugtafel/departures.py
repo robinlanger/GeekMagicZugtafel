@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
@@ -21,6 +21,7 @@ class Departure:
     platform: str | None
     platform_changed: bool
     cancelled: bool
+    next_stops: list[str] = field(default_factory=list)  # Ziel + Halte nach dem Bahnhof
 
     def realtime(self, now: datetime) -> datetime:
         """Tatsächliche Abfahrt als datetime (Mitternacht wird berücksichtigt)."""
@@ -58,7 +59,24 @@ def _clean_destination(name: str) -> str:
     return " ".join(name.split())
 
 
-def parse(payload: dict) -> list[Departure]:
+def _norm(name: str) -> str:
+    return re.sub(r"[^a-z0-9äöüß]", "", name.lower())
+
+
+def _next_stops(item: dict, station: str | None) -> list[str]:
+    """Halte NACH dem eigenen Bahnhof (die Route enthält auch die Halte davor)."""
+    route = [r.get("name", "") for r in item.get("route") or []]
+    if station:
+        key = _norm(station)
+        for i, name in enumerate(route):
+            if _norm(name) == key:
+                return route[i + 1:]
+    # Bahnhof nicht in der Route gefunden (z. B. EVA-Nummer angegeben):
+    # dann nur das Ziel zur Filterung verwenden.
+    return []
+
+
+def parse(payload: dict, station: str | None = None) -> list[Departure]:
     result: list[Departure] = []
     for item in payload.get("departures", []):
         scheduled = item.get("scheduledDeparture")
@@ -74,16 +92,30 @@ def parse(payload: dict) -> list[Departure]:
                 platform=platform,
                 platform_changed=bool(platform and platform != item.get("scheduledPlatform")),
                 cancelled=bool(item.get("isCancelled")),
+                next_stops=[item.get("destination") or "", *_next_stops(item, station)],
             )
         )
     return result
 
 
+def parse_directions(value: str | None) -> list[str]:
+    """"Wiesbaden, Frankfurt" -> ["wiesbaden", "frankfurt"]"""
+    return [_norm(v) for v in (value or "").split(",") if _norm(v)]
+
+
+def matches(dep: Departure, directions: list[str]) -> bool:
+    """True, wenn der Zug nach dem eigenen Bahnhof einen der Orte anfährt."""
+    if not directions:
+        return True
+    stops = [_norm(s) for s in dep.next_stops]
+    return any(d in s for d in directions for s in stops)
+
+
 def fetch(base_url: str, station: str, *, via: str | None = None,
           platforms: str | None = None, limit: int = 5, timeout: int = 15) -> list[Departure]:
-    params = {"version": "3", "limit": str(limit * 3)}  # Puffer, weil Ankünfte rausfallen
-    if via:
-        params["via"] = via
+    directions = parse_directions(via)
+    # Puffer, weil Ankünfte und gefilterte Richtungen rausfallen
+    params = {"version": "3", "limit": str(limit * (5 if directions else 3))}
     if platforms:
         params["platforms"] = platforms
     url = f"{base_url}/{quote(station)}.json"
@@ -92,4 +124,4 @@ def fetch(base_url: str, station: str, *, via: str | None = None,
     payload = resp.json()
     if "error" in payload:
         raise RuntimeError(f"DBF meldet: {payload['error']}")
-    return parse(payload)[:limit]
+    return [d for d in parse(payload, station) if matches(d, directions)][:limit]

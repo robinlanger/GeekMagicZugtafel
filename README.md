@@ -31,7 +31,7 @@ Den genauen Bahnhofsnamen findest du auf <https://dbf.finalrewind.org>: Die URL 
 | `STATION` | – | Bahnhof (Name, EVA-Nr. oder DS100) |
 | `DEVICE_IP` | – | IP-Adresse des Displays |
 | `DEVICE_PROFILE` | `ultra` | `ultra` (ESP8266) oder `pro` (ESP32) |
-| `VIA` | – | Nur Züge über diesen Halt, z. B. `Frankfurt(Main)Hbf` |
+| `VIA` | – | Nur Züge in diese Richtungen (Ziel oder Halt nach deinem Bahnhof), kommagetrennt, z. B. `Großstadt,Flughafen` |
 | `PLATFORMS` | – | Nur diese Gleise, z. B. `1,2` |
 | `TITLE` | Bahnhof | Eigene Überschrift |
 | `LIMIT` | `5` | Anzahl Zeilen (1–6) |
