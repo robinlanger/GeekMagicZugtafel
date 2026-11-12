@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+zugtafel.png
+.pytest_cache/
