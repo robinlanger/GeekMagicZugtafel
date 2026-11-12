@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY zugtafel ./zugtafel
+COPY --chmod=755 zugtafel ./zugtafel
 
 RUN useradd --system --uid 1000 zugtafel
 USER zugtafel
