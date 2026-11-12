@@ -1,8 +1,28 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from zugtafel.departures import Departure, _clean_train, parse
+from zugtafel.departures import Departure, _clean_train, matches, parse, parse_directions
 from zugtafel.render import SIZE, render
+
+# Route enthält auch Halte VOR dem eigenen Bahnhof – die dürfen nicht matchen.
+DIRECTIONS = {
+    "departures": [
+        {"train": "XY RB1", "destination": "Ost", "scheduledDeparture": "10:00",
+         "route": [{"name": "West Hbf"}, {"name": "Musterstadt"}, {"name": "Ost"}]},
+        {"train": "XY RB1", "destination": "West Hbf", "scheduledDeparture": "10:05",
+         "route": [{"name": "Ost"}, {"name": "Musterstadt"}, {"name": "Mitte"}, {"name": "West Hbf"}]},
+        {"train": "XY RB2", "destination": "Nord(Main)Hbf", "scheduledDeparture": "10:10",
+         "route": [{"name": "Musterstadt"}, {"name": "Nord(Main)Hbf"}]},
+    ]
+}
+
+
+def test_direction_filter_ignores_previous_stops():
+    deps = parse(DIRECTIONS, "Musterstadt")
+    dirs = parse_directions("West, nord")
+    assert [d.destination for d in deps if matches(d, dirs)] == ["West Hbf", "Nord Hbf"]
+    assert [d.destination for d in deps if matches(d, parse_directions("Mitte"))] == ["West Hbf"]
+    assert all(matches(d, []) for d in deps)
 
 SAMPLE = {
     "departures": [
