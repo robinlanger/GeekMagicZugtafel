@@ -34,7 +34,7 @@ Den genauen Bahnhofsnamen findest du auf <https://dbf.finalrewind.org>: Die URL 
 | `VIA` | – | Nur Züge in diese Richtungen (Ziel oder Halt nach deinem Bahnhof), kommagetrennt, z. B. `Großstadt,Flughafen` |
 | `PLATFORMS` | – | Nur diese Gleise, z. B. `1,2` |
 | `TITLE` | Bahnhof | Eigene Überschrift |
-| `LIMIT` | `5` | Anzahl Zeilen (1–6) |
+| `LIMIT` | `4` | Anzahl Zeilen (1–6, weniger Zeilen = größere Schrift) |
 | `INTERVAL` | `60` | Aktualisierung in Sekunden (min. 60) |
 | `DBF_URL` | `https://dbf.finalrewind.org` | Eigene DBF-Instanz möglich |
 | `DRY_RUN` | `0` | `1` = Bild nur lokal speichern statt hochladen |

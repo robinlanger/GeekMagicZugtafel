@@ -53,7 +53,7 @@ class Config:
             device_profile=profile,
             via=_env("VIA"),
             platforms=_env("PLATFORMS"),
-            limit=max(1, min(6, int(_env("LIMIT", "5")))),
+            limit=max(1, min(6, int(_env("LIMIT", "4")))),
             interval=interval,
             dbf_url=(_env("DBF_URL", "https://dbf.finalrewind.org") or "").rstrip("/"),
             title=_env("TITLE"),

@@ -70,3 +70,14 @@ def test_render_sizes():
                 render("Musterstadt", [], now),
                 render("Musterstadt", None, now, error="Stand 19:45")):
         assert img.size == (SIZE, SIZE)
+
+
+def test_bundled_fonts_have_umlauts():
+    import os
+    from zugtafel import render as r
+    pkg_fonts = os.path.join(os.path.dirname(r.__file__), "fonts")
+    for name in ("DejaVuSans.ttf", "DejaVuSans-Bold.ttf",
+                 "DejaVuSansCondensed.ttf", "DejaVuSansCondensed-Bold.ttf"):
+        f = r.font(name, 13)
+        assert getattr(f, "path", "").startswith(pkg_fonts), name
+        assert f.getmask("ü").getbbox() is not None
