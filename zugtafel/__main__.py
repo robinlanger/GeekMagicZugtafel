@@ -28,7 +28,7 @@ def run_once(cfg: Config, device: GeekMagic | None, tz: ZoneInfo) -> None:
     title = cfg.title or cfg.station
     try:
         deps = dbf.fetch(cfg.dbf_url, cfg.station, via=cfg.via,
-                         platforms=cfg.platforms, limit=cfg.limit)
+                         platforms=cfg.platforms, limit=cfg.limit, tz=cfg.timezone)
         img = render(title, deps, now, rows=cfg.limit)
         log.info("%d Abfahrten geladen", len(deps))
     except Exception as exc:  # Netzfehler, DBF down, unbekannte Station …
