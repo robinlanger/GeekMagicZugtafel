@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -112,7 +113,8 @@ def matches(dep: Departure, directions: list[str]) -> bool:
 
 
 def fetch(base_url: str, station: str, *, via: str | None = None,
-          platforms: str | None = None, limit: int = 5, timeout: int = 15) -> list[Departure]:
+          platforms: str | None = None, limit: int = 5, timeout: int = 15,
+          tz: str = "Europe/Berlin") -> list[Departure]:
     directions = parse_directions(via)
     # Puffer, weil Ankünfte und gefilterte Richtungen rausfallen
     params = {"version": "3", "limit": str(limit * (5 if directions else 3))}
@@ -124,4 +126,8 @@ def fetch(base_url: str, station: str, *, via: str | None = None,
     payload = resp.json()
     if "error" in payload:
         raise RuntimeError(f"DBF meldet: {payload['error']}")
-    return [d for d in parse(payload, station) if matches(d, directions)][:limit]
+    deps = [d for d in parse(payload, station) if matches(d, directions)]
+    # Nach tatsächlicher Abfahrt sortieren (DBF sortiert nach Planzeit)
+    now = datetime.now(ZoneInfo(tz))
+    deps.sort(key=lambda d: d.realtime(now))
+    return deps[:limit]
