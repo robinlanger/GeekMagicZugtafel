@@ -8,8 +8,8 @@ file. A release is a `vX.Y.Z` tag; the `release` workflow does the rest.
 1. **Bump the version.** Edit `VERSION` and add a `## [X.Y.Z]` section to `CHANGELOG.md`
    (the workflow publishes exactly that section as the release notes). Check it locally:
    `python3 tools/changelog_section.py "$(cat VERSION)"`.
-2. **CI is green** on the commit you are about to tag (`ci.yml`: server tests, firmware build,
-   native tests, size check, Docker build, docs check).
+2. **CI is green** on the commit you are about to tag (`ci.yml`, jobs `server`, `server-image`, `firmware`, `docs`:
+   server tests, firmware build, native tests, size check, Docker build, docs check).
 3. **Smoketest on real hardware** with the release candidate and the previous release bin:
 
    ```sh

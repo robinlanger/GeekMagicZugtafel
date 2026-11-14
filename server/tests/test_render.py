@@ -9,8 +9,6 @@ from PIL import Image
 
 from glancebox.render import MAX_JPEG_BYTES, Renderer, RenderError, encode_jpeg
 
-pytestmark = pytest.mark.browser
-
 
 def test_encode_jpeg_baseline_and_size():
     rnd = random.Random(1)
@@ -24,6 +22,7 @@ def test_encode_jpeg_baseline_and_size():
     assert res.size == (240, 240)
 
 
+@pytest.mark.browser
 async def test_render_html_umlauts():
     async with Renderer() as r:
         out = await r.render_html("<p>Grüße</p>")
@@ -32,6 +31,7 @@ async def test_render_html_umlauts():
     assert img.size == (240, 240)
 
 
+@pytest.mark.browser
 async def test_render_url_timeout_raises():
     class Slow(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -54,6 +54,7 @@ async def test_render_url_timeout_raises():
         srv.shutdown()
 
 
+@pytest.mark.browser
 async def test_render_url_wait_ms_exceeds_timeout_succeeds():
     class Fast(BaseHTTPRequestHandler):
         def do_GET(self):

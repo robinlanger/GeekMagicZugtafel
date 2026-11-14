@@ -11,7 +11,7 @@ def run(tmp_path: Path, size: int, limit: str):
     lim = tmp_path / "limit.txt"
     lim.write_text(limit)
     return subprocess.run(
-        [sys.executable, str(SCRIPT), str(binf), str(lim)], capture_output=True, text=True
+        [sys.executable, str(SCRIPT), str(binf), str(lim)], check=False, capture_output=True, text=True
     )
 
 
