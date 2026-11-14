@@ -2,5 +2,9 @@
 __pycache__/
 *.pyc
 .venv/
-zugtafel.png
+server/.venv/
+*.egg-info/
 .pytest_cache/
+.ruff_cache/
+.pio/
+zugtafel.png

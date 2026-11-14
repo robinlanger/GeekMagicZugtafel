@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "glancebox"
+# Package metadata only; the runtime version (glancebox.__version__) comes from ../VERSION.
+version = "0.0.0"
+description = "Glance Box server: renders 240x240 pages for the display"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+[tool.setuptools.packages.find]
+include = ["glancebox*"]
+
+[tool.setuptools.package-data]
+glancebox = ["fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "../pages"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
