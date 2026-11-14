@@ -1,0 +1,110 @@
+from datetime import datetime
+from pathlib import Path
+
+import pytest
+
+from glancebox.config import AppConfig, ConfigError, PageConfig, load_config
+from glancebox.pages import PageContext, load_page_types, validate_config
+
+FIX = Path(__file__).parent / "fixtures" / "pages"
+REAL = Path(__file__).resolve().parents[2] / "pages"
+CTX = PageContext(now=datetime(2026, 1, 1, 12, 0), lang="de", timezone="Europe/Berlin")
+
+
+def cfg_of(*pages: tuple[str, dict, dict], interval=30) -> AppConfig:
+    out = []
+    for i, (t, options, extra) in enumerate(pages):
+        duration = extra.get("duration", interval)
+        out.append(PageConfig(i, t, options, duration, extra.get("refresh", duration),
+                              "refresh" in extra))
+    return AppConfig(interval, "Europe/Berlin", "de", tuple(out), ())
+
+
+def test_loads_script_page_with_relative_import():
+    types = load_page_types([FIX / "good"])
+    assert types["good"].kind == "script"
+    assert types["good"].fetch({}, CTX) == {"ok": True, "lang": "de"}
+    assert types["good"].template_path == FIX / "good" / "good" / "template.html"
+    assert types["good"].min_refresh == 0
+
+
+def test_broken_page_module_reports_dir():
+    with pytest.raises(ConfigError, match="broken"):
+        load_page_types([FIX / "broken"])
+
+
+def test_missing_fetch_reports_dir(tmp_path):
+    (tmp_path / "nofetch").mkdir()
+    (tmp_path / "nofetch" / "page.py").write_text("X = 1\n")
+    with pytest.raises(ConfigError, match="nofetch"):
+        load_page_types([tmp_path])
+
+
+def test_builtin_url_type_always_present():
+    assert load_page_types([])["url"].kind == "url"
+
+
+def test_custom_dir_overrides_builtin(tmp_path):
+    (tmp_path / "bahn").mkdir()
+    (tmp_path / "bahn" / "page.py").write_text(
+        "def fetch(options, ctx):\n    return {'from': 'custom'}\n")
+    types = load_page_types([REAL, tmp_path])
+    assert types["bahn"].fetch({}, CTX) == {"from": "custom"}
+    assert types["bahn"].min_refresh == 0
+    assert load_page_types([REAL])["bahn"].min_refresh == 60
+
+
+def test_unknown_type_names_index():
+    types = load_page_types([])
+    cfg = cfg_of(("url", {"url": "http://x"}, {}), ("nope", {}, {}))
+    with pytest.raises(ConfigError, match=r"pages\[1\] \(nope\)"):
+        validate_config(cfg, types)
+
+
+def test_url_requires_url():
+    with pytest.raises(ConfigError, match="url"):
+        validate_config(cfg_of(("url", {}, {})), load_page_types([]))
+
+
+@pytest.mark.parametrize("opts", [
+    {"url": "ftp://x"}, {"url": 5},
+    {"url": "http://x", "wait_ms": -1}, {"url": "http://x", "wait_ms": True},
+    {"url": "http://x", "timeout_s": 0}, {"url": "http://x", "wait_for": 3},
+])
+def test_url_invalid_options(opts):
+    with pytest.raises(ConfigError, match=r"pages\[0\] \(url\)"):
+        validate_config(cfg_of(("url", opts, {})), load_page_types([]))
+
+
+def test_url_valid_options():
+    opts = {"url": "https://x", "wait_ms": 500, "wait_for": "#a", "timeout_s": 2.5}
+    cfg = cfg_of(("url", opts, {}))
+    assert validate_config(cfg, load_page_types([])).pages[0].options == opts
+
+
+def test_bahn_refresh_below_60_rejected():
+    types = load_page_types([REAL])
+    with pytest.raises(ConfigError, match="60"):
+        validate_config(cfg_of(("bahn", {"station": "X"}, {"refresh": 10})), types)
+
+
+def test_bahn_default_refresh_raised_to_60():
+    types = load_page_types([REAL])
+    out = validate_config(cfg_of(("bahn", {"station": "X"}, {})), types)
+    assert out.pages[0].refresh == 60
+    assert out.pages[0].duration == 30
+
+
+def test_bahn_requires_station_and_limit_range():
+    types = load_page_types([REAL])
+    with pytest.raises(ConfigError, match=r"pages\[0\] \(bahn\).*station"):
+        validate_config(cfg_of(("bahn", {}, {})), types)
+    with pytest.raises(ConfigError, match="limit"):
+        validate_config(cfg_of(("bahn", {"station": "X", "limit": 7}, {})), types)
+
+
+def test_validate_config_from_loaded_yaml(tmp_path):
+    p = tmp_path / "c.yaml"
+    p.write_text("pages:\n  - {type: bahn, station: X}\n")
+    out = validate_config(load_config(p), load_page_types([REAL]))
+    assert out.pages[0].refresh == 60
