@@ -96,7 +96,7 @@ def _jinja_env(extra_dirs: list) -> jinja2.Environment:
         loader=jinja2.FileSystemLoader([*map(str, extra_dirs), str(TEMPLATES_DIR)]),
         autoescape=True,
     )
-    env.globals["font_face_css"] = font_face_css
+    env.globals["font_face_css"] = font_face_css()  # base.html uses it as a string
     return env
 
 
