@@ -37,7 +37,7 @@ def _etag_matches(header: str | None, etag: str) -> bool:
     return False
 
 
-def on_worker_done(task: asyncio.Task, exit: Callable[[int], object] = os._exit) -> None:
+def on_worker_done(task: asyncio.Task, exit_process: Callable[[int], object] = os._exit) -> None:
     """Done callback of the render worker: a dead worker means no page is ever refreshed
     again, so log why and exit non-zero; the container restart policy brings us back.
     Cancellation is the normal shutdown path and is ignored."""
@@ -48,7 +48,7 @@ def on_worker_done(task: asyncio.Task, exit: Callable[[int], object] = os._exit)
         log.critical("render worker died, exiting", exc_info=exc)
     else:
         log.critical("render worker died (returned), exiting")
-    exit(1)
+    exit_process(1)
 
 
 def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = time.time, *,
