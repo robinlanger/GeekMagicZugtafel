@@ -81,6 +81,21 @@ class Renderer:
             if pw:
                 await pw.stop()
 
+    def healthy(self) -> bool:
+        """True while the shared Chromium is running and connected."""
+        return self._browser is not None and self._browser.is_connected()
+
+    async def _relaunch(self) -> None:
+        # Chromium died (crash, OOM kill): start a fresh one instead of failing forever.
+        old, self._browser = self._browser, None
+        if old is not None:
+            with contextlib.suppress(Exception):
+                await old.close()
+        try:
+            self._browser = await self._pw.chromium.launch()
+        except Exception as exc:
+            raise RenderError(f"cannot restart Chromium: {exc}") from exc
+
     async def render_html(self, html: str, timeout_s: float = 10) -> bytes:
         async def load(page):
             await page.set_content(html, wait_until="load", timeout=timeout_s * 1000)
@@ -100,9 +115,11 @@ class Renderer:
         return await self._render(load, timeout_s + wait_ms / 1000)
 
     async def _render(self, load, budget_s: float) -> bytes:
-        if self._browser is None:
+        if self._pw is None:
             raise RenderError("renderer not started")
         async with self._lock:
+            if not self.healthy():
+                await self._relaunch()
             context = page = None
             try:
                 async with asyncio.timeout(budget_s + 2):

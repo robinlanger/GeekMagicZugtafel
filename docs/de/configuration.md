@@ -119,7 +119,7 @@ Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene S
 | --- | --- |
 | `http://<server>:8080/` | Vorschau aller Seiten mit Alter und letztem Fehler (aktualisiert sich selbst). |
 | `http://<server>:8080/preview/<n>.jpg` | Das aktuelle Bild von Seite Nummer `n` (ab 0 gezählt). |
-| `http://<server>:8080/healthz` | Kleines JSON für Gesundheitsprüfungen (Docker nutzt es). |
+| `http://<server>:8080/healthz` | Kleines JSON für Gesundheitsprüfungen (Docker nutzt es). Antwortet mit 503, solange der Renderer oder sein Browser ausgefallen ist. |
 | `http://<server>:8080/api/v1/frame` | Was das Display abruft. |
 
 Der Server läuft als normaler Benutzer (nicht als root) und hat **keine Anmeldung**. Lass Port 8080 in deinem Heimnetz. Für einen anderen Port änderst du die linke Zahl bei `ports:` in der `docker-compose.yml`, zum Beispiel `"9090:8080"`.

@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
 import time
 from collections.abc import Callable
 
 import jinja2
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import __version__
 from .config import AppConfig
@@ -36,6 +37,20 @@ def _etag_matches(header: str | None, etag: str) -> bool:
     return False
 
 
+def on_worker_done(task: asyncio.Task, exit: Callable[[int], object] = os._exit) -> None:
+    """Done callback of the render worker: a dead worker means no page is ever refreshed
+    again, so log why and exit non-zero; the container restart policy brings us back.
+    Cancellation is the normal shutdown path and is ignored."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        log.critical("render worker died, exiting", exc_info=exc)
+    else:
+        log.critical("render worker died (returned), exiting")
+    exit(1)
+
+
 def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = time.time, *,
                types: dict[str, PageType] | None = None, start_worker: bool = True) -> FastAPI:
     @contextlib.asynccontextmanager
@@ -47,14 +62,18 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
         async with Renderer() as renderer:
             await store.build_error_frame(renderer)
             task = asyncio.create_task(run_worker(cfg, page_types, renderer, store))
+            task.add_done_callback(on_worker_done)
+            app.state.renderer, app.state.worker_task = renderer, task
             try:
                 yield
             finally:
+                task.remove_done_callback(on_worker_done)
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.renderer = app.state.worker_task = None  # set by lifespan when the worker runs
     durations = [p.duration for p in cfg.pages]
 
     def jpeg_response(request: Request, frame: Frame, next_in: int) -> Response:
@@ -101,7 +120,12 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
         return _env.get_template("index.html").render(pages=rows, version=__version__)
 
     @app.get("/healthz")
-    def healthz() -> dict:
-        return {"version": __version__, "pages_ok": sum(store.available(clock()))}
+    def healthz() -> JSONResponse:
+        task, renderer = app.state.worker_task, app.state.renderer
+        worker_ok = task is None or not task.done()
+        browser_ok = renderer is None or renderer.healthy()
+        body = {"version": __version__, "pages_ok": sum(store.available(clock())),
+                "worker_ok": worker_ok, "browser_ok": browser_ok}
+        return JSONResponse(body, status_code=200 if worker_ok and browser_ok else 503)
 
     return app
