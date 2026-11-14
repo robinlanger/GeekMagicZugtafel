@@ -86,3 +86,14 @@ def test_missing_custom_pages_dir_is_a_warning(tmp_path, caplog):
     cfg = load_config(write(tmp_path, "custom_pages_dir: nope\npages:\n  - {type: url}\n"))
     assert len(cfg.pages_dirs) == 1  # only the built-in dir is left
     assert "custom_pages_dir" in caplog.text and "nope" in caplog.text
+
+
+@pytest.mark.parametrize("tz", ["Europe/Berln", "../etc/passwd", ""])
+def test_unknown_timezone_rejected(tmp_path, tz):
+    with pytest.raises(ConfigError, match=r"timezone: unknown time zone"):
+        load_config(write(tmp_path, f"timezone: '{tz}'\npages:\n  - type: bahn\n"))
+
+
+def test_valid_timezone_accepted(tmp_path):
+    cfg = load_config(write(tmp_path, "timezone: America/New_York\npages:\n  - type: bahn\n"))
+    assert cfg.timezone == "America/New_York"
