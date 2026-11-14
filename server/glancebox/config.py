@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 
@@ -54,6 +55,14 @@ def _positive_int(value: Any, where: str) -> int:
     return value
 
 
+def _check_timezone(name: str) -> None:
+    # Fail at startup, not on every render of a page that uses the time zone.
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError) as e:
+        raise ConfigError(f"timezone: unknown time zone {name!r}") from e
+
+
 def _parse_page(index: int, raw: Any, interval: int) -> PageConfig:
     where = f"pages[{index}]"
     if not isinstance(raw, dict):
@@ -92,6 +101,7 @@ def load_config(path: Path) -> AppConfig:
     lang = data.get("lang", "de")
     if not isinstance(timezone, str) or not isinstance(lang, str):
         raise ConfigError("timezone and lang must be strings")
+    _check_timezone(timezone)
 
     raw_pages = data.get("pages")
     if not isinstance(raw_pages, list) or not raw_pages:
