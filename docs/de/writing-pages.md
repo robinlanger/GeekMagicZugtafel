@@ -29,6 +29,7 @@ def fetch(options: dict, ctx) -> dict:
 ```
 
 - `fetch(options, ctx)` ist **Pflicht**. Es gibt ein Dict zurück. Jeder Schlüssel wird im Template zu einer Variablen. Die Funktion läuft in einem Worker-Thread (blockierende Aufrufe wie HTTP-Anfragen sind in Ordnung) und muss innerhalb von 20 Sekunden fertig sein.
+- **Gib jedem Netzwerkaufruf ein Timeout mit**, zum Beispiel `requests.get(url, timeout=10)`. Die 20-Sekunden-Grenze beendet nur das Warten auf das Ergebnis: Ein hängender Aufruf hält seinen Worker-Thread belegt, und schon wenige davon können alle Skript-Seiten blockieren.
 - `validate(options)` ist optional. Wirf `ValueError("...")`, um eine fehlerhafte Konfiguration abzulehnen. Der Server startet dann nicht und zeigt deine Meldung mit der Seitennummer.
 - `MIN_REFRESH = 60` ist optional (eine ganze Zahl). Es legt das kleinste erlaubte `refresh` für deine Seite fest, zum Beispiel um ein Anfragelimit einzuhalten.
 - Andere `.py`-Dateien im selben Ordner kannst du mit `from .helper import etwas` importieren.
@@ -42,6 +43,8 @@ def fetch(options: dict, ctx) -> dict:
 | `ctx.timezone` | der Name der Zeitzone |
 
 Wirft `fetch` einen Fehler, behält die Seite bis zu 10 Minuten ihr letztes gutes Bild, und der Fehler erscheint im Log und auf der Vorschauseite. Ein Fehler in `page.py` beim Laden (ein Tippfehler) stoppt den Server beim Start mit einer klaren Meldung.
+
+Eine Seite kann den Fehler stattdessen abfangen und Daten für ein Bild zurückgeben, das ihn anzeigt. Die eingebaute Seite `bahn` macht das absichtlich: Ist DBF nicht erreichbar, zeigt sie sofort „Keine Daten“, statt ihr letztes Bild zu behalten, denn 10 Minuten alte Abfahrtsminuten wären falsch.
 
 ### template.html
 

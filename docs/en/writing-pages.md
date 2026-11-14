@@ -29,6 +29,7 @@ def fetch(options: dict, ctx) -> dict:
 ```
 
 - `fetch(options, ctx)` is **required**. It returns a dict. Every key becomes a variable in the template. It runs in a worker thread (blocking calls such as HTTP requests are fine) and must finish within 20 seconds.
+- **Give every network call a timeout**, for example `requests.get(url, timeout=10)`. The 20-second limit only stops waiting for the result: a call that hangs keeps its worker thread busy, and a few of them can stall all script pages.
 - `validate(options)` is optional. Raise `ValueError("...")` to reject a bad configuration. The server then refuses to start and shows your message with the page number.
 - `MIN_REFRESH = 60` is optional (an integer). It sets the smallest allowed `refresh` for your page, for example to respect a rate limit.
 - Other `.py` files in the same folder can be imported with `from .helper import something`.
@@ -42,6 +43,8 @@ def fetch(options: dict, ctx) -> dict:
 | `ctx.timezone` | the time zone name |
 
 If `fetch` raises an error, the page keeps its last good picture for up to 10 minutes and the error appears in the log and on the preview page. An error in `page.py` while loading (a typo) stops the server at startup with a clear message.
+
+A page may instead catch the error and return data for a picture that says so. The built-in `bahn` page does this on purpose: when DBF cannot be reached it shows "Keine Daten" right away instead of keeping its last picture, because departure minutes that are 10 minutes old would be wrong.
 
 ### template.html
 

@@ -8,9 +8,13 @@ file. A release is a `vX.Y.Z` tag; the `release` workflow does the rest.
 1. **Bump the version.** Edit `VERSION` and add a `## [X.Y.Z]` section to `CHANGELOG.md`
    (the workflow publishes exactly that section as the release notes). Check it locally:
    `python3 tools/changelog_section.py "$(cat VERSION)"`.
-2. **CI is green** on the commit you are about to tag (`ci.yml`, jobs `server`, `server-image`, `firmware`, `docs`:
+2. **Never change the flash layout in an OTA release.** `board_build.ldscript` and the
+   filesystem layout (LittleFS offset, size, block size) must stay as they are: an OTA update
+   keeps the data already on the flash, and a device whose settings no longer mount loses its
+   settings (server address, update password). A layout change is only possible with serial flashing.
+3. **CI is green** on the commit you are about to tag (`ci.yml`, jobs `server`, `server-image`, `firmware`, `docs`:
    server tests, firmware build, native tests, size check, Docker build, docs check).
-3. **Smoketest on real hardware** with the release candidate and the previous release bin:
+4. **Smoketest on real hardware** with the release candidate and the previous release bin:
 
    ```sh
    cd firmware && pio run -e ultra && cd ..
@@ -21,15 +25,16 @@ file. A release is a `vX.Y.Z` tag; the `release` workflow does the rest.
 
    It must end with `PASS` (see [The smoketest](#the-smoketest)). Use `--skip-frames` only if the
    device has no server configured.
-4. **24 h soak.** Leave the candidate on a device for 24 hours. Afterwards `/status` must show
+5. **24 h soak.** Leave the candidate on a device for 24 hours. Afterwards `/status` must show
    `boot_failed` 0, `safe_mode` false, and `frames_ok` still growing; note the uptime and
    `heap_free`.
-5. **Tag.** `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must equal `v$(cat VERSION)`,
+6. **Tag only from a green `main`.** Merge first, wait for CI on `main`, then tag that commit:
+   `git switch main && git pull && git tag vX.Y.Z && git push origin vX.Y.Z`. The tag must equal `v$(cat VERSION)`,
    otherwise the workflow fails before building anything.
-6. **Note the smoketest result in the release notes.** When the workflow has created the release,
+7. **Note the smoketest result in the release notes.** When the workflow has created the release,
    edit it and append a line such as
    `Smoketest: PASS on GeekMagic SmallTV Ultra, previous = vPREV, 24 h soak OK (YYYY-MM-DD)`.
-7. Optionally, run the smoketest once more with the **published** `.bin` (check it against the
+8. Optionally, run the smoketest once more with the **published** `.bin` (check it against the
    `.md5`/`.sha256` files first).
 
 ### First release (no previous release exists)

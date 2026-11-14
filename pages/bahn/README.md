@@ -20,6 +20,10 @@ Display: line badge (S green, long distance white/red, RB/RE red), minutes to de
 platform changed), cancelled trains struck through in red. If DBF cannot be reached the page
 shows "Keine Daten"; an empty list shows "Keine Abfahrten". The layout is `template.html`.
 
+This is a deliberate exception to the server's rule that a failing page keeps its last good
+picture for up to 10 minutes: old departure minutes would count down wrongly, so the page
+reports the failure at once (and logs it) instead of raising an error.
+
 ## Deutsch
 
 Live-Abfahrten für einen deutschen Bahnhof von [DBF](https://dbf.finalrewind.org) (db-infoscreen).
@@ -39,3 +43,7 @@ Anzeige: Linien-Badge (S grün, Fernverkehr weiß/rot, RB/RE rot), Minuten bis A
 3 Minuten oder weniger), `+Verspätung` (orange unter 6 Min., sonst rot), `Gl. X` (orange bei
 Gleiswechsel), ausfallende Züge rot durchgestrichen. Ist DBF nicht erreichbar, zeigt die Seite
 „Keine Daten“; eine leere Liste zeigt „Keine Abfahrten“. Das Layout steht in `template.html`.
+
+Das ist eine bewusste Ausnahme von der Server-Regel, dass eine fehlerhafte Seite ihr letztes
+gutes Bild bis zu 10 Minuten behält: Alte Abfahrtsminuten würden falsch weiterzählen, deshalb
+meldet die Seite den Fehler sofort (und schreibt ihn ins Log), statt eine Ausnahme zu werfen.
