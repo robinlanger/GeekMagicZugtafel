@@ -121,7 +121,6 @@ flash_and_verify() {
   await_reboot "$expected" "$pre_version" "$pre_uptime"
   log "version $expected is up"
 
-  frames0=$(field frames_ok)
   deadline=$((SECONDS + HEALTHY_TIMEOUT))
   until get_status && [ "$(field boot_failed)" = "0" ]; do
     [ "$SECONDS" -lt "$deadline" ] || fail "boot_failed still not 0 after ${HEALTHY_TIMEOUT}s (${status_json:-no answer})"
@@ -130,6 +129,7 @@ flash_and_verify() {
   [ "$(field version)" = "$expected" ] || fail "version changed to $(field version) while waiting"
   [ "$(field safe_mode)" = "false" ] || fail "device is in safe mode"
   log "boot_failed == 0, not in safe mode"
+  frames0=$(field frames_ok)
 
   if [ "$skip_frames" -eq 1 ]; then
     log "frames_ok check skipped (--skip-frames)"

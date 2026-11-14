@@ -60,10 +60,12 @@ reboot into the new image from no reboot, and it refuses to run.
    `ghcr.io/robinlanger/glancebox:<ver>` and `:latest`.
 4. Runs `gh release create` with the three firmware files and the `CHANGELOG.md` section.
 
-**Dry run.** Actions, "release", "Run workflow", with `dry_run` ticked (the default) builds
-everything but does not log in to GHCR, push, or create a release. The firmware files are kept as
-the workflow artifact `firmware-<ver>`. Unticking `dry_run` publishes like a tag push does (it
-creates the tag `v<ver>` on the selected commit), so use it only when you mean it.
+Before building, the workflow also fails if a GitHub release for the tag already exists, so a
+duplicate tag pushes nothing.
+
+**Dry run.** Actions, "release", "Run workflow" (any branch) builds everything but never logs in
+to GHCR, pushes, or creates a release. The firmware files are kept as the workflow artifact
+`firmware-<ver>`. Publishing is only possible by pushing a `v*` tag.
 
 ## The smoketest
 

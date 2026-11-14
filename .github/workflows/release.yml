@@ -1,17 +1,12 @@
 name: release
 
 # Tag vX.Y.Z: build firmware + image, push to GHCR, create the GitHub release.
-# Manual run (workflow_dispatch): dry_run=true (default) builds everything but pushes and
+# Manual run (workflow_dispatch): always a dry run. It builds everything but pushes and
 # publishes nothing; the firmware files are kept as a workflow artifact.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Build only: no image push, no GitHub release"
-        type: boolean
-        default: true
 
 permissions:
   contents: write # gh release create
@@ -19,8 +14,8 @@ permissions:
 
 env:
   IMAGE: ghcr.io/robinlanger/glancebox
-  # Real publishing happens only on a tag push, or a manual run with dry_run=false.
-  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+  # Real publishing happens only on a pushed v* tag; everything else is a dry run.
+  DRY_RUN: ${{ github.event_name != 'push' }}
 
 jobs:
   release:
@@ -35,6 +30,16 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
             echo "::error::tag $GITHUB_REF_NAME does not match VERSION file (v$version)"
+            exit 1
+          fi
+
+      - name: Refuse to republish an existing release
+        if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::a GitHub release for v$VERSION already exists; nothing was pushed"
             exit 1
           fi
 
@@ -58,7 +63,7 @@ jobs:
           bin="dist/glancebox-ultra-$VERSION.bin"
           cp firmware/.pio/build/ultra/firmware.bin "$bin"
           # The embedded version tag must match VERSION, exactly once.
-          [ "$(strings -a "$bin" | grep -c "^GBVER:$VERSION\$")" -eq 1 ]
+          [ "$(strings -a "$bin" | grep -Fxc "GBVER:$VERSION")" -eq 1 ]
           (cd dist && md5sum "glancebox-ultra-$VERSION.bin" > "glancebox-ultra-$VERSION.bin.md5" \
             && sha256sum "glancebox-ultra-$VERSION.bin" > "glancebox-ultra-$VERSION.bin.sha256")
           cat dist/*.md5 dist/*.sha256
