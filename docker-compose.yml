@@ -1,6 +1,12 @@
 services:
-  zugtafel:
+  glancebox:
     build: .
-    container_name: zugtafel
+    image: glancebox:dev
+    container_name: glancebox
     restart: unless-stopped
-    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      # Your own pages; create the folder first (mkdir pages-custom), it may be empty.
+      - ./pages-custom:/config/pages:ro

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+log = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL = 30
 _TOP_LEVEL_KEYS = {"interval", "timezone", "lang", "pages", "custom_pages_dir"}
@@ -100,6 +103,11 @@ def load_config(path: Path) -> AppConfig:
     if custom is not None:
         if not isinstance(custom, str):
             raise ConfigError("custom_pages_dir must be a string path")
-        pages_dirs.append((path.resolve().parent / custom).resolve())
+        custom_dir = (path.resolve().parent / custom).resolve()
+        if custom_dir.is_dir():
+            pages_dirs.append(custom_dir)
+        else:
+            # Optional by design: the documented default /config/pages is often not mounted.
+            log.warning("custom_pages_dir %s does not exist; using built-in pages only", custom_dir)
 
     return AppConfig(interval, timezone, lang, pages, tuple(pages_dirs))

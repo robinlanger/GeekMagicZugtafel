@@ -70,6 +70,7 @@ def test_invalid_interval_rejected(tmp_path):
 
 
 def test_custom_pages_dir_relative_to_config(tmp_path):
+    (tmp_path / "mine").mkdir()
     cfg = load_config(write(tmp_path, "custom_pages_dir: mine\npages:\n  - {type: url}\n"))
     assert cfg.pages_dirs[-1] == (tmp_path / "mine").resolve()
     assert len(cfg.pages_dirs) == 2
@@ -79,3 +80,9 @@ def test_pages_dir_env_override(tmp_path, monkeypatch):
     monkeypatch.setenv("GLANCEBOX_PAGES_DIR", str(tmp_path / "builtin"))
     cfg = load_config(write(tmp_path, "pages:\n  - {type: url}\n"))
     assert cfg.pages_dirs[0] == tmp_path / "builtin"
+
+
+def test_missing_custom_pages_dir_is_a_warning(tmp_path, caplog):
+    cfg = load_config(write(tmp_path, "custom_pages_dir: nope\npages:\n  - {type: url}\n"))
+    assert len(cfg.pages_dirs) == 1  # only the built-in dir is left
+    assert "custom_pages_dir" in caplog.text and "nope" in caplog.text
