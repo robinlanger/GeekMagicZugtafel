@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block head %}
+{% set n = [rows | length, 1] | max %}
+{% set row_h = (200 // ([n, 6] | min)) %}
+{% set k = [1.0, [1.5, row_h / 41] | min] | max %}
+<style>
+.cond{font-family:'DejaVu Sans Condensed','DejaVu Sans',sans-serif;}
+.hdr{position:absolute;left:0;top:0;width:240px;height:34px;background:var(--header-bg);display:flex;align-items:center;padding:0 7px;box-sizing:border-box;}
+.hdr .title{flex:1;min-width:0;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:14px;}
+.hdr .clock{font-weight:700;font-size:18px;}
+.msg{position:absolute;left:0;top:34px;width:240px;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.msg h1{margin:0;font-size:17px;}
+.msg p{margin:8px 0 0;font-size:13px;color:var(--muted);}
+.board{position:absolute;left:0;top:34px;width:240px;height:200px;}
+.row{--k:{{ k }};position:relative;height:{{ row_h }}px;box-sizing:border-box;padding:0 7px;}
+.row + .row{border-top:1px solid var(--divider);}
+.l1,.l2{position:absolute;left:7px;right:7px;display:flex;align-items:center;transform:translateY(-50%);white-space:nowrap;}
+.l1{top:31%;}
+.l2{top:74%;font-size:calc(13px * var(--k));}
+.badge{flex:none;max-width:calc(68px * var(--k));overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;padding:0 calc(5px * var(--k));height:calc(18px * var(--k));line-height:calc(18px * var(--k));border-radius:calc(4px * var(--k));font-weight:700;font-size:calc(13px * var(--k));text-align:center;margin-right:6px;}
+.badge.s{background:rgb(0,135,75);color:#fff;}
+.badge.long{background:rgb(235,235,235);color:rgb(200,0,30);}
+.badge.regional{background:rgb(190,25,40);color:#fff;}
+.badge.other{background:rgb(90,95,110);color:#fff;}
+.dest{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:calc(15px * var(--k));margin-right:6px;}
+.dest.cancelled{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;}
+.right{flex:none;display:flex;align-items:baseline;}
+.right .val{font-family:'DejaVu Sans',sans-serif;font-weight:700;font-size:calc(16px * var(--k));}
+.right .val.soon{color:var(--yellow);}
+.right .val.cancelled{font-family:'DejaVu Sans Condensed',sans-serif;font-size:calc(13px * var(--k));color:var(--red);}
+.right .unit{color:var(--muted);font-size:calc(13px * var(--k));margin-left:0.3em;}
+.sched{color:var(--muted);}
+.delay{font-weight:700;margin-left:6px;}
+.delay.minor{color:var(--orange);}
+.delay.major{color:var(--red);}
+.plat{margin-left:auto;font-weight:700;color:var(--muted);}
+.plat.changed{color:var(--orange);}
+</style>
+{% endblock %}
+{% block body %}
+<div class="hdr cond"><span class="title">{{ title }}</span><span class="clock" style="font-family:'DejaVu Sans'">{{ clock }}</span></div>
+{% if message %}
+<div class="msg"><h1>{{ message }}</h1>{% if sub %}<p>{{ sub }}</p>{% endif %}</div>
+{% else %}
+<div class="board cond">
+{% for r in rows[:6] %}
+<div class="row">
+  <div class="l1">
+    <span class="badge {{ r.badge }}">{{ r.train }}</span>
+    <span class="dest{% if r.cancelled %} cancelled{% endif %}">{{ r.destination }}</span>
+    <span class="right"><span class="val {{ r.right_class }}">{{ r.right }}</span>{% if r.unit %}<span class="unit">{{ r.unit }}</span>{% endif %}</span>
+  </div>
+  <div class="l2">
+    <span class="sched">{{ r.scheduled }}</span>{% if r.delay %}<span class="delay {{ r.delay_class }}">+{{ r.delay }}</span>{% endif %}
+    {% if r.platform %}<span class="plat{% if r.platform_changed %} changed{% endif %}">{{ r.platform }}</span>{% endif %}
+  </div>
+</div>
+{% endfor %}
+</div>
+<script>
+// Too long: drop a trailing " Hbf", then shrink the font towards its base size, then ellipsize.
+// Runs on load, when the inlined fonts are ready, so the measurements are right.
+window.addEventListener('load', function () { document.querySelectorAll('.dest').forEach(function (el) {
+  var over = function () { return el.scrollWidth > el.clientWidth; };
+  if (over() && / Hbf$/.test(el.textContent)) {
+    el.textContent = el.textContent.replace(/ Hbf$/, '');
+  }
+  for (var size = parseFloat(getComputedStyle(el).fontSize); over() && size > 15; ) {
+    size = Math.max(15, size - 1);
+    el.style.fontSize = size + 'px';
+  }
+}); });
+</script>
+{% endif %}
+{% endblock %}
