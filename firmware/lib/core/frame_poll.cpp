@@ -70,7 +70,9 @@ PollOutcome FramePoller::onSuccess(int nextIn, uint32_t nowMs) {
 
 PollOutcome FramePoller::onFailure(int status, uint32_t nowMs) {
   if (failures_ < 255) ++failures_;
-  PollOutcome o{nextDelayMs(false, -1, failures_), false, status == kErrDecode};
+  // Decode and mid-body read errors happen while the frame is being drawn.
+  const bool partialDraw = status == kErrDecode || status == kErrBodyRead;
+  PollOutcome o{nextDelayMs(false, -1, failures_), false, partialDraw};
   if (showOffline(nowMs - lastSuccessMs_) && (!offline_ || status != offlineStatus_)) {
     offline_ = true;
     offlineStatus_ = status;

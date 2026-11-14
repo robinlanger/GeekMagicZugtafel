@@ -10,7 +10,7 @@ constexpr size_t kErrorTextCap = 32;
 
 // Frame fetch status codes: HTTP status (> 0), HTTPClient errors (-1..-11) or these.
 constexpr int kErrFrameLength = -100;  // Content-Length missing, 0 or > kMaxFrameBytes
-constexpr int kErrBodyRead = -101;     // body shorter than Content-Length before the deadline
+constexpr int kErrBodyRead = -101;     // body ended/stalled before the deadline (mid-draw)
 constexpr int kErrDecode = -102;       // JPEG could not be decoded
 constexpr int kErrNoWifi = -103;       // no request made: Wi-Fi not connected
 constexpr int kErrBadUrl = -104;       // request URL could not be built/parsed
@@ -27,6 +27,7 @@ struct PollOutcome {
   uint32_t delayMs;  // until the next request
   bool drawOffline;  // (re)draw the offline status screen now
   bool clearEtag;    // the display no longer shows the frame of the stored ETag
+                     // (offline screen drawn, or a frame was cut off mid-draw)
 };
 
 // Poll loop state: backoff, offline screen after 120 s without success (once per

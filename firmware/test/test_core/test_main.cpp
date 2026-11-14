@@ -534,6 +534,9 @@ void test_poller_decode_error_clears_etag() {
   TEST_ASSERT_TRUE(o.clearEtag);  // a partial draw must be replaced by a full 200 next time
   TEST_ASSERT_FALSE(o.drawOffline);
   TEST_ASSERT_FALSE(p.onFailure(-1, 2000).clearEtag);  // the last good frame still stands
+  // Stream decode: a body cut off mid-frame leaves a partial draw as well.
+  TEST_ASSERT_TRUE(p.onFailure(kErrBodyRead, 3000).clearEtag);
+  TEST_ASSERT_FALSE(p.onFailure(kErrFrameLength, 4000).clearEtag);  // rejected before drawing
 }
 
 void test_poller_failure_count_saturates() {
