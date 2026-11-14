@@ -12,7 +12,7 @@ from PIL import Image
 from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import async_playwright
 
-MAX_JPEG_BYTES = 24576
+MAX_JPEG_BYTES = 24576  # must equal kMaxFrameBytes in firmware/lib/core/poll_timing.h
 QUALITY_STEPS = (85, 75, 65, 55, 45, 40)
 SIZE = 240
 
