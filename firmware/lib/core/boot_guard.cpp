@@ -17,4 +17,10 @@ bool isHealthy(uint32_t uptimeMs, bool wifi, bool web) {
   return uptimeMs >= kHealthyUptimeMs && wifi && web;
 }
 
+bool HealthLatch::shouldMark(uint32_t uptimeMs, bool wifi, bool web) {
+  if (marked_ || !isHealthy(uptimeMs, wifi, web)) return false;
+  marked_ = true;
+  return true;
+}
+
 }  // namespace gb

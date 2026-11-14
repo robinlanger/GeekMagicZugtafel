@@ -5,18 +5,17 @@
 #include <WiFiManager.h>
 
 #include "display.h"
+#include "version.h"
 
-#ifndef GB_VERSION
-#define GB_VERSION "dev"
-#endif
-static const char kVersionTag[] __attribute__((used)) = "GBVER:" GB_VERSION;
 
 static ESP8266WebServer server(80);
 static ESP8266HTTPUpdateServer updater;
 
 static String statusJson() {
   String j = "{";
-  j += "\"version\":\"" GB_VERSION "\"";
+  j += "\"version\":\"";
+  j += gbVersion();
+  j += '"';
   j += ",\"flash_real_size\":" + String(ESP.getFlashChipRealSize());
   j += ",\"flash_ide_size\":" + String(ESP.getFlashChipSize());
   j += ",\"sketch_size\":" + String(ESP.getSketchSize());

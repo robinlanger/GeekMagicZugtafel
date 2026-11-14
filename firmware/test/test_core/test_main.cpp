@@ -1,11 +1,14 @@
 #include <unity.h>
 
+#include <cstring>
 #include <string>
 
 #include "boot_guard.h"
+#include "frame_poll.h"
 #include "ota_check.h"
 #include "ota_flow.h"
 #include "poll_timing.h"
+#include "safe_policy.h"
 #include "settings.h"
 #include "web_util.h"
 
@@ -396,6 +399,151 @@ void test_ota_flow_empty_and_second_part_after_failure() {
   TEST_ASSERT_TRUE(f.onFinished(true, OtaError::None));
 }
 
+// ---- Task 13: health latch, safe-mode policy, frame poll state ----
+
+void test_health_latch_marks_exactly_once() {
+  HealthLatch h;
+  TEST_ASSERT_FALSE(h.shouldMark(59999, true, true));
+  TEST_ASSERT_FALSE(h.shouldMark(60000, false, true));
+  TEST_ASSERT_FALSE(h.shouldMark(60000, true, false));
+  TEST_ASSERT_FALSE(h.marked());
+  TEST_ASSERT_TRUE(h.shouldMark(60000, true, true));
+  TEST_ASSERT_TRUE(h.marked());
+  TEST_ASSERT_FALSE(h.shouldMark(60001, true, true));
+  TEST_ASSERT_FALSE(h.shouldMark(900000, true, true));
+}
+
+void test_safe_mode_portal_only_without_valid_password() {
+  Settings s;  // missing/corrupt settings file -> defaults
+  TEST_ASSERT_TRUE(safeModeNeedsPortal(s));
+  std::string err;
+  TEST_ASSERT_TRUE(applyPassword(s, "longenough", &err));
+  // URL is irrelevant in safe mode: a valid password is enough to accept updates.
+  TEST_ASSERT_FALSE(safeModeNeedsPortal(s));
+  TEST_ASSERT_TRUE(applyServerUrl(s, "homeserver:8080", &err));
+  TEST_ASSERT_FALSE(safeModeNeedsPortal(s));
+  strcpy(s.updatePassword, "short");  // corrupt/invalid stored password
+  TEST_ASSERT_TRUE(safeModeNeedsPortal(s));
+}
+
+void test_safe_mode_ap_fallback_after_connect_timeout() {
+  TEST_ASSERT_FALSE(safeModeApFallback(false, kSafeModeConnectMs - 1));
+  TEST_ASSERT_TRUE(safeModeApFallback(false, kSafeModeConnectMs));
+  TEST_ASSERT_FALSE(safeModeApFallback(true, kSafeModeConnectMs * 10));
+}
+
+void test_parse_next_in() {
+  TEST_ASSERT_EQUAL_INT(-1, parseNextIn(nullptr));
+  TEST_ASSERT_EQUAL_INT(-1, parseNextIn(""));
+  TEST_ASSERT_EQUAL_INT(15, parseNextIn("15"));
+  TEST_ASSERT_EQUAL_INT(15, parseNextIn(" 15 "));
+  TEST_ASSERT_EQUAL_INT(0, parseNextIn("0"));
+  TEST_ASSERT_EQUAL_INT(-1, parseNextIn("-3"));
+  TEST_ASSERT_EQUAL_INT(-1, parseNextIn("1.5"));
+  TEST_ASSERT_EQUAL_INT(-1, parseNextIn("abc"));
+  TEST_ASSERT_EQUAL_INT(9999, parseNextIn("99999999999999999999"));  // saturates, clamped later
+  TEST_ASSERT_EQUAL_UINT32(30000, nextDelayMs(true, parseNextIn("99999999999999999999"), 0));
+}
+
+void test_store_etag() {
+  char e[kEtagCap];
+  TEST_ASSERT_TRUE(storeEtag(e, "\"abc\""));
+  TEST_ASSERT_EQUAL_STRING("\"abc\"", e);
+  std::string max(kEtagCap - 1, 'x');
+  TEST_ASSERT_TRUE(storeEtag(e, max.c_str()));
+  TEST_ASSERT_EQUAL_STRING(max.c_str(), e);
+  std::string tooLong(kEtagCap, 'y');
+  TEST_ASSERT_FALSE(storeEtag(e, tooLong.c_str()));  // never keep a truncated tag
+  TEST_ASSERT_EQUAL_STRING("", e);
+  TEST_ASSERT_FALSE(storeEtag(e, nullptr));
+  TEST_ASSERT_EQUAL_STRING("", e);
+}
+
+void test_frame_error_text() {
+  char b[kErrorTextCap];
+  frameErrorText(500, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("HTTP 500", b);
+  frameErrorText(-1, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("connection failed", b);
+  frameErrorText(-11, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("read timeout", b);
+  frameErrorText(kErrFrameLength, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("bad frame size", b);
+  frameErrorText(kErrBodyRead, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("frame incomplete", b);
+  frameErrorText(kErrDecode, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("bad JPEG", b);
+  frameErrorText(kErrNoWifi, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("no Wi-Fi", b);
+  frameErrorText(-7, b, sizeof(b));
+  TEST_ASSERT_EQUAL_STRING("network error -7", b);
+  char tiny[4];
+  frameErrorText(500, tiny, sizeof(tiny));
+  TEST_ASSERT_EQUAL_STRING("HTT", tiny);
+}
+
+void test_poller_success_uses_next_in_and_resets_failures() {
+  FramePoller p;
+  p.begin(1000);
+  PollOutcome o = p.onFailure(-1, 2000);
+  TEST_ASSERT_EQUAL_UINT32(2000, o.delayMs);
+  o = p.onFailure(-1, 4000);
+  TEST_ASSERT_EQUAL_UINT32(4000, o.delayMs);
+  TEST_ASSERT_EQUAL_UINT8(2, p.failures());
+  o = p.onSuccess(12, 8000);
+  TEST_ASSERT_EQUAL_UINT32(12000, o.delayMs);
+  TEST_ASSERT_FALSE(o.drawOffline);
+  TEST_ASSERT_FALSE(o.clearEtag);
+  TEST_ASSERT_EQUAL_UINT8(0, p.failures());
+  TEST_ASSERT_EQUAL_UINT32(2000, p.onFailure(-1, 9000).delayMs);  // backoff restarts
+}
+
+void test_poller_offline_after_120s_since_boot_or_last_success() {
+  FramePoller p;
+  p.begin(5000);  // never succeeded: the clock starts at begin()
+  TEST_ASSERT_FALSE(p.onFailure(-1, 5000 + 119999).drawOffline);
+  PollOutcome o = p.onFailure(-1, 5000 + 120000);
+  TEST_ASSERT_TRUE(o.drawOffline);
+  TEST_ASSERT_TRUE(o.clearEtag);  // screen no longer shows the frame of the stored ETag
+  TEST_ASSERT_TRUE(p.offline());
+  // Same error again: no redraw (no flicker every poll).
+  o = p.onFailure(-1, 5000 + 150000);
+  TEST_ASSERT_FALSE(o.drawOffline);
+  TEST_ASSERT_FALSE(o.clearEtag);
+  // Different error while offline: redraw with the new text.
+  TEST_ASSERT_TRUE(p.onFailure(500, 5000 + 180000).drawOffline);
+  TEST_ASSERT_FALSE(p.onFailure(500, 5000 + 210000).drawOffline);
+  // Recovery leaves offline; a later outage needs another full 120 s.
+  p.onSuccess(10, 300000);
+  TEST_ASSERT_FALSE(p.offline());
+  TEST_ASSERT_FALSE(p.onFailure(-1, 300000 + 119999).drawOffline);
+  TEST_ASSERT_TRUE(p.onFailure(-1, 300000 + 120000).drawOffline);
+}
+
+void test_poller_millis_wraparound() {
+  FramePoller p;
+  p.begin(0xFFFFF000u);
+  TEST_ASSERT_FALSE(p.onFailure(-1, 0x00001000u).drawOffline);  // 8 KB ms later, wrapped
+  TEST_ASSERT_TRUE(p.onFailure(-1, 0xFFFFF000u + 120000u).drawOffline);
+}
+
+void test_poller_decode_error_clears_etag() {
+  FramePoller p;
+  p.begin(0);
+  PollOutcome o = p.onFailure(kErrDecode, 1000);
+  TEST_ASSERT_TRUE(o.clearEtag);  // a partial draw must be replaced by a full 200 next time
+  TEST_ASSERT_FALSE(o.drawOffline);
+  TEST_ASSERT_FALSE(p.onFailure(-1, 2000).clearEtag);  // the last good frame still stands
+}
+
+void test_poller_failure_count_saturates() {
+  FramePoller p;
+  p.begin(0);
+  for (int i = 0; i < 300; ++i) p.onFailure(-1, 1000);
+  TEST_ASSERT_EQUAL_UINT8(255, p.failures());
+  TEST_ASSERT_EQUAL_UINT32(30000, p.onFailure(-1, 1000).delayMs);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_boot_fresh_magic);
@@ -432,5 +580,16 @@ int main() {
   RUN_TEST(test_ota_flow_not_an_image_rejected_on_first_chunk);
   RUN_TEST(test_ota_flow_md5_mismatch_and_errors_discard);
   RUN_TEST(test_ota_flow_empty_and_second_part_after_failure);
+  RUN_TEST(test_health_latch_marks_exactly_once);
+  RUN_TEST(test_safe_mode_portal_only_without_valid_password);
+  RUN_TEST(test_safe_mode_ap_fallback_after_connect_timeout);
+  RUN_TEST(test_parse_next_in);
+  RUN_TEST(test_store_etag);
+  RUN_TEST(test_frame_error_text);
+  RUN_TEST(test_poller_success_uses_next_in_and_resets_failures);
+  RUN_TEST(test_poller_offline_after_120s_since_boot_or_last_success);
+  RUN_TEST(test_poller_millis_wraparound);
+  RUN_TEST(test_poller_decode_error_clears_etag);
+  RUN_TEST(test_poller_failure_count_saturates);
   return UNITY_END();
 }
