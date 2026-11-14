@@ -39,10 +39,10 @@ Ein einfacher Neustart (Schaltfläche **Neustart**, `POST /restart`) verlässt d
 
 ## Boot-Zähler und Stromunterbrechung
 
-Der Zähler liegt in einem Speicherbereich, der Neustarts überlebt, aber **keinen Stromausfall**. Daraus folgt:
+Der Zähler liegt in einem Speicherbereich, der Neustarts überlebt. Bei jedem Start prüft die Firmware außerdem, **warum** der Chip gestartet ist: Nach dem Einschalten beginnt sie immer neu zu zählen, auch wenn der Speicher eine kurze Stromunterbrechung überstanden hat. Daraus folgt:
 
-- Stecker ziehen und wieder einstecken **setzt den Zähler zurück**. Nach einer Stromunterbrechung startet das Gerät wieder die normale Firmware und hat drei neue Versuche.
-- Reset-Taste oder Neustart per Software behalten den Zähler. Drei Neustarts innerhalb einer Minute zählen jeweils als Fehlstart.
+- Stecker ziehen und wieder einstecken **setzt den Zähler zurück**. Nach einer Stromunterbrechung startet das Gerät wieder die normale Firmware und hat drei neue Versuche. Ein Signal am Reset-Pin des Chips (zum Beispiel von einem seriellen Adapter) zählt genauso.
+- Abstürze, Watchdog-Resets und Neustarts per Software (die Schaltfläche **Neustart**, ein Update) behalten den Zähler. Drei davon innerhalb einer Minute zählen jeweils als Fehlstart.
 - Scheitert die Firmware immer wieder und du unterbrichst jedes Mal den Strom, kommst du von allein nie in den Safe Mode. Spiele dann eine funktionierende Firmware auf (zum Beispiel direkt nach dem Einstecken, in der ersten Minute, sobald `/update` antwortet) oder nimm den seriellen Weg unten.
 
 ## Serielles Flashen
