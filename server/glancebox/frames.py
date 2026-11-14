@@ -99,7 +99,7 @@ def _jinja_env(extra_dirs: list) -> jinja2.Environment:
     return env
 
 
-async def _render_page(page: PageConfig, ptype: PageType, cfg: AppConfig, renderer,
+async def render_page(page: PageConfig, ptype: PageType, cfg: AppConfig, renderer,
                        now: float) -> bytes:
     if ptype.kind == "url":
         o = page.options
@@ -130,7 +130,7 @@ async def refresh_once(cfg: AppConfig, types: dict[str, PageType], renderer,
             ptype = types.get(page.type)
             if ptype is None:
                 raise LookupError(f"unknown page type {page.type!r}")
-            jpeg = await _render_page(page, ptype, cfg, renderer, now)
+            jpeg = await render_page(page, ptype, cfg, renderer, now)
         except Exception as e:
             log.exception("%s: refresh failed", label)
             store.mark_attempt(page.index, now, f"{type(e).__name__}: {e}")

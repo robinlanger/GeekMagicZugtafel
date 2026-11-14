@@ -10,6 +10,9 @@ description = "Glance Box server: renders 240x240 pages for the display"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 
+[project.scripts]
+glancebox = "glancebox.__main__:main"
+
 [tool.setuptools.packages.find]
 include = ["glancebox*"]
 
