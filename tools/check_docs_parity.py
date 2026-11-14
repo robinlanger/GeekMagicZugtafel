@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Usage: check_docs_parity.py [repo-root]. Exit 1 if the EN and DE docs drift apart.
+
+Checks README.md <-> README.de.md and docs/en/* <-> docs/de/*: both sides must exist and have
+the same heading level sequence (headings inside fenced code blocks are ignored).
+"""
+import re
+import sys
+from pathlib import Path
+
+HEADING = re.compile(r"^(#{1,6})\s")
+FENCE = re.compile(r"^\s*(```|~~~)")
+
+
+def levels(path: Path) -> list[int]:
+    out: list[int] = []
+    fence = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = FENCE.match(line)
+        if m:
+            if fence is None:
+                fence = m.group(1)
+            elif fence == m.group(1):
+                fence = None
+            continue
+        if fence is None and (h := HEADING.match(line)):
+            out.append(len(h.group(1)))
+    return out
+
+
+def pairs(root: Path) -> tuple[list[tuple[Path, Path]], list[str]]:
+    found: list[tuple[Path, Path]] = []
+    errors: list[str] = []
+    en, de = root / "README.md", root / "README.de.md"
+    if en.exists() and not de.exists():
+        errors.append("README.de.md is missing")
+    elif en.exists():
+        found.append((en, de))
+    en_dir, de_dir = root / "docs" / "en", root / "docs" / "de"
+    en_files = {p.name for p in en_dir.glob("*") if p.is_file()} if en_dir.is_dir() else set()
+    de_files = {p.name for p in de_dir.glob("*") if p.is_file()} if de_dir.is_dir() else set()
+    for name in sorted(en_files - de_files):
+        errors.append(f"docs/de/{name} is missing")
+    for name in sorted(de_files - en_files):
+        errors.append(f"docs/en/{name} is missing")
+    for name in sorted(en_files & de_files):
+        found.append((en_dir / name, de_dir / name))
+    return found, errors
+
+
+def main(argv: list[str]) -> int:
+    root = Path(argv[1]) if len(argv) > 1 else Path(__file__).resolve().parents[1]
+    found, errors = pairs(root)
+    for a, b in found:
+        la, lb = levels(a), levels(b)
+        if la != lb:
+            errors.append(f"heading levels differ: {a.relative_to(root)} {la} vs {b.relative_to(root)} {lb}")
+    for e in errors:
+        print(f"FAIL: {e}", file=sys.stderr)
+    if not errors:
+        print(f"OK: {len(found)} document pairs match")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

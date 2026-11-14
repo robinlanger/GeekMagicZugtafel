@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+.err{display:flex;flex-direction:column;align-items:center;justify-content:center;width:240px;height:240px;text-align:center;}
+.err h1{margin:0 0 10px;font-size:26px;color:var(--orange);}
+.err p{margin:0;padding:0 16px;font-size:15px;color:var(--muted);}
+</style>
+{% endblock %}
+{% block body %}
+<div class="err"><h1>{{ message | default("Keine Daten") }}</h1>{% if sub %}<p>{{ sub }}</p>{% endif %}</div>
+{% endblock %}

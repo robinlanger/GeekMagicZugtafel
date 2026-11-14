@@ -1,0 +1,56 @@
+#pragma once
+// DE/EN strings for the device web UI (stored in flash).
+#include <Arduino.h>
+
+#include <string>
+
+enum class Lang : uint8_t { En, De };
+
+enum class Msg : uint8_t {
+  Status,
+  Uptime,
+  Signal,
+  Frames,
+  LastFrame,
+  SafeMode,
+  BootFailures,
+  Settings,
+  ServerUrl,
+  Brightness,
+  NewPassword,
+  Save,
+  Saved,
+  AuthHint,
+  FirmwareUpdate,
+  Md5Label,
+  Upload,
+  Device,
+  Restart,
+  Reset,
+  ResetConfirm,
+  Restarting,
+  ResetDone,
+  Back,
+  ErrHttps,
+  ErrScheme,
+  ErrEmptyHost,
+  ErrTooLong,
+  ErrPwShort,
+  ErrPwLong,
+  ErrPwChars,
+  ErrBrightness,
+  ErrSaveFailed,
+  ErrWrongPassword,
+  ErrResetFailed,
+  SafeTitle,
+  SafeExplain,
+  BootNormal,
+  Count
+};
+
+// German when the first Accept-Language entry is "de*", English otherwise.
+Lang langFromHeader(const String& acceptLanguage);
+const __FlashStringHelper* tr(Lang lang, Msg msg);
+// Maps a gb::apply* error code ("too_short", "https_unsupported", ...) to a message.
+// isPassword selects the password variant of "too_long".
+Msg msgForError(const std::string& code, bool isPassword);

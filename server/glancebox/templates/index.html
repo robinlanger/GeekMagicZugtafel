@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="30">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glance Box {{ version }}</title>
+<style>
+body{font-family:sans-serif;margin:16px;background:#fafafa;color:#222}
+.page{display:inline-block;vertical-align:top;margin:0 16px 16px 0;width:240px}
+.page img,.page .none{width:240px;height:240px;display:block;background:#ddd}
+.err{color:#b00020;font-size:13px;word-break:break-word}
+.meta{font-size:13px;color:#555}
+</style>
+</head>
+<body>
+<h1>Glance Box {{ version }}</h1>
+{% for p in pages %}
+<div class="page">
+  {% if p.has_frame %}<img src="/preview/{{ p.index }}.jpg" alt="page {{ p.index }}" width="240" height="240">
+  {% else %}<div class="none"></div>{% endif %}
+  <div><strong>#{{ p.index }}</strong> {{ p.type }}</div>
+  <div class="meta">{% if p.age is not none %}age {{ p.age }} s{% else %}no frame{% endif %}</div>
+  {% if p.error %}<div class="err">{{ p.error }}</div>{% endif %}
+</div>
+{% endfor %}
+</body>
+</html>

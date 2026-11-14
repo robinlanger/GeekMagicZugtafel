@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: server/requirements.lock
+      - name: Install
+        run: |
+          pip install -r requirements.lock
+          pip install --no-deps -e .
+      - name: Ruff
+        run: ruff check . ../pages
+      - name: Tests (browser tests run in the server-image job)
+        run: pytest -q -m "not browser"
+
+  server-image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: docker/setup-buildx-action@v3.10.0
+      - name: Build image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: glancebox:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Browser tests inside the image
+        run: docker run --rm glancebox:ci pytest -q -m browser
+
+  firmware:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4.2.3
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+      - run: pip install platformio==6.2.0
+      - name: Native unit tests
+        working-directory: firmware
+        run: pio test -e native
+      - name: Build firmware
+        working-directory: firmware
+        run: pio run -e ultra -e spike -e ultra-crashtest
+      - name: Size check
+        run: python3 tools/check_fw_size.py firmware/.pio/build/ultra/firmware.bin firmware/size-limit.txt
+      - name: Copy bin out of the hidden .pio directory
+        run: |
+          mkdir dist
+          cp firmware/.pio/build/ultra/firmware.bin dist/glancebox-ultra-ci.bin
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: firmware-ultra-${{ github.sha }}
+          path: dist/glancebox-ultra-ci.bin
+          if-no-files-found: error
+
+  docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+      - name: EN/DE parity
+        run: python3 tools/check_docs_parity.py

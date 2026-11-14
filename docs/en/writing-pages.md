@@ -1,0 +1,116 @@
+# Writing your own pages
+
+There are two ways to get your own content on the display: point the server at a web page (`url` page), or write a small page type with a Python file and an HTML template (script page). The first needs no programming at all.
+
+## Two kinds of pages
+
+| | `url` page | script page |
+| --- | --- | --- |
+| What you write | nothing, or a web page that you host yourself | `page.py` and `template.html` |
+| Good for | dashboards or status pages that already exist | data from an API, a file or a sensor, shown in your own layout |
+| Configuration | `type: url` and `url: ...` | `type: <folder name>` |
+
+## The page contract
+
+A script page is a folder with two files. The folder name is the page type:
+
+```
+pages-custom/
+  mypage/
+    page.py
+    template.html
+```
+
+### page.py
+
+```python
+def fetch(options: dict, ctx) -> dict:
+    return {"title": "Hello"}
+```
+
+- `fetch(options, ctx)` is **required**. It returns a dict. Every key becomes a variable in the template. It runs in a worker thread (blocking calls such as HTTP requests are fine) and must finish within 20 seconds.
+- **Give every network call a timeout**, for example `requests.get(url, timeout=10)`. The 20-second limit only stops waiting for the result: a call that hangs keeps its worker thread busy, and a few of them can stall all script pages.
+- `validate(options)` is optional. Raise `ValueError("...")` to reject a bad configuration. The server then refuses to start and shows your message with the page number.
+- `MIN_REFRESH = 60` is optional (an integer). It sets the smallest allowed `refresh` for your page, for example to respect a rate limit.
+- Other `.py` files in the same folder can be imported with `from .helper import something`.
+
+`options` holds every key of the page entry in `config.yaml` except `type`, `duration` and `refresh`. `ctx` has three fields:
+
+| Field | Meaning |
+| --- | --- |
+| `ctx.now` | the current time as a datetime with the time zone from `config.yaml` |
+| `ctx.lang` | the top-level `lang` (`de` or `en`) |
+| `ctx.timezone` | the time zone name |
+
+If `fetch` raises an error, the page keeps its last good picture for up to 10 minutes and the error appears in the log and on the preview page. An error in `page.py` while loading (a typo) stops the server at startup with a clear message.
+
+A page may instead catch the error and return data for a picture that says so. The built-in `bahn` page does this on purpose: when DBF cannot be reached it shows "Keine Daten" right away instead of keeping its last picture, because departure minutes that are 10 minutes old would be wrong.
+
+### template.html
+
+A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dark background, the bundled DejaVu fonts (with umlauts) and these CSS variables: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`.
+
+```html
+{% extends "base.html" %}
+{% block head %}<style>h1{font-size:28px;margin:20px}</style>{% endblock %}
+{% block body %}<h1>{{ title }}</h1>{% endblock %}
+```
+
+Values are HTML-escaped automatically. The canvas is exactly 240x240 pixels and nothing scrolls, so anything that does not fit is cut off. The fonts are "DejaVu Sans" and "DejaVu Sans Condensed" (regular and bold). The condensed one gives you more characters per line.
+
+## Walkthrough: the clock page
+
+The built-in `clock` page is the smallest useful example (`pages/clock/`). Its `page.py` does three things:
+
+1. `validate` rejects a `lang` other than `de` or `en`.
+2. `fetch` takes the language (the page's own `lang` option, or the top-level one), formats `ctx.now` and returns `{"time": "14:05", "weekday": "Dienstag", "date": "14.11.2026"}`.
+3. Nothing else: no network, no state.
+
+Its `template.html` extends `base.html` and uses `{{ time }}`, `{{ weekday }}` and `{{ date }}`, centered in the 240x240 area with a large, bold time. Copy it and change it:
+
+```sh
+mkdir -p pages-custom
+cp -r pages/clock pages-custom/mypage
+```
+
+Edit `pages-custom/mypage/page.py` and `template.html`, add the page to `config.yaml`:
+
+```yaml
+pages:
+  - type: mypage
+    refresh: 30
+```
+
+and restart with `docker compose restart`. A page in `pages-custom` with the name of a built-in page (`clock`, `bahn`) replaces the built-in one.
+
+## The url page and its tips
+
+```yaml
+- type: url
+  url: http://homeserver.lan/status-240
+  wait_for: "#ready"
+```
+
+The server loads the address in a headless Chromium with a window of exactly **240x240 pixels** and device scale factor 1, then takes a screenshot. So:
+
+- **Design for 240x240.** A desktop page shrunk to this size is unreadable. Build a page just for the display: large text (at least 18 px), few elements, high contrast, no scrollbars. Use `html, body { width: 240px; height: 240px; overflow: hidden; }`.
+- **Use `wait_for`** when the page fills itself with JavaScript. Give the finished content an element (for example `<div id="ready">`) and set `wait_for: "#ready"`. Use `wait_ms` only for a fixed extra pause, for example for an animation.
+- **Keep the picture simple.** A picture must fit into 24 576 bytes as a JPEG. Flat areas and plain text compress very well, photos and fine gradients badly. If the server has to lower the quality a lot, text gets blurry.
+- **The server has to reach the address from inside the container.** Use the LAN address or name, not `localhost`.
+- **No login screens.** The server's browser has no saved logins. A page that needs a login shows the login. Make a read-only page for the display, and do not publish it to the internet, because the display image is served without any password.
+- Every refresh loads the page again, so `refresh: 30` means one request to your page every 30 seconds.
+
+## Previewing in the browser
+
+Open `http://<server>:8080/`. It shows every page of your playlist as a 240x240 picture with its age and last error, and refreshes itself every 30 seconds. After a change to `page.py` or `template.html` restart the server (`docker compose restart`) and reload. If your page does not appear as a picture, the error text under it tells you why. `docker compose logs` has the details.
+
+## The render command
+
+To try a page without a display, render one page once to a file:
+
+```sh
+docker compose exec glancebox python -m glancebox render 0 -o /tmp/page0.png
+docker compose cp glancebox:/tmp/page0.png .
+```
+
+`0` is the number of the page in `pages:` (counting from 0). The output is a PNG when the name ends in `.png`, otherwise a JPEG, exactly as the display would get it. The command uses the configuration of the running server (`--config` selects another file) and exits with an error message if the configuration or the rendering fails. Outside Docker, install the server (`pip install -e server` in a Python 3.12 environment with Playwright's Chromium) and run `python -m glancebox render 0 -o page0.png --config config.yaml`.

@@ -1,0 +1,18 @@
+# Glance Box server configuration (mount at /config/config.yaml in Docker).
+interval: 30              # default display time per page, in seconds
+timezone: Europe/Berlin
+lang: de                  # language for built-in pages (de or en)
+custom_pages_dir: /config/pages   # your own pages (<type>/page.py + template.html); may be missing
+
+pages:
+  - type: bahn
+    station: "Frankfurt(Main)Hbf"
+    via: [Darmstadt]
+    platforms: ["1", "2"]
+    limit: 4
+    title: Heimweg
+    refresh: 60           # data at most once a minute (DB rule, minimum 60 for bahn)
+  - type: url
+    url: http://homeserver.lan/status-240
+    duration: 15          # show this page for 15 s instead of the default interval
+    refresh: 30           # re-render every 30 s

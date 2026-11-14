@@ -1,0 +1,127 @@
+# Server-Konfiguration
+
+Der ganze Server wird mit einer einzigen Datei eingestellt, `config.yaml`. Als Vorlage dient `config.example.yaml`.
+
+## Wo die Datei liegt
+
+Mit der mitgelieferten `docker-compose.yml` liest der Server `./config.yaml` aus dem Projektordner (schreibgeschützt unter `/config/config.yaml` eingebunden). Eigene Seiten kommen nach `./pages-custom` (unter `/config/pages` eingebunden, siehe [Seiten schreiben](writing-pages.md)). **Lege diesen Ordner vor dem ersten Start an** (`mkdir pages-custom`), sonst legt Docker ihn als root an.
+
+Starte den Server nach jeder Änderung neu:
+
+```sh
+docker compose restart
+docker compose logs --tail 50
+```
+
+Der Server prüft die Datei beim Start. Stimmt etwas nicht (Tippfehler bei einem Schlüssel, unbekannter Seitentyp, `refresh` unter dem Minimum), startet er nicht und schreibt eine klare Meldung ins Log.
+
+## Optionen auf oberster Ebene
+
+| Schlüssel | Standard | Bedeutung |
+| --- | --- | --- |
+| `interval` | `30` | Standard-Anzeigedauer einer Seite in Sekunden. |
+| `timezone` | `Europe/Berlin` | Zeitzone für Uhren und Uhrzeiten auf Seiten (IANA-Name). |
+| `lang` | `de` | Standardsprache der mitgelieferten Seiten (`de` oder `en`). |
+| `custom_pages_dir` | nicht gesetzt | Ordner mit deinen eigenen Seitentypen. Relative Pfade gelten ab dem Ordner der Konfigurationsdatei. Er darf fehlen, der Server warnt dann im Log und nutzt nur die mitgelieferten Seiten. In Docker `/config/pages`. |
+| `pages` | Pflicht | Die Playlist, mindestens eine Seite. |
+
+Unbekannte Schlüssel auf oberster Ebene werden abgelehnt.
+
+## Optionen, die jede Seite hat
+
+```yaml
+pages:
+  - type: clock
+    duration: 15
+    refresh: 60
+```
+
+| Schlüssel | Standard | Bedeutung |
+| --- | --- | --- |
+| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock` oder ein eigener. |
+| `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
+| `refresh` | `duration` | Eine Seite wird höchstens alle `refresh` Sekunden neu gerendert. Nimm einen größeren Wert für Daten, die sich langsam ändern, oder für Dienste, die Anfragen begrenzen. |
+
+Alle anderen Schlüssel gehören zum Seitentyp und stehen unten.
+
+## Seitentyp: url
+
+Rendert eine Webseite unverändert, in einem Browserfenster von genau 240x240 Pixeln.
+
+```yaml
+- type: url
+  url: http://homeserver.lan/status-240
+  wait_for: "#ready"
+  wait_ms: 500
+  duration: 15
+  refresh: 30
+```
+
+| Schlüssel | Standard | Bedeutung |
+| --- | --- | --- |
+| `url` | Pflicht | Adresse mit `http://` oder `https://`. |
+| `wait_for` | keiner | CSS-Selektor. Der Screenshot entsteht erst, wenn ein passendes Element existiert. Nutze das für Seiten, die ihren Inhalt mit JavaScript aufbauen. |
+| `wait_ms` | `0` | Zusätzliche Pause in Millisekunden vor dem Screenshot (nachdem die Seite geladen ist und `wait_for` gepasst hat). |
+| `timeout_s` | `15` | Wie lange Laden und `wait_for` dauern dürfen, bevor die Seite als fehlgeschlagen gilt. |
+
+Der Server läuft in einem Container. `localhost` heißt dort der Container selbst, nimm also die LAN-Adresse oder den Namen des anderen Rechners. Seiten, die eine Anmeldung brauchen, zeigen den Anmeldebildschirm. Tipps zum Gestalten solcher Seiten stehen in [Seiten schreiben](writing-pages.md#die-url-seite-und-ihre-tipps).
+
+## Seitentyp: bahn
+
+Live-Abfahrten für einen deutschen Bahnhof von [DBF](https://dbf.finalrewind.org) (db-infoscreen).
+
+```yaml
+- type: bahn
+  station: "Frankfurt(Main)Hbf"
+  via: [Wiesbaden, Mainz]
+  platforms: "101,102"
+  limit: 4
+  title: "Frankfurt"
+  refresh: 60
+```
+
+| Schlüssel | Standard | Bedeutung |
+| --- | --- | --- |
+| `station` | Pflicht | Bahnhofsname, EVA-Nummer oder DS100-Kürzel. Den genauen Namen findest du auf dbf.finalrewind.org: der Teil der Adresse nach der Suche. |
+| `via` | alle | Nur Züge, die **nach** deinem Bahnhof an einem dieser Orte halten (Text oder Liste). Zwischenhalte funktionieren besser als Endziele, weil sie auch Züge erfassen, die früher enden. |
+| `platforms` | alle | Nur diese Gleise (Text oder Liste). |
+| `limit` | `4` | Zeilen, 1 bis 6. Weniger Zeilen bedeuten größere Schrift. |
+| `title` | der Bahnhof | Text der Kopfzeile. |
+| `dbf_url` | `https://dbf.finalrewind.org` | Adresse einer DBF-Instanz, falls du eine eigene betreibst. |
+| `refresh` | `60` | **Mindestens 60.** Das ist die DBF-Regel von einer Anfrage pro Bahnhof und Minute. Setzt du `refresh` nicht, wird es automatisch auf 60 angehoben. Setzt du einen Wert unter 60, startet der Server nicht. |
+
+Ist DBF nicht erreichbar, zeigt die Seite „Keine Daten“, eine leere Liste zeigt „Keine Abfahrten“. Mehr steht in `pages/bahn/README.md`.
+
+## Seitentyp: clock
+
+Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene Seiten.
+
+```yaml
+- type: clock
+  lang: en
+  refresh: 60
+```
+
+| Schlüssel | Standard | Bedeutung |
+| --- | --- | --- |
+| `lang` | `lang` von oberster Ebene | `de` oder `en`. |
+
+## So verhält sich die Playlist
+
+- Welche Seite gerade läuft, ergibt sich aus der **Uhrzeit**: Die Anzeigedauern aller Seiten ergeben zusammen einen Zyklus, und die Position im Zyklus ist die aktuelle Zeit modulo dieser Summe. Der Server merkt sich nichts pro Gerät, also zeigen mehrere Displays gleichzeitig dieselbe Seite.
+- Das Display fragt nach der Zeit, die der Server nennt, nach dem nächsten Bild. Diese Zeit liegt immer zwischen 2 und 30 Sekunden. Das Bild wird nur übertragen, wenn es sich geändert hat, sonst antwortet der Server „nicht geändert“.
+- Die Bilder sind Baseline-JPEGs mit 240x240 Pixeln und höchstens 24 576 Bytes. Der Server senkt die Qualität (von 85 bis auf 40), bis ein Bild passt. Sehr detailreiche Bilder (Fotos, feine Farbverläufe) können trotzdem scheitern, einfarbige Flächen funktionieren am besten.
+- Fällt eine Seite aus (Datenquelle down, Fehler im Template), zeigt der Server **bis zu 10 Minuten lang ihr letztes gutes Bild** weiter. Danach wird die Seite übersprungen. Funktioniert gar keine Seite, zeigt das Display eine Fehlerseite statt eines schwarzen Bildschirms. Fehler stehen im Log und auf der Vorschauseite.
+
+## Server prüfen und betreiben
+
+| Adresse | Wozu |
+| --- | --- |
+| `http://<server>:8080/` | Vorschau aller Seiten mit Alter und letztem Fehler (aktualisiert sich selbst). |
+| `http://<server>:8080/preview/<n>.jpg` | Das aktuelle Bild von Seite Nummer `n` (ab 0 gezählt). |
+| `http://<server>:8080/healthz` | Kleines JSON für Gesundheitsprüfungen (Docker nutzt es). Antwortet mit 503, solange der Renderer oder sein Browser ausgefallen ist. |
+| `http://<server>:8080/api/v1/frame` | Was das Display abruft. |
+
+Der Server läuft als normaler Benutzer (nicht als root) und hat **keine Anmeldung**. Lass Port 8080 in deinem Heimnetz. Für einen anderen Port änderst du die linke Zahl bei `ports:` in der `docker-compose.yml`, zum Beispiel `"9090:8080"`.
+
+Server aktualisieren: `git pull` und `docker compose up -d --build`. Zu jedem Release gibt es auch ein fertiges Image, `ghcr.io/robinlanger/glancebox:<version>`, für amd64 und arm64.
