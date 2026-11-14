@@ -9,8 +9,22 @@ constexpr size_t kMaxFileBytes = 512;
 
 bool mounted = false;
 
+// Never auto-format: a failed mount at boot (stock firmware's data, a future layout
+// change) must not erase the partition and with it the update password. Only the
+// user-initiated writes (save, factory reset) may format, see mountForWrite().
 bool mount() {
-  if (!mounted) mounted = LittleFS.begin();
+  if (mounted) return true;
+  LittleFSConfig cfg;
+  cfg.setAutoFormat(false);
+  LittleFS.setConfig(cfg);  // only fails while mounted, which we are not
+  mounted = LittleFS.begin();
+  return mounted;
+}
+
+bool mountForWrite() {
+  if (mount()) return true;
+  // Unusable file system: the user asked us to write, so start a fresh one.
+  mounted = LittleFS.format() && LittleFS.begin();
   return mounted;
 }
 
@@ -29,6 +43,7 @@ bool readFile(std::string* out) {
 }
 }  // namespace
 
+// Read-only: never writes flash (a mount failure just leaves the defaults).
 bool settingsLoad(gb::Settings& s) {
   s = gb::Settings();
   std::string text;
@@ -40,7 +55,7 @@ bool settingsLoad(gb::Settings& s) {
 }
 
 bool settingsSave(const gb::Settings& s) {
-  if (!mount()) return false;
+  if (!mountForWrite()) return false;
   const std::string text = gb::encodeSettings(s);
   std::string current;
   if (readFile(&current) && current == text) return true;  // unchanged: no flash write
@@ -57,7 +72,7 @@ bool settingsSave(const gb::Settings& s) {
 }
 
 bool settingsErase() {
-  if (!mount()) return false;
+  if (!mountForWrite()) return false;
   LittleFS.remove(kTmpPath);
   return !LittleFS.exists(kPath) || LittleFS.remove(kPath);
 }
