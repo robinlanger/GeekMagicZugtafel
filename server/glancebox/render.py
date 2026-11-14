@@ -97,15 +97,15 @@ class Renderer:
             if wait_ms:
                 await page.wait_for_timeout(wait_ms)
 
-        return await self._render(load, timeout_s)
+        return await self._render(load, timeout_s + wait_ms / 1000)
 
-    async def _render(self, load, timeout_s: float) -> bytes:
+    async def _render(self, load, budget_s: float) -> bytes:
         if self._browser is None:
             raise RenderError("renderer not started")
         async with self._lock:
             context = page = None
             try:
-                async with asyncio.timeout(timeout_s + 2):
+                async with asyncio.timeout(budget_s + 2):
                     context = await self._browser.new_context(
                         viewport={"width": SIZE, "height": SIZE}, device_scale_factor=1
                     )

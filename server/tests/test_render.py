@@ -52,3 +52,26 @@ async def test_render_url_timeout_raises():
             assert time.monotonic() - t0 < 3
     finally:
         srv.shutdown()
+
+
+async def test_render_url_wait_ms_exceeds_timeout_succeeds():
+    class Fast(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = b"<p>ok</p>"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+
+    srv = HTTPServer(("127.0.0.1", 0), Fast)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        async with Renderer() as r:
+            out = await r.render_url(f"http://127.0.0.1:{srv.server_port}/", 4000, None, 1)
+        assert Image.open(io.BytesIO(out)).size == (240, 240)
+    finally:
+        srv.shutdown()
