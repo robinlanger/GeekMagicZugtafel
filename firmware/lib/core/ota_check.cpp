@@ -20,4 +20,10 @@ bool fitsOta(size_t imageSize, size_t freeSketchSpace) {
   return imageSize <= freeSketchSpace;
 }
 
+size_t otaBeginSize(size_t freeSketchSpace) {
+  constexpr size_t kSector = 0x1000;
+  if (freeSketchSpace <= kSector) return 0;
+  return (freeSketchSpace - kSector) & ~(kSector - 1);
+}
+
 }  // namespace gb
