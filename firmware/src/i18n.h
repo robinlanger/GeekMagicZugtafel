@@ -42,6 +42,9 @@ enum class Msg : uint8_t {
   ErrSaveFailed,
   ErrWrongPassword,
   ErrResetFailed,
+  SafeTitle,
+  SafeExplain,
+  BootNormal,
   Count
 };
 

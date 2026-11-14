@@ -41,6 +41,9 @@ GB_STR(en31, "Brightness must be a number from 5 to 100")
 GB_STR(en32, "Saving failed")
 GB_STR(en33, "Current update password is wrong")
 GB_STR(en34, "Reset failed: settings could not be erased")
+GB_STR(en35, "Safe mode")
+GB_STR(en36, "The device failed to boot several times and is running the minimal safe firmware. Upload a working firmware (.bin) below, or try the normal firmware again.")
+GB_STR(en37, "Boot normal firmware")
 
 // German
 GB_STR(de0, "Status")
@@ -78,17 +81,20 @@ GB_STR(de31, "Helligkeit muss eine Zahl von 5 bis 100 sein")
 GB_STR(de32, "Speichern fehlgeschlagen")
 GB_STR(de33, "Aktuelles Update-Passwort ist falsch")
 GB_STR(de34, "Zurücksetzen fehlgeschlagen: Einstellungen nicht gelöscht")
+GB_STR(de35, "Abgesicherter Modus")
+GB_STR(de36, "Das Gerät ist mehrfach nicht hochgefahren und läuft mit der minimalen Notfall-Firmware. Lade unten eine funktionierende Firmware (.bin) hoch oder versuche es noch einmal mit der normalen Firmware.")
+GB_STR(de37, "Normale Firmware starten")
 
 #undef GB_STR
 
 const char* const kEn[] PROGMEM = {en0,  en1,  en2,  en3,  en4,  en5,  en6,  en7,  en8,
                                    en9,  en10, en11, en12, en13, en14, en15, en16, en17,
                                    en18, en19, en20, en21, en22, en23, en24, en25, en26,
-                                   en27, en28, en29, en30, en31, en32, en33, en34};
+                                   en27, en28, en29, en30, en31, en32, en33, en34, en35, en36, en37};
 const char* const kDe[] PROGMEM = {de0,  de1,  de2,  de3,  de4,  de5,  de6,  de7,  de8,
                                    de9,  de10, de11, de12, de13, de14, de15, de16, de17,
                                    de18, de19, de20, de21, de22, de23, de24, de25, de26,
-                                   de27, de28, de29, de30, de31, de32, de33, de34};
+                                   de27, de28, de29, de30, de31, de32, de33, de34, de35, de36, de37};
 static_assert(sizeof(kEn) / sizeof(kEn[0]) == static_cast<size_t>(Msg::Count), "kEn size");
 static_assert(sizeof(kDe) / sizeof(kDe[0]) == static_cast<size_t>(Msg::Count), "kDe size");
 }  // namespace

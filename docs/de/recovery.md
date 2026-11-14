@@ -8,7 +8,7 @@ Was du tust, wenn etwas schiefgeht: der Safe Mode nach einem fehlerhaften Update
 
 Die Firmware zählt jeden Start. Er gilt als gesund nach **60 Sekunden Laufzeit mit verbundenem WLAN und laufendem Webserver**, dann geht der Zähler auf 0 zurück. Schaffen das **3 Starts hintereinander** nicht (Absturz, Hänger, endlose Neustarts), startet der nächste Start den Safe Mode. Ein Server, der nicht erreichbar ist, löst den Safe Mode **nicht** aus.
 
-Der Safe Mode hat fast keinen Code: WLAN, einen minimalen Webserver, die Update-Funktion und `/status`. Er dekodiert keine Bilder und fragt den Server nicht nach Frames.
+Der Safe Mode hat fast keinen Code: WLAN, einen minimalen Webserver mit einer Update-Seite, die Update-Funktion und `/status`. Er dekodiert keine Bilder und fragt den Server nicht nach Frames.
 
 ### Was du siehst
 
@@ -18,16 +18,16 @@ Das Display zeigt **„Safe mode“** mit der Firmware-Version, der Zahl der Feh
 
 ### Safe Mode verlassen
 
-Der Safe Mode hat kein Webformular, nur die folgenden Funktionen (Benutzer `admin`, dein Update-Passwort).
+Der Safe Mode liefert eine kleine Seite unter `http://<ip>/` und `http://<ip>/update` (deutsch oder englisch, je nach Browser). Sie enthält das Update-Formular und zwei Schaltflächen. Die Seite ist öffentlich, jede Aktion verlangt aber den Benutzer `admin` und dein Update-Passwort.
 
-1. **Eine funktionierende Firmware hochladen** (das vorige Release ist eine gute Wahl, oder das neueste):
+1. **Eine funktionierende Firmware hochladen** (das vorige Release ist eine gute Wahl, oder das neueste). Öffne im Browser die Seite, füge die MD5 ein (das erste Wort der `.md5`-Datei des Releases, siehe [Aktualisieren](updating.md#bevor-du-aktualisierst)), wähle die `.bin`-Datei und drücke **Hochladen**. Der Browser fragt nach `admin` und deinem Update-Passwort. Alternativ mit curl:
 
    ```sh
    curl -u admin:<passwort> -F md5=<md5> -F firmware=@glancebox-ultra-<version>.bin http://<ip>/update
    ```
 
    Nach dem Upload startet das Gerät mit sauberem Zähler in die neue Firmware. Die Einzelheiten des Befehls stehen unter [Aktualisieren](updating.md#update-mit-curl).
-2. **Oder die normale Firmware wieder starten**, zum Beispiel wenn etwas Vorübergehendes den Safe Mode ausgelöst hat:
+2. **Oder die normale Firmware wieder starten**, zum Beispiel wenn etwas Vorübergehendes den Safe Mode ausgelöst hat. Drücke auf der Seite **Normale Firmware starten** oder nimm curl:
 
    ```sh
    curl -u admin:<passwort> -X POST http://<ip>/boot-normal
@@ -35,7 +35,7 @@ Der Safe Mode hat kein Webformular, nur die folgenden Funktionen (Benutzer `admi
 
    Der nächste Start läuft mit der normalen Firmware. Scheitert er wieder dreimal, bist du zurück im Safe Mode.
 
-Ein einfacher Neustart (`POST /restart`) verlässt den Safe Mode **nicht**.
+Ein einfacher Neustart (Schaltfläche **Neustart**, `POST /restart`) verlässt den Safe Mode **nicht**.
 
 ## Boot-Zähler und Stromunterbrechung
 
