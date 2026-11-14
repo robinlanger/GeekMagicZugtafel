@@ -73,7 +73,9 @@ PollOutcome FramePoller::onFailure(int status, uint32_t nowMs) {
   // Decode and mid-body read errors happen while the frame is being drawn.
   const bool partialDraw = status == kErrDecode || status == kErrBodyRead;
   PollOutcome o{nextDelayMs(false, -1, failures_), false, partialDraw};
-  if (showOffline(nowMs - lastSuccessMs_) && (!offline_ || status != offlineStatus_)) {
+  // Redraw while offline when the error changed or a partial frame overwrote the screen.
+  if (showOffline(nowMs - lastSuccessMs_) &&
+      (!offline_ || status != offlineStatus_ || partialDraw)) {
     offline_ = true;
     offlineStatus_ = status;
     o.drawOffline = true;

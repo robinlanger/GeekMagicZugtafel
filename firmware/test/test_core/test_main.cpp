@@ -520,6 +520,27 @@ void test_poller_offline_after_120s_since_boot_or_last_success() {
   TEST_ASSERT_TRUE(p.onFailure(-1, 300000 + 120000).drawOffline);
 }
 
+void test_poller_offline_redrawn_after_partial_frames() {
+  FramePoller p;
+  p.begin(0);
+  // Slow link: every 200 starts drawing, then misses the body deadline.
+  PollOutcome o = p.onFailure(kErrBodyRead, 120000);
+  TEST_ASSERT_TRUE(o.drawOffline);
+  // Same error, but the partial frame overwrote the offline screen: redraw it.
+  o = p.onFailure(kErrBodyRead, 150000);
+  TEST_ASSERT_TRUE(o.drawOffline);
+  TEST_ASSERT_TRUE(o.clearEtag);
+  TEST_ASSERT_TRUE(p.onFailure(kErrDecode, 180000).drawOffline);
+  TEST_ASSERT_TRUE(p.onFailure(kErrDecode, 210000).drawOffline);
+  // Errors without drawing still do not flicker.
+  TEST_ASSERT_TRUE(p.onFailure(-1, 240000).drawOffline);  // error changed
+  TEST_ASSERT_FALSE(p.onFailure(-1, 270000).drawOffline);
+  // Before 120 s a partial draw does not bring up the offline screen.
+  FramePoller q;
+  q.begin(0);
+  TEST_ASSERT_FALSE(q.onFailure(kErrBodyRead, 1000).drawOffline);
+}
+
 void test_poller_millis_wraparound() {
   FramePoller p;
   p.begin(0xFFFFF000u);
@@ -591,6 +612,7 @@ int main() {
   RUN_TEST(test_frame_error_text);
   RUN_TEST(test_poller_success_uses_next_in_and_resets_failures);
   RUN_TEST(test_poller_offline_after_120s_since_boot_or_last_success);
+  RUN_TEST(test_poller_offline_redrawn_after_partial_frames);
   RUN_TEST(test_poller_millis_wraparound);
   RUN_TEST(test_poller_decode_error_clears_etag);
   RUN_TEST(test_poller_failure_count_saturates);

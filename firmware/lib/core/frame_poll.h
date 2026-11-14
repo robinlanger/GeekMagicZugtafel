@@ -31,7 +31,8 @@ struct PollOutcome {
 };
 
 // Poll loop state: backoff, offline screen after 120 s without success (once per
-// outage, redrawn only when the error changes). Times are millis() values; wraparound safe.
+// outage; redrawn when the error changes or a partial frame was drawn over it).
+// Times are millis() values; wraparound safe.
 class FramePoller {
  public:
   void begin(uint32_t nowMs);
