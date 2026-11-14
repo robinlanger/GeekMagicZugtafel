@@ -250,7 +250,7 @@ pages:
 - **Fehler:** Wenn `fetch` oder das Rendern fehlschlägt, bleibt das letzte gute Bild der Seite bis
   max. 10 min gültig. Danach wird die Seite übersprungen. Fehler landen im Log. Ist keine Seite
   verfügbar, kommt eine einfache Fehlerseite (nie schwarz).
-- **Zusatzendpunkte:** `GET /preview/<index>.png` und eine einfache Übersicht `/`, um Seiten im
+- **Zusatzendpunkte:** `GET /preview/<index>.jpg` und eine einfache Übersicht `/`, um Seiten im
   Browser zu prüfen (wichtig für Leute, die eigene Seiten bauen). `GET /healthz` für Docker.
 - **CLI:** `python -m glancebox render <index|typ> -o out.png` zum lokalen Testen ohne Gerät
   (Ersatz für `DRY_RUN`).
