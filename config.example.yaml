@@ -2,7 +2,7 @@
 interval: 30              # default display time per page, in seconds
 timezone: Europe/Berlin
 lang: de                  # language for built-in pages (de or en)
-# custom_pages_dir: /config/pages   # your own pages (pages/<type>/page.py + template.html)
+custom_pages_dir: /config/pages   # your own pages (<type>/page.py + template.html); may be missing
 
 pages:
   - type: bahn
