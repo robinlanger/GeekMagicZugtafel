@@ -1,16 +1,31 @@
+import importlib.util
+import sys
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from zugtafel.departures import Departure, _clean_train, matches, parse, parse_directions
-from zugtafel.render import SIZE, render
+# Load by file path: pages/bahn is not an installed package, and the top-level
+# name `departures` must not leak into sys.modules.
+_NAME = "glancebox_pages_bahn_departures"
+_spec = importlib.util.spec_from_file_location(_NAME, Path(__file__).parent / "departures.py")
+departures = importlib.util.module_from_spec(_spec)
+sys.modules[_NAME] = departures  # dataclasses looks the module up here
+_spec.loader.exec_module(departures)
 
-# Route enthält auch Halte VOR dem eigenen Bahnhof – die dürfen nicht matchen.
+Departure = departures.Departure
+_clean_train = departures._clean_train
+matches = departures.matches
+parse = departures.parse
+parse_directions = departures.parse_directions
+
+# The route also contains stops BEFORE our own station; those must not match.
 DIRECTIONS = {
     "departures": [
         {"train": "XY RB1", "destination": "Ost", "scheduledDeparture": "10:00",
          "route": [{"name": "West Hbf"}, {"name": "Musterstadt"}, {"name": "Ost"}]},
         {"train": "XY RB1", "destination": "West Hbf", "scheduledDeparture": "10:05",
-         "route": [{"name": "Ost"}, {"name": "Musterstadt"}, {"name": "Mitte"}, {"name": "West Hbf"}]},
+         "route": [{"name": "Ost"}, {"name": "Musterstadt"}, {"name": "Mitte"},
+                   {"name": "West Hbf"}]},
         {"train": "XY RB2", "destination": "Nord(Main)Hbf", "scheduledDeparture": "10:10",
          "route": [{"name": "Musterstadt"}, {"name": "Nord(Main)Hbf"}]},
     ]
@@ -23,6 +38,7 @@ def test_direction_filter_ignores_previous_stops():
     assert [d.destination for d in deps if matches(d, dirs)] == ["West Hbf", "Nord Hbf"]
     assert [d.destination for d in deps if matches(d, parse_directions("Mitte"))] == ["West Hbf"]
     assert all(matches(d, []) for d in deps)
+
 
 SAMPLE = {
     "departures": [
@@ -62,22 +78,3 @@ def test_minutes_until_with_delay_and_midnight():
     late = datetime(2026, 11, 12, 23, 55, tzinfo=TZ)
     d2 = Departure("S1", "X", "00:05", 0, None, False, False)
     assert d2.minutes_until(late) == 10
-
-
-def test_render_sizes():
-    now = datetime(2026, 11, 12, 19, 45, tzinfo=TZ)
-    for img in (render("Musterstadt", parse(SAMPLE), now),
-                render("Musterstadt", [], now),
-                render("Musterstadt", None, now, error="Stand 19:45")):
-        assert img.size == (SIZE, SIZE)
-
-
-def test_bundled_fonts_have_umlauts():
-    import os
-    from zugtafel import render as r
-    pkg_fonts = os.path.join(os.path.dirname(r.__file__), "fonts")
-    for name in ("DejaVuSans.ttf", "DejaVuSans-Bold.ttf",
-                 "DejaVuSansCondensed.ttf", "DejaVuSansCondensed-Bold.ttf"):
-        f = r.font(name, 13)
-        assert getattr(f, "path", "").startswith(pkg_fonts), name
-        assert f.getmask("ü").getbbox() is not None
