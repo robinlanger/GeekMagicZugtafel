@@ -14,12 +14,13 @@ license = { text = "MIT" }
 include = ["glancebox*"]
 
 [tool.setuptools.package-data]
-glancebox = ["fonts/*"]
+glancebox = ["fonts/*", "templates/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "../pages"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+markers = ["browser: needs a Chromium install (excluded in one CI job)"]
 
 [tool.ruff]
 line-length = 100

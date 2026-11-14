@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+{{ font_face_css | safe }}
+:root{--bg:rgb(8,10,14);--header-bg:rgb(0,55,110);--fg:rgb(235,238,242);--muted:rgb(140,148,160);--divider:rgb(38,42,50);--orange:rgb(255,170,40);--red:rgb(240,70,60);--yellow:rgb(255,215,0);}
+html,body{margin:0;width:240px;height:240px;overflow:hidden;background:#080a0e;color:#ebeef2;font-family:'DejaVu Sans',sans-serif;}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>
