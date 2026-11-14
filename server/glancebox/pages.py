@@ -6,10 +6,11 @@ import dataclasses
 import importlib.util
 import sys
 import types as _types
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Literal, Sequence
+from typing import Literal
 from urllib.parse import urlparse
 
 from .config import AppConfig, ConfigError
