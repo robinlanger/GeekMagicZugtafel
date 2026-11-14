@@ -17,6 +17,7 @@ def test_defaults(tmp_path):
     assert (page.index, page.type) == (0, "bahn")
     assert page.duration == 30
     assert page.refresh == 30
+    assert page.refresh_explicit is False
     assert page.options == {"station": "X"}
     assert cfg.interval == 30
     assert cfg.timezone == "Europe/Berlin"
@@ -30,6 +31,7 @@ def test_explicit_duration_and_refresh(tmp_path):
     assert cfg.interval == 30
     assert (cfg.pages[0].duration, cfg.pages[0].refresh) == (15, 15)
     assert cfg.pages[1].refresh == 60
+    assert cfg.pages[1].refresh_explicit is True
 
 
 def test_empty_pages_rejected(tmp_path):

@@ -25,6 +25,7 @@ class PageConfig:
     options: dict
     duration: int
     refresh: int
+    refresh_explicit: bool = False
 
 
 @dataclass(frozen=True)
@@ -61,10 +62,11 @@ def _parse_page(index: int, raw: Any, interval: int) -> PageConfig:
     if "duration" in raw:
         duration = _positive_int(raw["duration"], f"{where}: duration")
     refresh = duration
+    refresh_explicit = "refresh" in raw
     if "refresh" in raw:
         refresh = _positive_int(raw["refresh"], f"{where}: refresh")
     options = {k: v for k, v in raw.items() if k not in _RESERVED_PAGE_KEYS}
-    return PageConfig(index, page_type, options, duration, refresh)
+    return PageConfig(index, page_type, options, duration, refresh, refresh_explicit)
 
 
 def load_config(path: Path) -> AppConfig:
