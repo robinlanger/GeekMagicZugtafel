@@ -26,7 +26,9 @@ void webUiBegin(gb::Settings& settings, const StatusProvider& status);
 void webUiBeginSafe(gb::Settings& settings, const StatusProvider& status);
 void webUiLoop();
 
-// Hooks for additional routes.
+// Hooks for additional routes. Never call collectHeaders() on it: that replaces the
+// header list of web_ui.cpp (kCollectedHeaders), and the Origin check then refuses
+// every state-changing request.
 ESP8266WebServer& webUiServer();
 // Origin (CSRF) check plus Basic auth "admin"/update password. Sends 403/401 itself
 // and returns false when the request must not proceed.

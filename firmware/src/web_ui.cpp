@@ -39,7 +39,21 @@ char otaMd5[33];
 
 Lang requestLang() { return langFromHeader(server.header(F("Accept-Language"))); }
 
+// Every request header the UI reads, collected in this one place (beginCommon()).
+// collectHeaders() REPLACES the list, so nothing else may call it on this server.
+const char* kCollectedHeaders[] = {"Accept-Language", "Origin"};
+
+bool originCollected() {
+  for (int i = 0; i < server.headers(); ++i) {
+    if (server.headerName(i).equalsIgnoreCase(F("Origin"))) return true;
+  }
+  return false;
+}
+
 bool originOk() {
+  // Fail closed: if Origin were no longer collected it would read as absent, and an
+  // absent Origin is allowed (curl). Refuse instead of silently dropping the CSRF guard.
+  if (!originCollected()) return false;
   return gb::originAllowed(server.header(F("Origin")).c_str(), server.hostHeader().c_str());
 }
 
@@ -357,7 +371,7 @@ void beginCommon(gb::Settings& s, const StatusProvider& st, bool safe) {
   settings = &s;
   status = st;
   safeModeUi = safe;
-  server.collectHeaders("Accept-Language", "Origin");
+  server.collectHeaders(kCollectedHeaders, sizeof(kCollectedHeaders) / sizeof(kCollectedHeaders[0]));
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/update", HTTP_POST, handleUpdateDone, handleUpload);
   server.on("/restart", HTTP_POST, handleRestart);
