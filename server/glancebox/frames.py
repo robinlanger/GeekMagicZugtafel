@@ -42,7 +42,8 @@ def _static_error_jpeg() -> bytes:
 
 
 class FrameStore:
-    def __init__(self) -> None:
+    def __init__(self, page_count: int) -> None:
+        self._page_count = page_count
         # Random per store (= per process start) so a restarted server never answers 304
         # for a frame the device cached from a previous run.
         self._nonce = secrets.token_hex(4)
@@ -65,9 +66,7 @@ class FrameStore:
         return frame
 
     def available(self, now: float) -> list[bool]:
-        n = max(self._frames, default=-1) + 1
-        n = max(n, max(self._last_attempt, default=-1) + 1)
-        return [self.get(i, now) is not None for i in range(n)]
+        return [self.get(i, now) is not None for i in range(self._page_count)]
 
     def last_attempt(self, index: int) -> float | None:
         return self._last_attempt.get(index)
