@@ -119,7 +119,7 @@ A large clock with weekday and date, meant as the starting point for your own pa
 | --- | --- |
 | `http://<server>:8080/` | Preview of all pages with age and last error (refreshes itself). |
 | `http://<server>:8080/preview/<n>.jpg` | The current picture of page number `n` (counting from 0). |
-| `http://<server>:8080/healthz` | Small JSON for health checks (Docker uses it). |
+| `http://<server>:8080/healthz` | Small JSON for health checks (Docker uses it). Answers 503 while the renderer or its browser is down. |
 | `http://<server>:8080/api/v1/frame` | What the display fetches. |
 
 The server runs as a normal (non-root) user and has **no login**. Keep port 8080 inside your home network. To use another port change the left number in `ports:` of `docker-compose.yml`, for example `"9090:8080"`.

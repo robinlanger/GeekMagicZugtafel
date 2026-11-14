@@ -76,3 +76,38 @@ async def test_render_url_wait_ms_exceeds_timeout_succeeds():
         assert Image.open(io.BytesIO(out)).size == (240, 240)
     finally:
         srv.shutdown()
+
+
+@pytest.mark.browser
+async def test_render_relaunches_dead_browser():
+    async with Renderer() as r:
+        await r._browser.close()  # simulates a crashed Chromium
+        assert not r.healthy()
+        out = await r.render_html("<p>again</p>")
+        assert r.healthy()
+    assert Image.open(io.BytesIO(out)).format == "JPEG"
+
+
+class _DeadBrowser:
+    def is_connected(self):
+        return False
+
+    async def close(self):
+        pass
+
+
+class _FailingChromium:
+    async def launch(self):
+        raise RuntimeError("no chromium")
+
+
+class _FakePlaywright:
+    chromium = _FailingChromium()
+
+
+async def test_render_relaunch_failure_is_render_error():
+    r = Renderer()
+    r._pw, r._browser = _FakePlaywright(), _DeadBrowser()
+    with pytest.raises(RenderError, match="cannot restart Chromium"):
+        await r.render_html("<p>x</p>")
+    assert not r.healthy()

@@ -3,7 +3,7 @@ import sys
 
 from fastapi.testclient import TestClient
 
-from glancebox.app import create_app
+from glancebox.app import create_app, on_worker_done
 from glancebox.config import AppConfig, PageConfig
 from glancebox.frames import FrameStore
 
@@ -83,3 +83,71 @@ def test_cli_bad_config_exits_2(tmp_path):
                        check=False, capture_output=True, text=True)
     assert r.returncode == 2
     assert "pages[0]" in r.stderr
+
+
+class _FakeTask:
+    def __init__(self, done=False, cancelled=False, exc=None):
+        self._done, self._cancelled, self._exc = done, cancelled, exc
+
+    def done(self):
+        return self._done
+
+    def cancelled(self):
+        return self._cancelled
+
+    def exception(self):
+        return self._exc
+
+
+class _FakeRenderer:
+    def __init__(self, ok):
+        self.ok = ok
+
+    def healthy(self):
+        return self.ok
+
+
+def test_healthz_503_when_worker_dead():
+    client, _ = make_client(filled_store())
+    client.app.state.worker_task = _FakeTask(done=True, exc=RuntimeError("boom"))
+    client.app.state.renderer = _FakeRenderer(True)
+    r = client.get("/healthz")
+    assert r.status_code == 503
+    assert r.json()["worker_ok"] is False
+
+
+def test_healthz_503_when_browser_disconnected():
+    client, _ = make_client(filled_store())
+    client.app.state.worker_task = _FakeTask()
+    client.app.state.renderer = _FakeRenderer(False)
+    r = client.get("/healthz")
+    assert r.status_code == 503
+    assert r.json()["browser_ok"] is False
+
+
+def test_healthz_200_when_worker_and_browser_alive():
+    client, _ = make_client(filled_store())
+    client.app.state.worker_task = _FakeTask()
+    client.app.state.renderer = _FakeRenderer(True)
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    assert r.json()["worker_ok"] is True and r.json()["browser_ok"] is True
+
+
+def test_worker_death_logs_and_exits_nonzero(caplog):
+    codes = []
+    on_worker_done(_FakeTask(done=True, exc=RuntimeError("boom")), exit=codes.append)
+    assert codes == [1]
+    assert "render worker died" in caplog.text and "boom" in caplog.text
+
+
+def test_worker_cancelled_at_shutdown_does_not_exit():
+    codes = []
+    on_worker_done(_FakeTask(done=True, cancelled=True), exit=codes.append)
+    assert codes == []
+
+
+def test_worker_returning_is_also_fatal(caplog):
+    codes = []
+    on_worker_done(_FakeTask(done=True), exit=codes.append)
+    assert codes == [1]
