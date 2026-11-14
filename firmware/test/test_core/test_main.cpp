@@ -6,6 +6,7 @@
 #include "ota_check.h"
 #include "poll_timing.h"
 #include "settings.h"
+#include "web_util.h"
 
 using namespace gb;
 
@@ -117,6 +118,138 @@ void test_image_magic() {
   TEST_ASSERT_FALSE(fitsOta(1001, 1000));
 }
 
+void test_settings_roundtrip_with_escapes() {
+  Settings s;
+  TEST_ASSERT_TRUE(applyServerUrl(s, "homeserver:8080/", nullptr));
+  TEST_ASSERT_TRUE(applyPassword(s, "pa\"ss\\w:rd", nullptr));
+  s.brightness = 42;
+  std::string text = encodeSettings(s);
+  TEST_ASSERT_EQUAL_STRING(
+      "{\"server_url\":\"http://homeserver:8080\",\"update_password\":\"pa\\\"ss\\\\w:rd\","
+      "\"brightness\":42}\n",
+      text.c_str());
+  Settings back;
+  TEST_ASSERT_TRUE(parseSettings(text, &back));
+  TEST_ASSERT_EQUAL_STRING("http://homeserver:8080", back.serverUrl);
+  TEST_ASSERT_EQUAL_STRING("pa\"ss\\w:rd", back.updatePassword);
+  TEST_ASSERT_EQUAL_UINT8(42, back.brightness);
+  TEST_ASSERT_TRUE(settingsComplete(back));
+}
+
+void test_settings_parse_tolerates_whitespace_unknown_keys_and_missing_brightness() {
+  Settings s;
+  TEST_ASSERT_TRUE(parseSettings(
+      " {\n \"x\" : \"y\", \"n\": -3, \"update_password\" : \"abc\\u0041defgh\" ,"
+      "\"server_url\":\"http://a.lan\"}\n",
+      &s));
+  TEST_ASSERT_EQUAL_STRING("abcAdefgh", s.updatePassword);
+  TEST_ASSERT_EQUAL_STRING("http://a.lan", s.serverUrl);
+  TEST_ASSERT_EQUAL_UINT8(kDefaultBrightness, s.brightness);
+}
+
+void test_settings_parse_rejects_corrupt_input() {
+  const char* bad[] = {
+      "",
+      "{",
+      "{\"server_url\":\"http://a.lan\"",
+      "{\"server_url\":\"http://a.lan\"} trailing",
+      "{\"server_url\":http}",
+      "{\"brightness\":}",
+      "{\"brightness\":1234567}",
+      "{\"update_password\":\"ab\ncd\"}",
+      "{\"update_password\":\"\\u0000\"}",
+      "{\"update_password\":\"\\u00e9\"}",
+      "{\"update_password\":\"\\q\"}",
+      "{\"update_password\":\"0123456789012345678901234567890123\"}",
+      "[1]",
+  };
+  for (const char* b : bad) {
+    Settings s;
+    s.brightness = 7;
+    TEST_ASSERT_FALSE_MESSAGE(parseSettings(b, &s), b);
+    TEST_ASSERT_EQUAL_UINT8(7, s.brightness);  // untouched on failure
+  }
+}
+
+void test_settings_parse_clamps_brightness() {
+  Settings s;
+  TEST_ASSERT_TRUE(parseSettings("{\"brightness\":0}", &s));
+  TEST_ASSERT_EQUAL_UINT8(5, s.brightness);
+  TEST_ASSERT_TRUE(parseSettings("{\"brightness\":900}", &s));
+  TEST_ASSERT_EQUAL_UINT8(100, s.brightness);
+}
+
+void test_settings_defaults_incomplete() {
+  Settings s;
+  TEST_ASSERT_EQUAL_STRING("", s.serverUrl);
+  TEST_ASSERT_EQUAL_STRING("", s.updatePassword);
+  TEST_ASSERT_EQUAL_UINT8(kDefaultBrightness, s.brightness);
+  TEST_ASSERT_FALSE(settingsComplete(s));
+  applyServerUrl(s, "a.lan", nullptr);
+  TEST_ASSERT_FALSE(settingsComplete(s));
+  applyPassword(s, "12345678", nullptr);
+  TEST_ASSERT_TRUE(settingsComplete(s));
+}
+
+void test_apply_server_url_errors_leave_value() {
+  Settings s;
+  applyServerUrl(s, "a.lan", nullptr);
+  std::string err;
+  TEST_ASSERT_FALSE(applyServerUrl(s, "https://x", &err));
+  TEST_ASSERT_EQUAL_STRING("https_unsupported", err.c_str());
+  TEST_ASSERT_FALSE(applyServerUrl(s, "http://" + std::string(90, 'a'), &err));
+  TEST_ASSERT_EQUAL_STRING("too_long", err.c_str());
+  TEST_ASSERT_TRUE(applyServerUrl(s, "http://" + std::string(88, 'a'), &err));  // 95 chars fits
+  TEST_ASSERT_FALSE(applyServerUrl(s, "", &err));
+  TEST_ASSERT_EQUAL_STRING("empty_host", err.c_str());
+  TEST_ASSERT_EQUAL_UINT(95, std::string(s.serverUrl).size());
+}
+
+void test_apply_password_rules() {
+  Settings s;
+  std::string err;
+  TEST_ASSERT_FALSE(applyPassword(s, "short", &err));
+  TEST_ASSERT_EQUAL_STRING("too_short", err.c_str());
+  TEST_ASSERT_FALSE(applyPassword(s, std::string(33, 'x'), &err));
+  TEST_ASSERT_EQUAL_STRING("too_long", err.c_str());
+  TEST_ASSERT_FALSE(applyPassword(s, "abcdefg\xc3\xa9", &err));
+  TEST_ASSERT_EQUAL_STRING("invalid_chars", err.c_str());
+  TEST_ASSERT_FALSE(applyPassword(s, "abcdefgh\t", &err));
+  TEST_ASSERT_EQUAL_STRING("", s.updatePassword);
+  TEST_ASSERT_TRUE(applyPassword(s, std::string(32, '~'), &err));
+  TEST_ASSERT_EQUAL_UINT(32, std::string(s.updatePassword).size());
+}
+
+void test_prefers_german() {
+  TEST_ASSERT_TRUE(prefersGerman("de"));
+  TEST_ASSERT_TRUE(prefersGerman("de-DE,de;q=0.9,en;q=0.8"));
+  TEST_ASSERT_TRUE(prefersGerman(" DE-at"));
+  TEST_ASSERT_FALSE(prefersGerman("en-US,de;q=0.9"));
+  TEST_ASSERT_FALSE(prefersGerman(""));
+  TEST_ASSERT_FALSE(prefersGerman(nullptr));
+  TEST_ASSERT_FALSE(prefersGerman("dex"));
+}
+
+void test_html_escape() {
+  TEST_ASSERT_EQUAL_STRING("a&amp;b&lt;c&gt;&quot;d&#39;", htmlEscape("a&b<c>\"d'").c_str());
+}
+
+void test_origin_allowed() {
+  TEST_ASSERT_TRUE(originAllowed("", "192.168.1.5"));
+  TEST_ASSERT_TRUE(originAllowed("http://192.168.1.5", "192.168.1.5"));
+  TEST_ASSERT_TRUE(originAllowed("HTTP://Box.lan", "box.lan"));
+  TEST_ASSERT_FALSE(originAllowed("http://evil.example", "192.168.1.5"));
+  TEST_ASSERT_FALSE(originAllowed("null", "192.168.1.5"));
+  TEST_ASSERT_FALSE(originAllowed("http://192.168.1.5", ""));
+}
+
+void test_ota_begin_size() {
+  TEST_ASSERT_EQUAL_UINT(0, otaBeginSize(0));
+  TEST_ASSERT_EQUAL_UINT(0, otaBeginSize(0x1000));
+  TEST_ASSERT_EQUAL_UINT(0x1000, otaBeginSize(0x2FFF));
+  TEST_ASSERT_EQUAL_UINT(0x7A000, otaBeginSize(0x7B000));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_boot_fresh_magic);
@@ -133,5 +266,16 @@ int main() {
   RUN_TEST(test_valid_password);
   RUN_TEST(test_md5_hex);
   RUN_TEST(test_image_magic);
+  RUN_TEST(test_settings_roundtrip_with_escapes);
+  RUN_TEST(test_settings_parse_tolerates_whitespace_unknown_keys_and_missing_brightness);
+  RUN_TEST(test_settings_parse_rejects_corrupt_input);
+  RUN_TEST(test_settings_parse_clamps_brightness);
+  RUN_TEST(test_settings_defaults_incomplete);
+  RUN_TEST(test_apply_server_url_errors_leave_value);
+  RUN_TEST(test_apply_password_rules);
+  RUN_TEST(test_prefers_german);
+  RUN_TEST(test_html_escape);
+  RUN_TEST(test_origin_allowed);
+  RUN_TEST(test_ota_begin_size);
   return UNITY_END();
 }
