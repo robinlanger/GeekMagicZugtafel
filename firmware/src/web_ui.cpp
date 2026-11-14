@@ -11,11 +11,9 @@
 #include "ota_flow.h"
 #include "rtc_boot.h"
 #include "settings_store.h"
+#include "version.h"
 #include "web_util.h"
 
-#ifndef GB_VERSION
-#define GB_VERSION "dev"
-#endif
 
 namespace {
 
@@ -170,7 +168,7 @@ String statusJson() {
              PSTR("{\"version\":\"%s\",\"uptime_s\":%lu,\"heap_free\":%u,\"rssi\":%s,"
                   "\"boot_failed\":%u,\"safe_mode\":%s,\"frames_ok\":%lu,"
                   "\"last_frame_age_s\":%s,\"flash_size\":%u,\"reset_reason\":\"%s\"}"),
-             GB_VERSION, static_cast<unsigned long>(uptimeS()),
+             gbVersion(), static_cast<unsigned long>(uptimeS()),
              static_cast<unsigned>(ESP.getFreeHeap()), rssi,
              static_cast<unsigned>(status.bootFailed ? status.bootFailed() : 0),
              (status.safeMode ? status.safeMode() : safeModeUi) ? "true" : "false",
