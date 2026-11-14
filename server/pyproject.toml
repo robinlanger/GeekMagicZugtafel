@@ -23,6 +23,9 @@ glancebox = ["fonts/*", "templates/*"]
 testpaths = ["tests", "../pages"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
 markers = ["browser: needs a Chromium install (excluded in one CI job)"]
 
 [tool.ruff]

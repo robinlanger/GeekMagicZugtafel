@@ -73,10 +73,14 @@ jobs:
         run: pio run -e ultra -e spike -e ultra-crashtest
       - name: Size check
         run: python3 tools/check_fw_size.py firmware/.pio/build/ultra/firmware.bin firmware/size-limit.txt
+      - name: Copy bin out of the hidden .pio directory
+        run: |
+          mkdir dist
+          cp firmware/.pio/build/ultra/firmware.bin dist/glancebox-ultra-ci.bin
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: firmware-ultra-${{ github.sha }}
-          path: firmware/.pio/build/ultra/firmware.bin
+          path: dist/glancebox-ultra-ci.bin
           if-no-files-found: error
 
   docs:
