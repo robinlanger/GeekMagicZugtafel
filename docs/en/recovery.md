@@ -8,7 +8,7 @@ What to do when something goes wrong: safe mode after a bad update, the boot cou
 
 The firmware counts every boot. It counts as healthy after **60 seconds of uptime with Wi-Fi connected and the web server running**, and the counter returns to 0. If **3 boots in a row** do not get there (crash, hang, endless restarts), the next boot starts safe mode. A server that cannot be reached does **not** trigger safe mode.
 
-Safe mode has almost no code: Wi-Fi, a minimal web server, the update function and `/status`. It does not decode pictures and does not ask the server for frames.
+Safe mode has almost no code: Wi-Fi, a minimal web server with one update page, the update function and `/status`. It does not decode pictures and does not ask the server for frames.
 
 ### What you see
 
@@ -18,16 +18,16 @@ The display shows **"Safe mode"** with the firmware version, the number of faile
 
 ### Leaving safe mode
 
-Safe mode has no web form, only the functions below (user `admin`, your update password).
+Safe mode serves a small page at `http://<ip>/` and `http://<ip>/update` (in German or English, depending on your browser). It has the update form and two buttons. The page is public, but every action asks for the user `admin` and your update password.
 
-1. **Upload a working firmware** (the previous release is a good choice, or the newest one):
+1. **Upload a working firmware** (the previous release is a good choice, or the newest one). In the browser, open the page, paste the MD5 (the first word of the release's `.md5` file, see [Updating](updating.md#before-you-update)), choose the `.bin` file and press **Upload**. The browser asks for `admin` and your update password. Alternatively use curl:
 
    ```sh
    curl -u admin:<password> -F md5=<md5> -F firmware=@glancebox-ultra-<version>.bin http://<ip>/update
    ```
 
    After the upload the device restarts into the new firmware with a clean counter. Details of the command are in [Updating](updating.md#update-with-curl).
-2. **Or boot the normal firmware again**, for example if safe mode was triggered by something temporary:
+2. **Or boot the normal firmware again**, for example if safe mode was triggered by something temporary. Press **Boot normal firmware** on the page, or use curl:
 
    ```sh
    curl -u admin:<password> -X POST http://<ip>/boot-normal
@@ -35,7 +35,7 @@ Safe mode has no web form, only the functions below (user `admin`, your update p
 
    The next boot runs the normal firmware. If it fails again three times, you are back in safe mode.
 
-A plain restart (`POST /restart`) does **not** leave safe mode.
+A plain restart (the **Restart** button, `POST /restart`) does **not** leave safe mode.
 
 ## The boot counter and power cycles
 

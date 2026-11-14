@@ -188,7 +188,7 @@ void handleRestart() {
   webUiScheduleRestart();
 }
 
-// ---- HTML pages (normal mode only) ----
+// ---- HTML pages ----
 
 const char kHead[] PROGMEM =
     "<!doctype html><meta charset=utf-8><meta name=viewport "
@@ -221,6 +221,19 @@ void sendMessage(int code, Lang lang, const __FlashStringHelper* msg, bool error
   b += tr(lang, Msg::Back);
   b += F("</a>");
   sendPage(code, b);
+}
+
+// Shared by normal mode and safe mode: one form, one OTA code path (POST /update).
+void appendUpdateForm(String& b, Lang l) {
+  b += F("<h2 id=update>");
+  b += tr(l, Msg::FirmwareUpdate);
+  // md5 must precede the file input: fields are sent in document order.
+  b += F("</h2><form method=post action=/update enctype=multipart/form-data><label>");
+  b += tr(l, Msg::Md5Label);
+  b += F("<input name=md5 required pattern='[0-9a-fA-F]{32}'></label>"
+         "<input type=file name=firmware accept='.bin' required><button>");
+  b += tr(l, Msg::Upload);
+  b += F("</button></form>");
 }
 
 void handleRoot() {
@@ -264,14 +277,8 @@ void handleRoot() {
          "</label><button>");
   b += tr(l, Msg::Save);
   b += F("</button></form><h2>");
-  b += tr(l, Msg::FirmwareUpdate);
-  // md5 must precede the file input: fields are sent in document order.
-  b += F("</h2><form method=post action=/update enctype=multipart/form-data><label>");
-  b += tr(l, Msg::Md5Label);
-  b += F("<input name=md5 required pattern='[0-9a-fA-F]{32}'></label>"
-         "<input type=file name=firmware accept='.bin' required><button>");
-  b += tr(l, Msg::Upload);
-  b += F("</button></form><h2>");
+  appendUpdateForm(b, l);
+  b += F("<h2>");
   b += tr(l, Msg::Device);
   b += F("</h2><form method=post action=/restart><button>");
   b += tr(l, Msg::Restart);
@@ -279,6 +286,32 @@ void handleRoot() {
   b += tr(l, Msg::ResetConfirm);
   b += F("')\"><button>");
   b += tr(l, Msg::Reset);
+  b += F("</button></form>");
+  sendPage(200, b);
+}
+
+// Safe mode: GET / and GET /update. No secrets shown; posting needs auth as usual.
+void handleSafePage() {
+  const Lang l = requestLang();
+  String b;
+  b.reserve(1800);
+  b += F("<h2>");
+  b += tr(l, Msg::SafeTitle);
+  b += F("</h2><p>");
+  b += tr(l, Msg::SafeExplain);
+  b += F("<table>");
+  addRow(b, F("Version"), F(GB_VERSION));
+  addRow(b, tr(l, Msg::BootFailures), String(status.bootFailed ? status.bootFailed() : 0));
+  b += F("</table><p><small>");
+  b += tr(l, Msg::AuthHint);
+  b += F("</small>");
+  appendUpdateForm(b, l);
+  b += F("<h2>");
+  b += tr(l, Msg::Device);
+  b += F("</h2><form method=post action=/boot-normal><button>");
+  b += tr(l, Msg::BootNormal);
+  b += F("</button></form><form method=post action=/restart><button>");
+  b += tr(l, Msg::Restart);
   b += F("</button></form>");
   sendPage(200, b);
 }
@@ -341,6 +374,10 @@ void start() {
 void webUiBegin(gb::Settings& s, const StatusProvider& st) {
   beginCommon(s, st, false);
   server.on("/", HTTP_GET, handleRoot);
+  server.on("/update", HTTP_GET, []() {  // the address printed on the safe-mode screen
+    server.sendHeader(F("Location"), F("/#update"));
+    server.send(302);
+  });
   server.on("/settings", HTTP_POST, handleSettings);
   server.on("/reset", HTTP_POST, handleReset);
   start();
@@ -348,6 +385,8 @@ void webUiBegin(gb::Settings& s, const StatusProvider& st) {
 
 void webUiBeginSafe(gb::Settings& s, const StatusProvider& st) {
   beginCommon(s, st, true);
+  server.on("/", HTTP_GET, handleSafePage);
+  server.on("/update", HTTP_GET, handleSafePage);
   start();
 }
 

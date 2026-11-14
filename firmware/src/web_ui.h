@@ -18,9 +18,10 @@ struct StatusProvider {
   uint8_t (*bootFailed)() = nullptr;
 };
 
-// Normal mode: GET /, POST /settings, /restart, /reset, GET /status, POST /update.
+// Normal mode: GET /, GET /update (redirect to the form), POST /settings, /restart, /reset, GET /status, POST /update.
 void webUiBegin(gb::Settings& settings, const StatusProvider& status);
-// Safe mode: only GET /status, POST /update, POST /restart (same OTA code path).
+// Safe mode: GET / and /update (minimal page with the update form), GET /status,
+// POST /update, POST /restart (same OTA code path).
 // Further routes (e.g. /boot-normal) can be added via webUiServer() before or after.
 void webUiBeginSafe(gb::Settings& settings, const StatusProvider& status);
 void webUiLoop();

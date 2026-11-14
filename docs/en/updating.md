@@ -50,7 +50,7 @@ The device rejects the update with HTTP 400 and a short reason (for example MD5 
 
 Each boot raises a counter in the device's memory. The counter goes back to 0 once the firmware is **healthy**: 60 seconds of uptime, Wi-Fi connected and web server running. A server that is down does not count against it.
 
-If the firmware fails to become healthy **3 boots in a row** (crashes, hangs, restarts), the next boot starts **safe mode**: only Wi-Fi, the update function and `/status`, with a status screen on the display. From there you upload a good firmware, see [Recovery](recovery.md#safe-mode).
+If the firmware fails to become healthy **3 boots in a row** (crashes, hangs, restarts), the next boot starts **safe mode**: only Wi-Fi, a small update page in the browser, the update function and `/status`, with a status screen on the display. From there you upload a good firmware (browser or curl), see [Recovery](recovery.md#safe-mode).
 
 Note that restarting the device by hand three times within a minute also counts as three failed boots. Switching the power off and on again clears the counter.
 

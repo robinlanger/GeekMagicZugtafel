@@ -50,7 +50,7 @@ Das Gerät lehnt das Update mit HTTP 400 und einem kurzen Grund ab (zum Beispiel
 
 Bei jedem Start steigt ein Zähler im Speicher des Geräts. Er geht auf 0 zurück, sobald die Firmware **gesund** ist: 60 Sekunden Laufzeit, WLAN verbunden und Webserver läuft. Ein Server, der nicht erreichbar ist, zählt nicht dagegen.
 
-Wird die Firmware **3 Starts hintereinander** nicht gesund (Abstürze, Hänger, Neustarts), startet der nächste Start den **Safe Mode**: nur WLAN, die Update-Funktion und `/status`, mit einem Statusbildschirm auf dem Display. Von dort spielst du eine funktionierende Firmware auf, siehe [Rettung](recovery.md#safe-mode).
+Wird die Firmware **3 Starts hintereinander** nicht gesund (Abstürze, Hänger, Neustarts), startet der nächste Start den **Safe Mode**: nur WLAN, eine kleine Update-Seite im Browser, die Update-Funktion und `/status`, mit einem Statusbildschirm auf dem Display. Von dort spielst du eine funktionierende Firmware auf (Browser oder curl), siehe [Rettung](recovery.md#safe-mode).
 
 Beachte: Drei Neustarts von Hand innerhalb einer Minute zählen auch als drei Fehlstarts. Strom aus und wieder an setzt den Zähler zurück.
 
