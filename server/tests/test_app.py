@@ -136,18 +136,18 @@ def test_healthz_200_when_worker_and_browser_alive():
 
 def test_worker_death_logs_and_exits_nonzero(caplog):
     codes = []
-    on_worker_done(_FakeTask(done=True, exc=RuntimeError("boom")), exit=codes.append)
+    on_worker_done(_FakeTask(done=True, exc=RuntimeError("boom")), exit_process=codes.append)
     assert codes == [1]
     assert "render worker died" in caplog.text and "boom" in caplog.text
 
 
 def test_worker_cancelled_at_shutdown_does_not_exit():
     codes = []
-    on_worker_done(_FakeTask(done=True, cancelled=True), exit=codes.append)
+    on_worker_done(_FakeTask(done=True, cancelled=True), exit_process=codes.append)
     assert codes == []
 
 
 def test_worker_returning_is_also_fatal(caplog):
     codes = []
-    on_worker_done(_FakeTask(done=True), exit=codes.append)
+    on_worker_done(_FakeTask(done=True), exit_process=codes.append)
     assert codes == [1]
