@@ -14,20 +14,39 @@ TFT_eSPI tft;
 // TJpgDec work pool: static, never heap (size verified by test_tjpgd).
 alignas(4) uint8_t jpegPool[gb::kJpegPoolBytes];
 
+// Streaming source: never reads beyond len bytes; gives up at the deadline.
 struct JpegSource {
-  const uint8_t* data;
-  size_t len;
-  size_t pos;
+  Stream* stream;
+  size_t left;          // bytes of the body not consumed yet
+  uint32_t startMs;
+  uint32_t deadlineMs;  // overall budget for the whole body
+  bool starved;         // stream ended or stalled before tjpgd got what it asked for
 };
 
-// Input callback: copy (or skip, when buf is null) up to n bytes from the memory buffer.
+// Input callback: read (or skip, when buf is null) up to n bytes from the stream.
+// Returns fewer than n only on failure; tjpgd then aborts with JDR_INP.
 size_t jpegInput(JDEC* jd, uint8_t* buf, size_t n) {
   auto* src = static_cast<JpegSource*>(jd->device);
-  const size_t left = src->len - src->pos;
-  if (n > left) n = left;
-  if (buf != nullptr) memcpy(buf, src->data + src->pos, n);
-  src->pos += n;
-  return n;
+  if (n > src->left) n = src->left;
+  uint8_t skip[64];
+  size_t done = 0;
+  while (done < n) {
+    if (millis() - src->startMs >= src->deadlineMs) break;
+    const int avail = src->stream->available();
+    if (avail <= 0) {
+      delay(0);  // yield: watchdog, TCP stack
+      continue;
+    }
+    size_t want = n - done;
+    if (want > static_cast<size_t>(avail)) want = static_cast<size_t>(avail);
+    if (buf == nullptr && want > sizeof(skip)) want = sizeof(skip);
+    const size_t got = src->stream->readBytes(buf != nullptr ? buf + done : skip, want);
+    if (got == 0) break;
+    done += got;
+  }
+  src->left -= done;
+  if (done < n) src->starved = true;
+  return done;
 }
 
 // Output callback: push one decoded RGB565 block; stop below the visible area.
@@ -56,12 +75,13 @@ void displayBegin(uint8_t brightnessPct) {
   displaySetBrightness(brightnessPct);
 }
 
-bool displayJpeg(const uint8_t* data, size_t len) {
-  JpegSource src{data, len, 0};
+JpegStreamResult displayJpegStream(Stream& stream, size_t len, uint32_t deadlineMs) {
+  JpegSource src{&stream, len, millis(), deadlineMs, false};
   JDEC jd;
-  if (jd_prepare(&jd, jpegInput, jpegPool, sizeof(jpegPool), &src) != JDR_OK) return false;
-  const JRESULT rc = jd_decomp(&jd, jpegOutput, 0);
-  return rc == JDR_OK || rc == JDR_INTR;  // INTR: stopped below the visible area
+  JRESULT rc = jd_prepare(&jd, jpegInput, jpegPool, sizeof(jpegPool), &src);
+  if (rc == JDR_OK) rc = jd_decomp(&jd, jpegOutput, 0);
+  if (rc == JDR_OK || rc == JDR_INTR) return JpegStreamResult::Ok;  // INTR: below the visible area
+  return src.starved ? JpegStreamResult::InputError : JpegStreamResult::DecodeError;
 }
 
 void displayStatus(const char* title, const char* const* lines, size_t n) {

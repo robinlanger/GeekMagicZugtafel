@@ -53,13 +53,9 @@ void pollFrame() {
     const FrameResult r = fetchFrame(settings.serverUrl, etag);
     status = r.status;
     nextIn = r.nextIn;
-    if (status == 200) {
-      if (displayJpeg(frameData(), r.len)) {
-        memcpy(etag, r.etag, sizeof(etag));
-        ++framesOk;
-      } else {
-        status = gb::kErrDecode;
-      }
+    if (status == 200) {  // already drawn (stream decode)
+      memcpy(etag, r.etag, sizeof(etag));
+      ++framesOk;
     }
   }
   const uint32_t now = millis();  // after the request, which may take seconds
@@ -70,6 +66,7 @@ void pollFrame() {
     anySuccess = true;
   } else {
     gb::frameErrorText(status, lastError, sizeof(lastError));
+    Serial.printf("frame poll failed: %s (%d)\n", lastError, status);
     o = poller.onFailure(status, now);
   }
   if (o.clearEtag) etag[0] = '\0';
@@ -90,6 +87,7 @@ void setup() {
   if (boot.safeMode) safeModeRun(stored.failed, boot.next.failed);
 
   // 3. Normal firmware.
+  Serial.begin(115200);
   displayBegin(gb::kDefaultBrightness);
   const char* starting[] = {"starting..."};
   displayStatus("Glance Box " GB_VERSION, starting, 1);
