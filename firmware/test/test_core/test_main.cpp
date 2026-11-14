@@ -18,7 +18,7 @@ void setUp() {}
 void tearDown() {}
 
 void test_boot_fresh_magic() {
-  BootDecision d = onBoot({0xDEADBEEF, 7});
+  BootDecision d = onBoot({0xDEADBEEF, 7}, ResetKind::Counted);
   TEST_ASSERT_EQUAL_HEX32(kBootMagic, d.next.magic);
   TEST_ASSERT_EQUAL_UINT8(1, d.next.failed);
   TEST_ASSERT_FALSE(d.safeMode);
@@ -26,14 +26,39 @@ void test_boot_fresh_magic() {
 
 void test_boot_third_failure_enters_safe() {
   for (uint8_t f = 0; f < 3; ++f) {
-    BootDecision d = onBoot({kBootMagic, f});
+    BootDecision d = onBoot({kBootMagic, f}, ResetKind::Counted);
     TEST_ASSERT_FALSE(d.safeMode);
     TEST_ASSERT_EQUAL_UINT8(f + 1, d.next.failed);
   }
-  TEST_ASSERT_TRUE(onBoot({kBootMagic, 3}).safeMode);
-  BootDecision cap = onBoot({kBootMagic, 255});
+  TEST_ASSERT_TRUE(onBoot({kBootMagic, 3}, ResetKind::Counted).safeMode);
+  BootDecision cap = onBoot({kBootMagic, 255}, ResetKind::Counted);
   TEST_ASSERT_TRUE(cap.safeMode);
   TEST_ASSERT_EQUAL_UINT8(255, cap.next.failed);
+}
+
+void test_reset_kind_mapping() {
+  // Values of the SDK's rst_reason enum (user_interface.h).
+  TEST_ASSERT_EQUAL(static_cast<int>(ResetKind::Fresh), static_cast<int>(resetKindFromReason(0)));  // power-on
+  TEST_ASSERT_EQUAL(static_cast<int>(ResetKind::Fresh), static_cast<int>(resetKindFromReason(6)));  // reset pin
+  for (uint32_t r : {1u, 2u, 3u, 4u, 5u, 99u}) {  // HW WDT, exception, SW WDT, soft restart, deep sleep, unknown
+    TEST_ASSERT_EQUAL(static_cast<int>(ResetKind::Counted), static_cast<int>(resetKindFromReason(r)));
+  }
+}
+
+void test_boot_fresh_start_resets_counter() {
+  // RTC RAM can survive a brief power loss: a power-on must still start a fresh count.
+  BootDecision d = onBoot({kBootMagic, 3}, ResetKind::Fresh);
+  TEST_ASSERT_FALSE(d.safeMode);
+  TEST_ASSERT_EQUAL_HEX32(kBootMagic, d.next.magic);
+  TEST_ASSERT_EQUAL_UINT8(1, d.next.failed);
+  TEST_ASSERT_FALSE(onBoot({0xDEADBEEF, 9}, ResetKind::Fresh).safeMode);
+}
+
+void test_boot_counted_reset_keeps_counting() {
+  BootDecision d = onBoot({kBootMagic, 2}, ResetKind::Counted);
+  TEST_ASSERT_FALSE(d.safeMode);
+  TEST_ASSERT_EQUAL_UINT8(3, d.next.failed);
+  TEST_ASSERT_TRUE(onBoot({kBootMagic, 3}, ResetKind::Counted).safeMode);
 }
 
 void test_boot_healthy_resets() {
@@ -572,6 +597,9 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_boot_fresh_magic);
   RUN_TEST(test_boot_third_failure_enters_safe);
+  RUN_TEST(test_reset_kind_mapping);
+  RUN_TEST(test_boot_fresh_start_resets_counter);
+  RUN_TEST(test_boot_counted_reset_keeps_counting);
   RUN_TEST(test_boot_healthy_resets);
   RUN_TEST(test_is_healthy_needs_all_three);
   RUN_TEST(test_next_delay_success_clamped);

@@ -17,7 +17,20 @@ struct BootDecision {
   bool safeMode;
 };
 
-BootDecision onBoot(BootState rtc);
+// Why the chip started. Fresh: power-on or reset pin; RTC memory may still hold an old
+// count (it can survive a brief power loss), but the user asked for a clean start.
+// Counted: crash, watchdog, software restart (OTA, /restart) and anything unknown.
+enum class ResetKind : uint8_t { Fresh, Counted };
+
+// Raw values of the SDK's rst_reason (user_interface.h); main.cpp static_asserts them.
+constexpr uint32_t kResetReasonPowerOn = 0;   // REASON_DEFAULT_RST
+constexpr uint32_t kResetReasonExtPin = 6;    // REASON_EXT_SYS_RST
+
+ResetKind resetKindFromReason(uint32_t reason);
+
+// Fresh start: counter begins at 1, never safe mode. Counted: increments, safe mode
+// once kSafeModeThreshold boots in a row failed.
+BootDecision onBoot(BootState rtc, ResetKind kind);
 BootState markHealthy();
 bool isHealthy(uint32_t uptimeMs, bool wifi, bool web);
 

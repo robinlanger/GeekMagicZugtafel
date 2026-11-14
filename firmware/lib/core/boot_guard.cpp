@@ -2,8 +2,13 @@
 
 namespace gb {
 
-BootDecision onBoot(BootState rtc) {
-  if (rtc.magic != kBootMagic) {
+ResetKind resetKindFromReason(uint32_t reason) {
+  return reason == kResetReasonPowerOn || reason == kResetReasonExtPin ? ResetKind::Fresh
+                                                                       : ResetKind::Counted;
+}
+
+BootDecision onBoot(BootState rtc, ResetKind kind) {
+  if (kind == ResetKind::Fresh || rtc.magic != kBootMagic) {
     return {{kBootMagic, 1}, false};
   }
   bool safe = rtc.failed >= kSafeModeThreshold;

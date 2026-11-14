@@ -12,6 +12,9 @@
 #include "version.h"
 #include "web_ui.h"
 
+static_assert(gb::kResetReasonPowerOn == REASON_DEFAULT_RST, "rst_reason changed");
+static_assert(gb::kResetReasonExtPin == REASON_EXT_SYS_RST, "rst_reason changed");
+
 namespace {
 
 gb::Settings settings;
@@ -79,7 +82,8 @@ void pollFrame() {
 void setup() {
   // 1. Boot guard first: before display, Wi-Fi or anything else that could crash.
   const gb::BootState stored = rtcBootRead();
-  const gb::BootDecision boot = gb::onBoot(stored);
+  const gb::ResetKind kind = gb::resetKindFromReason(ESP.getResetInfoPtr()->reason);
+  const gb::BootDecision boot = gb::onBoot(stored, kind);
   rtcBootWrite(boot.next);
   bootState = boot.next;
 

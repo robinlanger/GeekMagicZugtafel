@@ -39,10 +39,10 @@ A plain restart (the **Restart** button, `POST /restart`) does **not** leave saf
 
 ## The boot counter and power cycles
 
-The counter lives in a memory area that survives restarts but **not a power loss**. So:
+The counter lives in a memory area that survives restarts. At every start the firmware also checks **why** the chip started: after power-on it always starts counting from scratch, even if the memory survived a short power loss. So:
 
-- Unplugging the power and plugging it in again **resets the counter**. After a power cycle the device starts the normal firmware again and gets three new tries.
-- Pressing reset or restarting by software keeps the counter. Three restarts within a minute each count as failed boots.
+- Unplugging the power and plugging it in again **resets the counter**. After a power cycle the device starts the normal firmware again and gets three new tries. A signal on the chip's reset pin (for example from a serial adapter) counts the same way.
+- Crashes, watchdog resets and restarts by software (the **Restart** button, an update) keep the counter. Three of them within a minute each count as failed boots.
 - If the firmware keeps failing and you power-cycle each time, you will never reach safe mode on your own. In that case upload a good firmware (for example right after a power cycle, within the first minute, as soon as `/update` answers) or use the serial route below.
 
 ## Serial flashing
