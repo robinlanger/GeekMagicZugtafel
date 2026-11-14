@@ -40,6 +40,7 @@ GB_STR(en30, "Password: use printable ASCII characters only")
 GB_STR(en31, "Brightness must be a number from 5 to 100")
 GB_STR(en32, "Saving failed")
 GB_STR(en33, "Current update password is wrong")
+GB_STR(en34, "Reset failed: settings could not be erased")
 
 // German
 GB_STR(de0, "Status")
@@ -76,17 +77,18 @@ GB_STR(de30, "Passwort: nur druckbare ASCII-Zeichen")
 GB_STR(de31, "Helligkeit muss eine Zahl von 5 bis 100 sein")
 GB_STR(de32, "Speichern fehlgeschlagen")
 GB_STR(de33, "Aktuelles Update-Passwort ist falsch")
+GB_STR(de34, "Zurücksetzen fehlgeschlagen: Einstellungen nicht gelöscht")
 
 #undef GB_STR
 
 const char* const kEn[] PROGMEM = {en0,  en1,  en2,  en3,  en4,  en5,  en6,  en7,  en8,
                                    en9,  en10, en11, en12, en13, en14, en15, en16, en17,
                                    en18, en19, en20, en21, en22, en23, en24, en25, en26,
-                                   en27, en28, en29, en30, en31, en32, en33};
+                                   en27, en28, en29, en30, en31, en32, en33, en34};
 const char* const kDe[] PROGMEM = {de0,  de1,  de2,  de3,  de4,  de5,  de6,  de7,  de8,
                                    de9,  de10, de11, de12, de13, de14, de15, de16, de17,
                                    de18, de19, de20, de21, de22, de23, de24, de25, de26,
-                                   de27, de28, de29, de30, de31, de32, de33};
+                                   de27, de28, de29, de30, de31, de32, de33, de34};
 static_assert(sizeof(kEn) / sizeof(kEn[0]) == static_cast<size_t>(Msg::Count), "kEn size");
 static_assert(sizeof(kDe) / sizeof(kDe[0]) == static_cast<size_t>(Msg::Count), "kDe size");
 }  // namespace

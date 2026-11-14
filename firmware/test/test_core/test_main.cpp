@@ -4,6 +4,7 @@
 
 #include "boot_guard.h"
 #include "ota_check.h"
+#include "ota_flow.h"
 #include "poll_timing.h"
 #include "settings.h"
 #include "web_util.h"
@@ -250,6 +251,151 @@ void test_ota_begin_size() {
   TEST_ASSERT_EQUAL_UINT(0x7A000, otaBeginSize(0x7B000));
 }
 
+namespace {
+const OtaStartChecks kGood{true, true, true, true, true};
+
+// Drives one successful upload part up to (not including) Update.end().
+void uploadUntilEnd(OtaFlow& f) {
+  f.onFileStart(kGood);
+  TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::BeginAndWrite);
+  f.onBegin(true);
+  f.onWrite(true, false);
+  TEST_ASSERT_TRUE(f.onChunk(false) == OtaFlow::Chunk::Write);  // later chunks: no header check
+  f.onWrite(true, false);
+  TEST_ASSERT_TRUE(f.onFileEnd() == OtaFlow::End::Finish);
+}
+}  // namespace
+
+void test_ota_flow_success_commits_at_file_end() {
+  OtaFlow f;
+  uploadUntilEnd(f);
+  TEST_ASSERT_TRUE(f.onFinished(true, OtaError::None));
+  TEST_ASSERT_TRUE(f.committed());
+  TEST_ASSERT_FALSE(f.mayDiscard());
+  TEST_ASSERT_EQUAL(200, f.response().code);
+}
+
+void test_ota_flow_abort_after_commit_keeps_commit_and_success() {
+  OtaFlow f;
+  uploadUntilEnd(f);
+  f.onFinished(true, OtaError::None);
+  f.onAborted();  // client disconnected after the final boundary
+  TEST_ASSERT_TRUE(f.committed());
+  TEST_ASSERT_FALSE(f.mayDiscard());
+  TEST_ASSERT_EQUAL(200, f.response().code);
+}
+
+void test_ota_flow_second_part_after_commit_never_touches_flash() {
+  OtaFlow f;
+  uploadUntilEnd(f);
+  f.onFinished(true, OtaError::None);
+  f.onFileStart(kGood);  // second file part in the same request
+  TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_TRUE(f.onFileEnd() == OtaFlow::End::Skip);
+  TEST_ASSERT_FALSE(f.mayDiscard());
+  TEST_ASSERT_EQUAL(200, f.response().code);  // the committed image stands
+}
+
+void test_ota_flow_later_requests_refused_after_commit() {
+  OtaFlow f;
+  uploadUntilEnd(f);
+  f.onFinished(true, OtaError::None);
+  f.endRequest();
+  TEST_ASSERT_TRUE(f.committed());
+  f.onFileStart(kGood);
+  TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_TRUE(f.onFileEnd() == OtaFlow::End::Skip);
+  TEST_ASSERT_FALSE(f.mayDiscard());
+  TEST_ASSERT_TRUE(f.error() == OtaError::Committed);
+  TEST_ASSERT_EQUAL(400, f.response().code);
+}
+
+void test_ota_flow_unauthorized_never_writes() {
+  OtaFlow f;
+  f.onFileStart({true, false, true, true, true});
+  TEST_ASSERT_FALSE(f.authorized());
+  TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_TRUE(f.onFileEnd() == OtaFlow::End::Skip);
+  TEST_ASSERT_EQUAL(401, f.response().code);
+  OtaFlow g;
+  g.onFileStart({false, true, true, true, true});
+  TEST_ASSERT_TRUE(g.onChunk(true) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_EQUAL(403, g.response().code);
+}
+
+void test_ota_flow_start_checks_reject_before_flash() {
+  const OtaStartChecks bad[] = {{true, true, false, true, true},
+                                {true, true, true, false, true},
+                                {true, true, true, true, false}};
+  const OtaError expect[] = {OtaError::Field, OtaError::Md5, OtaError::TooLarge};
+  for (int i = 0; i < 3; ++i) {
+    OtaFlow f;
+    f.onFileStart(bad[i]);
+    TEST_ASSERT_TRUE(f.authorized());
+    TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::Skip);
+    TEST_ASSERT_TRUE(f.error() == expect[i]);
+    TEST_ASSERT_EQUAL(400, f.response().code);
+    TEST_ASSERT_TRUE(f.mayDiscard());
+  }
+}
+
+void test_ota_flow_not_an_image_rejected_on_first_chunk() {
+  OtaFlow f;
+  f.onFileStart(kGood);
+  TEST_ASSERT_TRUE(f.onChunk(false) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_TRUE(f.error() == OtaError::NotImage);
+  TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::Skip);  // stays failed
+  TEST_ASSERT_TRUE(f.onFileEnd() == OtaFlow::End::Skip);
+  TEST_ASSERT_EQUAL(400, f.response().code);
+}
+
+void test_ota_flow_md5_mismatch_and_errors_discard() {
+  OtaFlow f;
+  uploadUntilEnd(f);
+  TEST_ASSERT_FALSE(f.onFinished(false, OtaError::Md5Mismatch));
+  TEST_ASSERT_FALSE(f.committed());
+  TEST_ASSERT_TRUE(f.mayDiscard());
+  TEST_ASSERT_EQUAL(400, f.response().code);
+  TEST_ASSERT_EQUAL_STRING("md5 mismatch", otaErrorText(f.response().error));
+
+  OtaFlow w;
+  w.onFileStart(kGood);
+  w.onChunk(true);
+  w.onBegin(true);
+  w.onWrite(false, false);
+  TEST_ASSERT_TRUE(w.onChunk(true) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_EQUAL(500, w.response().code);
+
+  OtaFlow b;
+  b.onFileStart(kGood);
+  b.onChunk(true);
+  b.onBegin(false);
+  TEST_ASSERT_EQUAL(500, b.response().code);
+
+  OtaFlow a;
+  a.onFileStart(kGood);
+  a.onChunk(true);
+  a.onBegin(true);
+  a.onAborted();
+  TEST_ASSERT_TRUE(a.error() == OtaError::Aborted);
+  TEST_ASSERT_TRUE(a.mayDiscard());
+}
+
+void test_ota_flow_empty_and_second_part_after_failure() {
+  OtaFlow f;
+  f.onFileStart(kGood);
+  TEST_ASSERT_TRUE(f.onFileEnd() == OtaFlow::End::Skip);
+  TEST_ASSERT_TRUE(f.error() == OtaError::Empty);
+  f.onFileStart(kGood);  // second part cannot reset the failure
+  TEST_ASSERT_TRUE(f.onChunk(true) == OtaFlow::Chunk::Skip);
+  TEST_ASSERT_TRUE(f.error() == OtaError::Empty);
+  f.endRequest();
+  TEST_ASSERT_FALSE(f.started());
+  TEST_ASSERT_FALSE(f.failed());
+  uploadUntilEnd(f);  // a fresh request works again
+  TEST_ASSERT_TRUE(f.onFinished(true, OtaError::None));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_boot_fresh_magic);
@@ -277,5 +423,14 @@ int main() {
   RUN_TEST(test_html_escape);
   RUN_TEST(test_origin_allowed);
   RUN_TEST(test_ota_begin_size);
+  RUN_TEST(test_ota_flow_success_commits_at_file_end);
+  RUN_TEST(test_ota_flow_abort_after_commit_keeps_commit_and_success);
+  RUN_TEST(test_ota_flow_second_part_after_commit_never_touches_flash);
+  RUN_TEST(test_ota_flow_later_requests_refused_after_commit);
+  RUN_TEST(test_ota_flow_unauthorized_never_writes);
+  RUN_TEST(test_ota_flow_start_checks_reject_before_flash);
+  RUN_TEST(test_ota_flow_not_an_image_rejected_on_first_chunk);
+  RUN_TEST(test_ota_flow_md5_mismatch_and_errors_discard);
+  RUN_TEST(test_ota_flow_empty_and_second_part_after_failure);
   return UNITY_END();
 }

@@ -3,10 +3,12 @@
 #include <ESP8266WiFi.h>
 #include <Updater.h>
 #include <WiFiUdp.h>
+#include <eboot_command.h>
 
 #include "display.h"
 #include "i18n.h"
 #include "ota_check.h"
+#include "ota_flow.h"
 #include "rtc_boot.h"
 #include "settings_store.h"
 #include "web_util.h"
@@ -32,18 +34,10 @@ bool restartPending = false;
 bool wifiErasePending = false;  // factory reset: forget Wi-Fi right before restarting
 uint32_t restartAtMs = 0;
 
-// ---- OTA state (one upload at a time; the server is single-threaded) ----
-struct Ota {
-  bool started;     // a file part was seen
-  bool authorized;  // auth + origin checked at file start
-  bool begun;       // Update.begin() succeeded
-  bool failed;
-  bool done;        // Update.end(true) succeeded
-  int code;
-  const char* reason;
-  char md5[33];
-};
-Ota ota;
+// ---- OTA (one upload at a time; the server is single-threaded) ----
+// Decisions live in gb::OtaFlow (native-tested); this file only executes them.
+gb::OtaFlow flow;
+char otaMd5[33];
 
 Lang requestLang() { return langFromHeader(server.header(F("Accept-Language"))); }
 
@@ -57,142 +51,108 @@ bool credentialsOk() {
          server.authenticate(kUser, settings->updatePassword);
 }
 
-// Abort an in-progress update so the running image stays untouched and Update can be
-// reused. end(false) only aborts when bytes are still missing; if the image happens to
-// be complete, a bogus MD5 forces end() to fail instead of staging it.
-void otaAbort() {
-  if (!Update.isRunning()) return;
-  if (Update.isFinished() && !Update.hasError()) Update.setMD5("00000000000000000000000000000000");
-  Update.end(false);
-  if (Update.isRunning()) Update.end(false);  // first end() failed on MD5 without reset
+// Drop an uncommitted update: abort the Updater and clear any eboot copy command, so
+// the running image stays the one that boots. Never called once an image is committed.
+void otaDiscard() {
+  if (!flow.mayDiscard()) return;
+  if (Update.isRunning()) {
+    // end(false) only aborts while bytes are missing; if the image happens to be complete,
+    // a bogus MD5 makes end() fail instead of staging it.
+    if (Update.isFinished() && !Update.hasError()) Update.setMD5("00000000000000000000000000000000");
+    Update.end(false);
+    if (Update.isRunning()) Update.end(false);  // end() keeps state after an MD5 mismatch
+  }
+  eboot_command_clear();
 }
 
-void otaFail(int code, const char* reason) {
-  if (!ota.failed) {
-    ota.failed = true;
-    ota.code = code;
-    ota.reason = reason;
-    if (ota.authorized) {  // unauthenticated requests must not touch the display
-      const char* lines[] = {reason};
-      displayStatus("Update failed", lines, 1);
-    }
+// After every upload event: on failure discard (unless committed) and tell the screen.
+void otaSettle(gb::OtaError before) {
+  if (!flow.failed()) return;
+  otaDiscard();
+  // Unauthenticated requests must not touch the display; after a commit the screen keeps
+  // "Update OK" because the staged image boots next regardless.
+  if (before == gb::OtaError::None && flow.authorized() && !flow.committed()) {
+    const char* lines[] = {gb::otaErrorText(flow.error())};
+    displayStatus("Update failed", lines, 1);
   }
-  otaAbort();
+}
+
+gb::OtaError otaEndError(uint8_t updaterError) {
+  if (updaterError == UPDATE_ERROR_MD5) return gb::OtaError::Md5Mismatch;
+  if (updaterError == UPDATE_ERROR_MAGIC_BYTE || updaterError == UPDATE_ERROR_NEW_FLASH_CONFIG)
+    return gb::OtaError::Header;
+  return gb::OtaError::Verify;
 }
 
 void handleUpload() {
   HTTPUpload& up = server.upload();
+  const gb::OtaError before = flow.error();
   switch (up.status) {
     case UPLOAD_FILE_START: {
-      otaAbort();  // stale state from an earlier broken request
-      ota = Ota{};
-      ota.started = true;
-      if (!originOk()) {
-        otaFail(403, "origin not allowed");
-        return;
-      }
-      if (!credentialsOk()) {
-        ota.failed = true;  // reported as 401 by handleUpdateDone; nothing written
-        return;
-      }
-      ota.authorized = true;
-      if (restartPending) {
-        otaFail(400, "restart pending");  // never overwrite a staged image
-        return;
-      }
-      if (up.name != F("firmware")) {
-        otaFail(400, "file field must be named firmware");
-        return;
-      }
+      const bool origin = originOk();
+      const bool auth = origin && credentialsOk();
       const String md5 = server.arg(F("md5"));
-      if (!gb::isValidMd5Hex(md5.c_str())) {
-        otaFail(400, "md5 missing or invalid (send md5 before firmware)");
-        return;
-      }
-      strlcpy(ota.md5, md5.c_str(), sizeof(ota.md5));
+      const size_t minImage =
+          up.contentLength > kMultipartSlack ? up.contentLength - kMultipartSlack : 0;
       const size_t beginSize = gb::otaBeginSize(ESP.getFreeSketchSpace());
-      const size_t minImage = up.contentLength > kMultipartSlack ? up.contentLength - kMultipartSlack : 0;
-      if (beginSize == 0 || !gb::fitsOta(minImage, beginSize)) {
-        otaFail(400, "image too large");
-        return;
+      flow.onFileStart({origin, auth, up.name == F("firmware"), gb::isValidMd5Hex(md5.c_str()),
+                        beginSize > 0 && gb::fitsOta(minImage, beginSize)});
+      if (!flow.failed()) {
+        strlcpy(otaMd5, md5.c_str(), sizeof(otaMd5));
+        const char* lines[] = {"receiving..."};
+        displayStatus("Firmware update", lines, 1);
       }
-      const char* lines[] = {"receiving..."};
-      displayStatus("Firmware update", lines, 1);
-      return;
+      break;
     }
     case UPLOAD_FILE_WRITE: {
-      if (ota.failed) return;
-      if (!ota.begun) {
-        // First chunk: check the image header before touching flash.
-        if (!gb::looksLikeEsp8266Image(up.buf, up.currentSize)) {
-          otaFail(400, "not an ESP8266 image");
-          return;
-        }
+      const auto step = flow.onChunk(gb::looksLikeEsp8266Image(up.buf, up.currentSize));
+      if (step == gb::OtaFlow::Chunk::Skip) break;
+      if (step == gb::OtaFlow::Chunk::BeginAndWrite) {
         WiFiUDP::stopAll();
-        if (!Update.begin(gb::otaBeginSize(ESP.getFreeSketchSpace()))) {
-          otaFail(500, "Update.begin failed");
-          return;
-        }
-        ota.begun = true;
-        if (!Update.setMD5(ota.md5)) {
-          otaFail(400, "md5 missing or invalid");
-          return;
-        }
+        eboot_command_clear();  // no stale copy command may survive into this update
+        flow.onBegin(Update.begin(gb::otaBeginSize(ESP.getFreeSketchSpace())) &&
+                     Update.setMD5(otaMd5));
+        if (flow.failed()) break;
       }
-      if (Update.write(up.buf, up.currentSize) != up.currentSize) {
-        otaFail(Update.getError() == UPDATE_ERROR_SPACE ? 400 : 500,
-                Update.getError() == UPDATE_ERROR_SPACE ? "image too large" : "flash write failed");
-      }
-      return;
+      const bool ok = Update.write(up.buf, up.currentSize) == up.currentSize;
+      flow.onWrite(ok, !ok && Update.getError() == UPDATE_ERROR_SPACE);
+      break;
     }
     case UPLOAD_FILE_END: {
-      if (ota.failed) return;
-      if (!ota.begun) {
-        otaFail(400, "empty or truncated image");
-        return;
+      if (flow.onFileEnd() == gb::OtaFlow::End::Skip) break;
+      const bool ok = Update.end(true);  // verifies size, MD5, header; stages eboot copy
+      if (flow.onFinished(ok, ok ? gb::OtaError::None : otaEndError(Update.getError()))) {
+        // Commit point: whatever happens to this request now, the staged image boots
+        // next, with a clean boot counter.
+        rtcBootWrite(gb::markHealthy());
+        const char* lines[] = {"restarting..."};
+        displayStatus("Update OK", lines, 1);
+        webUiScheduleRestart();
       }
-      if (Update.end(true)) {
-        ota.done = true;
-        return;
-      }
-      const uint8_t err = Update.getError();
-      otaFail(err == UPDATE_ERROR_MD5 ? 400 : 500,
-              err == UPDATE_ERROR_MD5                  ? "md5 mismatch"
-              : err == UPDATE_ERROR_MAGIC_BYTE ||
-                      err == UPDATE_ERROR_NEW_FLASH_CONFIG ? "image header does not fit this device"
-                                                           : "verification failed");
-      return;
+      break;
     }
     case UPLOAD_FILE_ABORTED:
     default:
-      otaFail(400, "upload aborted");
-      return;
+      flow.onAborted();
+      break;
   }
+  otaSettle(before);
 }
 
 void handleUpdateDone() {
-  const Ota r = ota;  // consume the per-request upload state
-  ota = Ota{};
-  if (!r.done) otaAbort();
-  if (!r.started) {
-    // No file part at all (or broken form): still enforce auth before saying anything.
+  if (!flow.started()) {
+    // No file part at all: still enforce origin/auth before saying anything.
     if (!originOk()) return server.send(403, F("text/plain"), F("origin not allowed\n"));
     if (!credentialsOk()) return server.requestAuthentication();
     return server.send(400, F("text/plain"), F("update failed: firmware missing\n"));
   }
-  if (!r.authorized && r.code != 403) return server.requestAuthentication();
-  if (!r.done) {
-    String msg = F("update failed: ");
-    msg += r.reason != nullptr ? r.reason : "unknown error";
-    msg += '\n';
-    return server.send(r.code != 0 ? r.code : 500, F("text/plain"), msg);
-  }
-  // Staged: the new image starts with a clean boot counter.
-  rtcBootWrite(gb::markHealthy());
-  const char* lines[] = {"restarting..."};
-  displayStatus("Update OK", lines, 1);
-  server.send(200, F("text/plain"), F("update ok, restarting\n"));
-  webUiScheduleRestart();
+  const gb::OtaResponse r = flow.response();
+  if (r.code == 401) return server.requestAuthentication();
+  if (r.code == 200) return server.send(200, F("text/plain"), F("update ok, restarting\n"));
+  String msg = F("update failed: ");
+  msg += gb::otaErrorText(r.error);
+  msg += '\n';
+  server.send(r.code, F("text/plain"), msg);
 }
 
 uint32_t uptimeS() { return static_cast<uint32_t>(micros64() / 1000000ULL); }
@@ -354,7 +314,9 @@ void handleSettings() {
 void handleReset() {
   if (!webUiAuthorize()) return;
   const Lang l = requestLang();
-  settingsErase();
+  if (!settingsErase()) {  // keep running unchanged: no half reset
+    return sendMessage(500, l, tr(l, Msg::ErrResetFailed), true);
+  }
   sendMessage(200, l, tr(l, Msg::ResetDone), false);  // before Wi-Fi goes away
   wifiErasePending = true;
   webUiScheduleRestart();
@@ -395,8 +357,8 @@ void webUiLoop() {
   server.handleClient();
   // Uploads are parsed synchronously inside handleClient(), so upload state left here
   // belongs to a broken request (parse error, client gone): drop it.
-  if (Update.isRunning()) otaAbort();
-  ota = Ota{};
+  if (Update.isRunning()) otaDiscard();  // never true after a commit (Update is reset then)
+  flow.endRequest();
   if (restartPending && static_cast<int32_t>(millis() - restartAtMs) >= 0) {
     server.stop();
     if (wifiErasePending) {
