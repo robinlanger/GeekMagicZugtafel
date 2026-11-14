@@ -50,3 +50,10 @@ def test_headings_in_code_fences_ignored(tmp_path):
     de = "# A\n~~~\n# one\n# two\n~~~\n## B\n"
     make(tmp_path, {"a.md": en}, {"a.md": de})
     assert run(tmp_path).returncode == 0
+
+
+def test_file_only_in_de_fails(tmp_path):
+    make(tmp_path, {"a.md": "# A\n"}, {"a.md": "# A\n", "extra.md": "# E\n"})
+    r = run(tmp_path)
+    assert r.returncode == 1
+    assert "extra.md" in r.stderr
