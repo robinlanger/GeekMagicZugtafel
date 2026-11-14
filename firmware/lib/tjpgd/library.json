@@ -1,0 +1,6 @@
+{
+  "name": "tjpgd",
+  "version": "0.3.0",
+  "description": "ChaN TJpgDec R0.03, vendored (see README.md)",
+  "build": { "flags": "-Wno-unused-parameter" }
+}

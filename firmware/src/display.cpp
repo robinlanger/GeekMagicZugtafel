@@ -1,8 +1,8 @@
 #include "display.h"
 
-#include <TJpg_Decoder.h>
-
+#include "poll_timing.h"
 #include "settings.h"
+#include "tjpgd.h"
 
 namespace {
 constexpr uint8_t kBacklightPin = 5;
@@ -11,10 +11,31 @@ constexpr int kHeight = 240;
 
 TFT_eSPI tft;
 
-bool tftOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap) {
-  if (y >= kHeight) return false;
-  tft.pushImage(x, y, w, h, bitmap);
-  return true;
+// TJpgDec work pool: static, never heap (size verified by test_tjpgd).
+alignas(4) uint8_t jpegPool[gb::kJpegPoolBytes];
+
+struct JpegSource {
+  const uint8_t* data;
+  size_t len;
+  size_t pos;
+};
+
+// Input callback: copy (or skip, when buf is null) up to n bytes from the memory buffer.
+size_t jpegInput(JDEC* jd, uint8_t* buf, size_t n) {
+  auto* src = static_cast<JpegSource*>(jd->device);
+  const size_t left = src->len - src->pos;
+  if (n > left) n = left;
+  if (buf != nullptr) memcpy(buf, src->data + src->pos, n);
+  src->pos += n;
+  return n;
+}
+
+// Output callback: push one decoded RGB565 block; stop below the visible area.
+int jpegOutput(JDEC*, void* bitmap, JRECT* rect) {
+  if (rect->top >= kHeight) return 0;
+  tft.pushImage(rect->left, rect->top, rect->right - rect->left + 1, rect->bottom - rect->top + 1,
+                static_cast<uint16_t*>(bitmap));
+  return 1;
 }
 }  // namespace
 
@@ -30,15 +51,17 @@ void displayBegin(uint8_t brightnessPct) {
   displaySetBrightness(0);  // keep dark until the controller is initialised
   tft.init();
   tft.invertDisplay(true);
-  tft.setSwapBytes(true);
+  tft.setSwapBytes(true);  // TJpgDec emits native-endian RGB565
   tft.fillScreen(TFT_BLACK);
-  TJpgDec.setJpgScale(1);
-  TJpgDec.setCallback(tftOutput);
   displaySetBrightness(brightnessPct);
 }
 
 bool displayJpeg(const uint8_t* data, size_t len) {
-  return TJpgDec.drawJpg(0, 0, data, len) == JDR_OK;
+  JpegSource src{data, len, 0};
+  JDEC jd;
+  if (jd_prepare(&jd, jpegInput, jpegPool, sizeof(jpegPool), &src) != JDR_OK) return false;
+  const JRESULT rc = jd_decomp(&jd, jpegOutput, 0);
+  return rc == JDR_OK || rc == JDR_INTR;  // INTR: stopped below the visible area
 }
 
 void displayStatus(const char* title, const char* const* lines, size_t n) {
