@@ -8,7 +8,13 @@ Verified 2026-11-15 against https://docs.github.com/en/rest/billing/usage (API v
 - Headers: Authorization: Bearer <token>, Accept: application/vnd.github+json,
   X-GitHub-Api-Version: 2026-03-10.
 - Token: fine-grained personal access token (or GitHub App user token) with the user
-  permission "Plan" (read). Only covers a Copilot plan the user bought personally; seats billed
+  permission "Plan" (read), per the endpoint reference and
+  https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens
+  ("User permissions for Plan"). Conflict: the tutorial
+  https://docs.github.com/en/billing/tutorials/automate-usage-reporting says the billing usage
+  endpoints need a classic PAT and do not support fine-grained ones, and no doc names the
+  classic scope. The user docs recommend fine-grained first and a classic token on HTTP 403.
+  Only covers a Copilot plan the user bought personally; seats billed
   through an organisation or enterprise are not included.
 - Query: year, month (default: the current month). The included allowance resets on the 1st at
   00:00 UTC, so the month is the UTC month.
