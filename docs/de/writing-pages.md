@@ -56,7 +56,7 @@ Ein Jinja2-Template. Erweitere `base.html`. Es richtet die 240x240-Fläche, den 
 {% block body %}<h1>{{ title }}</h1>{% endblock %}
 ```
 
-Werte werden automatisch HTML-maskiert. Die Fläche ist genau 240x240 Pixel groß und nichts scrollt, was nicht passt, wird abgeschnitten. Die Schriften heißen „DejaVu Sans“ und „DejaVu Sans Condensed“ (normal und fett). Die schmale Variante bringt mehr Zeichen in eine Zeile.
+Werte werden automatisch HTML-maskiert. Die Fläche ist genau 240x240 Pixel groß und nichts scrollt, was nicht passt, wird abgeschnitten. Beim SmallTV Ultra verdeckt das Gehäuse die untersten etwa 6 Pixelreihen. Lass deshalb unten mindestens 8 px frei. Die Schriften heißen „DejaVu Sans“ und „DejaVu Sans Condensed“ (normal und fett). Die schmale Variante bringt mehr Zeichen in eine Zeile.
 
 ## Beispiel: die Seite clock
 

@@ -8,3 +8,8 @@ server/.venv/
 .ruff_cache/
 .pio/
 zugtafel.png
+
+# Local setup (never commit)
+config.yaml
+docker-compose.override.yml
+pages-custom/

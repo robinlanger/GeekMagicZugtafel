@@ -31,9 +31,9 @@ static String statusJson() {
 static void drawTestPattern() {
   TFT_eSPI& t = displayTft();
   t.fillScreen(TFT_BLACK);
-  t.fillRect(0, 60, 80, 120, TFT_RED);
-  t.fillRect(80, 60, 80, 120, TFT_GREEN);
-  t.fillRect(160, 60, 80, 120, TFT_BLUE);
+  t.fillRect(0, 60, 80, 80, TFT_RED);
+  t.fillRect(80, 60, 80, 80, TFT_GREEN);
+  t.fillRect(160, 60, 80, 80, TFT_BLUE);
   t.drawRect(0, 0, 240, 240, TFT_WHITE);
   t.drawRect(1, 1, 238, 238, TFT_WHITE);
   t.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -41,11 +41,17 @@ static void drawTestPattern() {
   t.drawString("TOP", 8, 8, 4);
   t.fillTriangle(210, 8, 200, 28, 220, 28, TFT_YELLOW);  // arrow pointing up, top-right
   t.setTextColor(TFT_BLACK, TFT_RED);
-  t.drawString("R", 36, 110, 4);
+  t.drawString("R", 36, 90, 4);
   t.setTextColor(TFT_BLACK, TFT_GREEN);
-  t.drawString("G", 116, 110, 4);
+  t.drawString("G", 116, 90, 4);
   t.setTextColor(TFT_WHITE, TFT_BLUE);
-  t.drawString("B", 196, 110, 4);
+  t.drawString("B", 196, 90, 4);
+  // Bottom ruler: 2-px bands upward from the last row (white border = rows 238-239).
+  // The lowest band still visible tells how many rows the bezel hides; bands showing up
+  // at the top instead would mean a RAM row offset.
+  static const uint16_t kRuler[] = {TFT_RED, TFT_GREEN, TFT_BLUE, TFT_YELLOW,
+                                    TFT_MAGENTA, TFT_CYAN, TFT_ORANGE};
+  for (int i = 0; i < 7; i++) t.fillRect(20, 236 - 2 * i, 200, 2, kRuler[i]);
 }
 
 static void showInfo() {
@@ -59,7 +65,7 @@ static void showInfo() {
       "sketch free " + String(ESP.getFreeSketchSpace()),
       "heap " + String(ESP.getFreeHeap()),
   };
-  for (int i = 0; i < 5; i++) t.drawString(l[i], 6, 186 + i * 10, 1);
+  for (int i = 0; i < 5; i++) t.drawString(l[i], 6, 150 + i * 12, 1);
 }
 
 void setup() {

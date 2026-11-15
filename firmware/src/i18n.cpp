@@ -1,5 +1,7 @@
 #include "i18n.h"
 
+#include "arduino_str.h"
+
 #include "web_util.h"
 
 namespace {
@@ -100,7 +102,7 @@ static_assert(sizeof(kDe) / sizeof(kDe[0]) == static_cast<size_t>(Msg::Count), "
 }  // namespace
 
 Lang langFromHeader(const String& acceptLanguage) {
-  return gb::prefersGerman(acceptLanguage.c_str()) ? Lang::De : Lang::En;
+  return gb::prefersGerman(strOrEmpty(acceptLanguage)) ? Lang::De : Lang::En;
 }
 
 const __FlashStringHelper* tr(Lang lang, Msg msg) {

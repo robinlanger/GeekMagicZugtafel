@@ -81,7 +81,7 @@ The way back is described in [Recovery](recovery.md#restoring-the-backup).
 
 1. Power the display and let it join your Wi-Fi with the stock firmware. Find its IP address (shown on the display, or in your router's device list).
 2. Open `http://<display-ip>/` in a browser on the same network.
-3. Find the **firmware update** page of the stock interface. The exact name of the menu entry depends on the stock firmware version.
+3. Find the **firmware update** page of the stock interface. On a tested Ultra the section is called **"7. Firmware update"** with an **UPLOAD** button. Other stock firmware versions may name it differently.
 4. Choose `glancebox-ultra-<version>.bin` and start the upload.
 5. **Do not unplug the display** for about a minute. It restarts on its own when the upload is done.
 

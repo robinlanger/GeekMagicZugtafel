@@ -81,7 +81,7 @@ Den Weg zurück beschreibt [Rettung](recovery.md#sicherung-zurückspielen).
 
 1. Schalte das Display ein und lass es mit der Original-Firmware in dein WLAN. Finde seine IP-Adresse heraus (sie steht auf dem Display oder in der Geräteliste deines Routers).
 2. Öffne `http://<display-ip>/` in einem Browser im selben Netzwerk.
-3. Suche die Seite für das **Firmware-Update** in der Original-Oberfläche. Wie der Menüpunkt genau heißt, hängt von der Version der Original-Firmware ab.
+3. Suche die Seite für das **Firmware-Update** in der Original-Oberfläche. Auf einem getesteten Ultra heißt der Abschnitt **„7. Firmware update“** mit einem Button **UPLOAD**. In anderen Versionen der Original-Firmware kann er anders heißen.
 4. Wähle `glancebox-ultra-<version>.bin` und starte den Upload.
 5. **Ziehe das Display etwa eine Minute lang nicht ab.** Es startet von selbst neu, wenn der Upload fertig ist.
 
