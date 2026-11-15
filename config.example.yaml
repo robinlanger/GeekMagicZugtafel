@@ -3,6 +3,7 @@ interval: 30              # default display time per page, in seconds
 timezone: Europe/Berlin
 lang: de                  # language for built-in pages (de or en)
 custom_pages_dir: /config/pages   # your own pages (<type>/page.py + template.html); may be missing
+# push_key: ${GLANCEBOX_PUSH_KEY}   # only needed for pushed data (ai page, provider claude)
 
 pages:
   - type: bahn
@@ -12,6 +13,16 @@ pages:
     limit: 4
     title: Heimweg
     refresh: 60           # data at most once a minute (DB rule, minimum 60 for bahn)
+  # - type: weather
+  #   location: Frankfurt am Main
+  #   refresh: 60           # minimum 60; Open-Meteo is asked at most every 15 min
+  # - type: kuma
+  #   url: http://192.168.1.20:3001   # your Uptime Kuma
+  #   slug: home                    # slug of its status page
+  #   refresh: 30
+  # - type: ai
+  #   provider: claude      # values from Claude Code's status line, needs push_key above
+  #   refresh: 30
   - type: url
     url: http://homeserver.lan/status-240
     duration: 15          # show this page for 15 s instead of the default interval

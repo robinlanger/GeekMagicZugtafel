@@ -1,0 +1,33 @@
+{# Flat weather icons. Usage: {% import "icons.html" as icons %}{{ icons.icon("rain", 70, 56) }} #}
+{% macro icon(key, w=70, h=56) -%}
+<svg width="{{ w }}" height="{{ h }}" viewBox="0 0 70 56" xmlns="http://www.w3.org/2000/svg">
+{%- set cloud = '<path d="M18 42h35a10 10 0 0 0 1-19.9A14 14 0 0 0 27 19a12 12 0 0 0-9 23z" fill="%s"/>' -%}
+{%- if key == "clear" -%}
+  <circle cx="35" cy="28" r="12" fill="#ffd700"/>
+  {%- for a in range(0, 360, 45) %}<line x1="35" y1="8" x2="35" y2="3" stroke="#ffd700" stroke-width="3" stroke-linecap="round" transform="rotate({{ a }} 35 28)"/>{% endfor -%}
+{%- elif key == "clear-night" -%}
+  <path d="M42 8a20 20 0 1 0 14 34A17 17 0 0 1 42 8z" fill="#cfd8e6"/>
+{%- elif key == "partly" -%}
+  <circle cx="24" cy="20" r="10" fill="#ffd700"/>
+  {%- for a in range(0, 360, 45) %}<line x1="24" y1="4" x2="24" y2="0" stroke="#ffd700" stroke-width="3" stroke-linecap="round" transform="rotate({{ a }} 24 20)"/>{% endfor %}
+  {{ (cloud % "#c4ccd8")|safe }}
+{%- elif key == "partly-night" -%}
+  <path d="M30 4a14 14 0 1 0 10 24A12 12 0 0 1 30 4z" fill="#cfd8e6"/>
+  {{ (cloud % "#9aa4b4")|safe }}
+{%- elif key == "fog" -%}
+  {{ (cloud % "#7d8696")|safe }}
+  <g stroke="#b4bcc8" stroke-width="3" stroke-linecap="round"><line x1="12" y1="48" x2="52" y2="48"/><line x1="20" y1="54" x2="62" y2="54"/></g>
+{%- elif key == "rain" -%}
+  {{ (cloud % "#8a94a6")|safe }}
+  <g stroke="#5aa0ff" stroke-width="3" stroke-linecap="round"><line x1="24" y1="46" x2="21" y2="54"/><line x1="36" y1="46" x2="33" y2="54"/><line x1="48" y1="46" x2="45" y2="54"/></g>
+{%- elif key == "snow" -%}
+  {{ (cloud % "#8a94a6")|safe }}
+  <g fill="#ebeef2"><circle cx="23" cy="49" r="2.5"/><circle cx="35" cy="52" r="2.5"/><circle cx="47" cy="49" r="2.5"/></g>
+{%- elif key == "thunder" -%}
+  {{ (cloud % "#6c7586")|safe }}
+  <path d="M38 38l-8 10h6l-3 8 11-12h-6z" fill="#ffd700"/>
+{%- else -%}
+  {{ (cloud % "#a9b2c0")|safe }}
+{%- endif -%}
+</svg>
+{%- endmacro %}

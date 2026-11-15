@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% import "icons.html" as icons %}
+{% block head %}
+<style>
+.now{position:absolute;left:0;top:34px;width:240px;height:64px;display:flex;align-items:center;padding:0 7px;box-sizing:border-box;}
+.now svg{flex:none;margin-right:6px;}
+.now .col{min-width:0;}
+.temp{font-weight:700;font-size:46px;line-height:1;white-space:nowrap;}
+.desc{margin-top:3px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.range{position:absolute;left:0;top:104px;width:240px;padding:0 7px;box-sizing:border-box;font-size:14px;font-weight:700;display:flex;gap:14px;}
+.hi{color:var(--red);}
+.lo{color:var(--blue);}
+.hours{position:absolute;left:0;top:136px;width:240px;height:96px;border-top:1px solid var(--divider);display:flex;}
+.h{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;}
+.h + .h{border-left:1px solid var(--divider);}
+.h .t{font-size:13px;color:var(--muted);}
+.h .v{font-size:20px;font-weight:700;}
+.h .r{font-size:11px;color:var(--blue);}
+</style>
+{% endblock %}
+{% block body %}
+{{ ui.header(title, clock) }}
+<div class="now">
+  {{ icons.icon(icon, 70, 56) }}
+  <div class="col">
+    <div class="temp">{{ temp }}°</div>
+    <div class="desc">{{ desc }}</div>
+  </div>
+</div>
+<div class="range"><span class="hi">↑ {{ high }}°</span><span class="lo">↓ {{ low }}°</span></div>
+<div class="hours">
+{%- for h in hours %}
+  <div class="h"><span class="t">{{ h.hour }}</span><span class="v">{{ h.temp }}°</span><span class="r">{{ h.rain }}%</span></div>
+{%- endfor %}
+</div>
+{% endblock %}

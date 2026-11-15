@@ -29,18 +29,19 @@ def fetch(options: dict, ctx) -> dict:
 ```
 
 - `fetch(options, ctx)` is **required**. It returns a dict. Every key becomes a variable in the template. It runs in a worker thread (blocking calls such as HTTP requests are fine) and must finish within 20 seconds.
-- **Give every network call a timeout**, for example `requests.get(url, timeout=10)`. The 20-second limit only stops waiting for the result: a call that hangs keeps its worker thread busy, and a few of them can stall all script pages.
+- **Give every network call a timeout**, for example `requests.get(url, timeout=10)`. Better: `from glancebox import http` and `http.get_json(url, params=..., headers=...)`. It sets a 10-second timeout and the User-Agent `glancebox/<version>`, raises on HTTP errors and returns the parsed JSON. The 20-second limit only stops waiting for the result: a call that hangs keeps its worker thread busy, and a few of them can stall all script pages.
 - `validate(options)` is optional. Raise `ValueError("...")` to reject a bad configuration. The server then refuses to start and shows your message with the page number.
 - `MIN_REFRESH = 60` is optional (an integer). It sets the smallest allowed `refresh` for your page, for example to respect a rate limit.
 - Other `.py` files in the same folder can be imported with `from .helper import something`.
 
-`options` holds every key of the page entry in `config.yaml` except `type`, `duration` and `refresh`. `ctx` has three fields:
+`options` holds every key of the page entry in `config.yaml` except `type`, `duration` and `refresh`. `ctx` has four fields:
 
 | Field | Meaning |
 | --- | --- |
 | `ctx.now` | the current time as a datetime with the time zone from `config.yaml` |
 | `ctx.lang` | the top-level `lang` (`de` or `en`) |
 | `ctx.timezone` | the time zone name |
+| `ctx.pushed(channel)` | the latest data pushed to the server, see [Data pushed to the server](#data-pushed-to-the-server) |
 
 If `fetch` raises an error, the page keeps its last good picture for up to 10 minutes and the error appears in the log and on the preview page. An error in `page.py` while loading (a typo) stops the server at startup with a clear message.
 
@@ -48,7 +49,7 @@ A page may instead catch the error and return data for a picture that says so. T
 
 ### template.html
 
-A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dark background, the bundled DejaVu fonts (with umlauts) and these CSS variables: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`.
+A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dark background, the bundled DejaVu fonts (with umlauts) and these CSS variables: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`, `--green`, `--blue`, `--header-alert`.
 
 ```html
 {% extends "base.html" %}
@@ -57,6 +58,78 @@ A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dar
 ```
 
 Values are HTML-escaped automatically. The canvas is exactly 240x240 pixels and nothing scrolls, so anything that does not fit is cut off. On the SmallTV Ultra the housing hides roughly the bottom 6 pixel rows, so keep at least 8 px free at the bottom. The fonts are "DejaVu Sans" and "DejaVu Sans Condensed" (regular and bold). The condensed one gives you more characters per line.
+
+## Building blocks
+
+`base.html` also ships ready-made pieces for the common look. Import the macros in your template:
+
+```html
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% block body %}
+{{ ui.header("Server", "14:05", alert=False) }}
+<div style="position:absolute;top:50px;left:7px;right:7px">{{ ui.bar(82, "82 %") }}</div>
+{% endblock %}
+```
+
+- `ui.header(title, clock, alert=False)`: the 34 px title bar with the title on the left and the clock on the right. `alert=True` makes it red (`--header-alert`).
+- `ui.notice(message, sub=None, tone="muted")`: a centered message below the header. `tone` is `muted`, `warn` (orange) or `bad` (red).
+- `ui.bar(percent, text, height=30)`: a bar filled to `percent` (limited to 0 to 100) with `text` on its right. Green below 75 %, orange from 75 %, red from 90 %.
+- `ui.level(percent)`: only the class name (`ui-ok`, `ui-warn` or `ui-bad`) for colouring your own elements.
+
+New CSS variables: `--green` (`rgb(60,200,110)`), `--blue` (`rgb(90,160,255)`) and `--header-alert` (`rgb(150,25,25)`).
+
+## Data pushed to the server
+
+Some data cannot be fetched by the server, because it only exists on another computer. Such a computer can push it to the server instead, and your page reads the latest push. This is meant for your home network (LAN) only.
+
+Declare in `page.py` which channels your page reads and which top-level JSON keys the server keeps:
+
+```python
+PUSH_KEYS = {"claude": ("rate_limits",)}
+
+
+def fetch(options, ctx):
+    pushed = ctx.pushed("claude")
+    if pushed is None:
+        return {"text": "No data yet"}
+    return {"text": str(pushed.data["rate_limits"]), "at": pushed.received_at}
+```
+
+- `PUSH_KEYS` maps each channel name to a tuple of key names. Channel names match `^[a-z0-9_-]{1,32}$`. A malformed `PUSH_KEYS` stops the server at startup with a clear message.
+- `ctx.pushed(channel)` returns the latest push or `None` if nothing arrived since the server started. `.data` is a dict with only the declared keys. `.received_at` is the time of arrival in seconds since the epoch (Unix time).
+- Every other key of a push is dropped. Nothing is written to disk: the data lives in RAM only, so it is gone after a restart.
+- A push does not render the page at once. The page picks up new data on its next `refresh`. Pages that only read pushes need no network, so `refresh: 30` is cheap and recommended.
+
+The endpoint is off until you set `push_key` (see [Configuration](configuration.md)). Put the key in `.env` next to `docker-compose.yml` and refer to it in `config.yaml`:
+
+```
+# .env
+GLANCEBOX_PUSH_KEY=<at least 16 characters, e.g. from openssl rand -hex 24>
+```
+
+```yaml
+push_key: ${GLANCEBOX_PUSH_KEY}
+```
+
+Then a computer on your home network sends the data like this:
+
+```sh
+curl -X POST "http://192.168.1.20:8080/api/v1/push/claude" \
+  -H "Authorization: Bearer $GLANCEBOX_PUSH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"rate_limits": {"five_hour": {"used_percentage": 12}}}'
+```
+
+| Status | Meaning |
+| --- | --- |
+| 204 | stored |
+| 404 | no `push_key` set, or no page declares this channel |
+| 401 | `Authorization: Bearer <key>` missing or wrong |
+| 413 | body larger than 65 536 bytes |
+| 422 | body is not a JSON object |
+
+Keep the server on your home network. The push endpoint is protected only by the key and is not meant to be reachable from the internet. The server never logs the body or the key.
 
 ## Walkthrough: the clock page
 

@@ -29,18 +29,19 @@ def fetch(options: dict, ctx) -> dict:
 ```
 
 - `fetch(options, ctx)` ist **Pflicht**. Es gibt ein Dict zurück. Jeder Schlüssel wird im Template zu einer Variablen. Die Funktion läuft in einem Worker-Thread (blockierende Aufrufe wie HTTP-Anfragen sind in Ordnung) und muss innerhalb von 20 Sekunden fertig sein.
-- **Gib jedem Netzwerkaufruf ein Timeout mit**, zum Beispiel `requests.get(url, timeout=10)`. Die 20-Sekunden-Grenze beendet nur das Warten auf das Ergebnis: Ein hängender Aufruf hält seinen Worker-Thread belegt, und schon wenige davon können alle Skript-Seiten blockieren.
+- **Gib jedem Netzwerkaufruf ein Timeout mit**, zum Beispiel `requests.get(url, timeout=10)`. Besser: `from glancebox import http` und `http.get_json(url, params=..., headers=...)`. Das setzt ein Timeout von 10 Sekunden und den User-Agent `glancebox/<Version>`, wirft bei HTTP-Fehlern und gibt das geparste JSON zurück. Die 20-Sekunden-Grenze beendet nur das Warten auf das Ergebnis: Ein hängender Aufruf hält seinen Worker-Thread belegt, und schon wenige davon können alle Skript-Seiten blockieren.
 - `validate(options)` ist optional. Wirf `ValueError("...")`, um eine fehlerhafte Konfiguration abzulehnen. Der Server startet dann nicht und zeigt deine Meldung mit der Seitennummer.
 - `MIN_REFRESH = 60` ist optional (eine ganze Zahl). Es legt das kleinste erlaubte `refresh` für deine Seite fest, zum Beispiel um ein Anfragelimit einzuhalten.
 - Andere `.py`-Dateien im selben Ordner kannst du mit `from .helper import etwas` importieren.
 
-`options` enthält alle Schlüssel des Seiteneintrags in der `config.yaml` außer `type`, `duration` und `refresh`. `ctx` hat drei Felder:
+`options` enthält alle Schlüssel des Seiteneintrags in der `config.yaml` außer `type`, `duration` und `refresh`. `ctx` hat vier Felder:
 
 | Feld | Bedeutung |
 | --- | --- |
 | `ctx.now` | die aktuelle Zeit als datetime mit der Zeitzone aus der `config.yaml` |
 | `ctx.lang` | das `lang` von oberster Ebene (`de` oder `en`) |
 | `ctx.timezone` | der Name der Zeitzone |
+| `ctx.pushed(kanal)` | die letzten Daten, die an den Server geschickt wurden, siehe [Daten, die an den Server geschickt werden](#daten-die-an-den-server-geschickt-werden) |
 
 Wirft `fetch` einen Fehler, behält die Seite bis zu 10 Minuten ihr letztes gutes Bild, und der Fehler erscheint im Log und auf der Vorschauseite. Ein Fehler in `page.py` beim Laden (ein Tippfehler) stoppt den Server beim Start mit einer klaren Meldung.
 
@@ -48,7 +49,7 @@ Eine Seite kann den Fehler stattdessen abfangen und Daten für ein Bild zurückg
 
 ### template.html
 
-Ein Jinja2-Template. Erweitere `base.html`. Es richtet die 240x240-Fläche, den dunklen Hintergrund, die mitgelieferten DejaVu-Schriften (mit Umlauten) und diese CSS-Variablen ein: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`.
+Ein Jinja2-Template. Erweitere `base.html`. Es richtet die 240x240-Fläche, den dunklen Hintergrund, die mitgelieferten DejaVu-Schriften (mit Umlauten) und diese CSS-Variablen ein: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`, `--green`, `--blue`, `--header-alert`.
 
 ```html
 {% extends "base.html" %}
@@ -57,6 +58,78 @@ Ein Jinja2-Template. Erweitere `base.html`. Es richtet die 240x240-Fläche, den 
 ```
 
 Werte werden automatisch HTML-maskiert. Die Fläche ist genau 240x240 Pixel groß und nichts scrollt, was nicht passt, wird abgeschnitten. Beim SmallTV Ultra verdeckt das Gehäuse die untersten etwa 6 Pixelreihen. Lass deshalb unten mindestens 8 px frei. Die Schriften heißen „DejaVu Sans“ und „DejaVu Sans Condensed“ (normal und fett). Die schmale Variante bringt mehr Zeichen in eine Zeile.
+
+## Bausteine
+
+`base.html` bringt außerdem fertige Teile für das übliche Aussehen mit. Importiere die Makros in deinem Template:
+
+```html
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% block body %}
+{{ ui.header("Server", "14:05", alert=False) }}
+<div style="position:absolute;top:50px;left:7px;right:7px">{{ ui.bar(82, "82 %") }}</div>
+{% endblock %}
+```
+
+- `ui.header(title, clock, alert=False)`: die 34 px hohe Titelleiste mit dem Titel links und der Uhr rechts. `alert=True` färbt sie rot (`--header-alert`).
+- `ui.notice(message, sub=None, tone="muted")`: eine zentrierte Meldung unter der Titelleiste. `tone` ist `muted`, `warn` (orange) oder `bad` (rot).
+- `ui.bar(percent, text, height=30)`: ein Balken, gefüllt bis `percent` (begrenzt auf 0 bis 100), mit `text` rechts darin. Grün unter 75 %, orange ab 75 %, rot ab 90 %.
+- `ui.level(percent)`: nur der Klassenname (`ui-ok`, `ui-warn` oder `ui-bad`), um eigene Elemente einzufärben.
+
+Neue CSS-Variablen: `--green` (`rgb(60,200,110)`), `--blue` (`rgb(90,160,255)`) und `--header-alert` (`rgb(150,25,25)`).
+
+## Daten, die an den Server geschickt werden
+
+Manche Daten kann der Server nicht selbst abholen, weil es sie nur auf einem anderen Rechner gibt. Dieser Rechner kann sie stattdessen an den Server schicken, und deine Seite liest die jeweils letzte Sendung. Das ist nur für dein Heimnetz (LAN) gedacht.
+
+Lege in `page.py` fest, welche Kanäle deine Seite liest und welche JSON-Schlüssel der obersten Ebene der Server behält:
+
+```python
+PUSH_KEYS = {"claude": ("rate_limits",)}
+
+
+def fetch(options, ctx):
+    pushed = ctx.pushed("claude")
+    if pushed is None:
+        return {"text": "Noch keine Daten"}
+    return {"text": str(pushed.data["rate_limits"]), "at": pushed.received_at}
+```
+
+- `PUSH_KEYS` ordnet jedem Kanalnamen ein Tupel von Schlüsselnamen zu. Kanalnamen passen auf `^[a-z0-9_-]{1,32}$`. Ein fehlerhaftes `PUSH_KEYS` stoppt den Server beim Start mit einer klaren Meldung.
+- `ctx.pushed(kanal)` gibt die letzte Sendung zurück, oder `None`, wenn seit dem Start des Servers nichts angekommen ist. `.data` ist ein Dict mit nur den angegebenen Schlüsseln. `.received_at` ist der Zeitpunkt des Eingangs in Sekunden seit der Epoche (Unix-Zeit).
+- Alle anderen Schlüssel einer Sendung werden verworfen. Nichts wird auf die Festplatte geschrieben: Die Daten liegen nur im Arbeitsspeicher und sind nach einem Neustart weg.
+- Eine Sendung zeichnet die Seite nicht sofort neu. Die Seite übernimmt neue Daten bei ihrem nächsten `refresh`. Seiten, die nur Sendungen lesen, brauchen kein Netz, daher ist `refresh: 30` günstig und empfohlen.
+
+Der Endpunkt ist aus, bis du `push_key` setzt (siehe [Konfiguration](configuration.md)). Leg den Schlüssel in `.env` neben `docker-compose.yml` ab und verweise in der `config.yaml` darauf:
+
+```
+# .env
+GLANCEBOX_PUSH_KEY=<mindestens 16 Zeichen, z. B. aus openssl rand -hex 24>
+```
+
+```yaml
+push_key: ${GLANCEBOX_PUSH_KEY}
+```
+
+Dann schickt ein Rechner in deinem Heimnetz die Daten so:
+
+```sh
+curl -X POST "http://192.168.1.20:8080/api/v1/push/claude" \
+  -H "Authorization: Bearer $GLANCEBOX_PUSH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"rate_limits": {"five_hour": {"used_percentage": 12}}}'
+```
+
+| Status | Bedeutung |
+| --- | --- |
+| 204 | gespeichert |
+| 404 | kein `push_key` gesetzt, oder keine Seite gibt diesen Kanal an |
+| 401 | `Authorization: Bearer <Schlüssel>` fehlt oder ist falsch |
+| 413 | Inhalt größer als 65 536 Byte |
+| 422 | Inhalt ist kein JSON-Objekt |
+
+Lass den Server in deinem Heimnetz. Der Endpunkt ist nur durch den Schlüssel geschützt und nicht dafür gedacht, aus dem Internet erreichbar zu sein. Der Server schreibt weder den Inhalt noch den Schlüssel ins Log.
 
 ## Beispiel: die Seite clock
 

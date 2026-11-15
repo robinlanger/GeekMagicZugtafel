@@ -23,9 +23,24 @@ The server checks the file at startup. If something is wrong (a typo in a key, a
 | `timezone` | `Europe/Berlin` | Time zone for clocks and times on pages (IANA name). |
 | `lang` | `de` | Default language of the built-in pages (`de` or `en`). |
 | `custom_pages_dir` | not set | Folder with your own page types. Relative paths are relative to the config file. It may be missing, the server then logs a warning and uses the built-in pages only. In Docker use `/config/pages`. |
+| `push_key` | not set | Key for pushed data (needed by the `ai` page with provider `claude`). At least 16 characters, ASCII only (letters, digits, `-`, `_`); generate one with `openssl rand -hex 24`. Without it the push endpoint is off. Use it on your home network only (LAN). Put it in `.env` and write `push_key: ${GLANCEBOX_PUSH_KEY}`. |
 | `pages` | required | The playlist, at least one page. |
 
 Unknown top-level keys are rejected.
+
+## Secrets and environment variables
+
+Never write tokens or keys into `config.yaml`. Put them in a file called `.env` next to `docker-compose.yml`, one `NAME=value` per line, and refer to them in the config:
+
+```yaml
+push_key: ${GLANCEBOX_PUSH_KEY}
+```
+
+- Only a value that is exactly `${NAME}` is replaced. Inside a longer text such as `http://${HOST}:3001` it stays literal text.
+- The server refuses to start if the variable is missing or empty and names the place in the file, for example `pages[2].token: environment variable KUMA_TOKEN is not set`.
+- A replaced value is always text. Options that need a number, such as `refresh` or `budget`, cannot use `${NAME}`.
+- Docker reads `.env` only when the container is created. After a change run `docker compose up -d`; `docker compose restart` does not apply it.
+- The supplied `docker-compose.yml` loads `.env` with `env_file` and `path`/`required: false`, so the file may be missing. This form needs Docker Compose 2.24 or newer (`docker compose version`).
 
 ## Options every page has
 
@@ -38,11 +53,11 @@ pages:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `type` | required | Page type: `url`, `bahn`, `clock` or one of your own. |
+| `type` | required | Page type: `url`, `bahn`, `clock`, `weather`, `kuma`, `ai` or one of your own. The ready-made ones are described in the [template catalog](templates/README.md). |
 | `duration` | `interval` | How many seconds the page stays on the display. |
 | `refresh` | `duration` | A page is rendered again at most every `refresh` seconds. Use a larger value for data that changes slowly or for services that limit requests. |
 
-All other keys belong to the page type and are described below.
+All other keys belong to the page type and are described below. Ready-made pages with preview pictures are in the [template catalog](templates/README.md).
 
 ## Page type: url
 
@@ -90,11 +105,11 @@ Live departures for a German station, from [DBF](https://dbf.finalrewind.org) (d
 | `dbf_url` | `https://dbf.finalrewind.org` | Address of a DBF instance, if you run your own. |
 | `refresh` | `60` | **At least 60.** This is DBF's rule of one request per station and minute. If you do not set `refresh` it is raised to 60 automatically. If you set a value below 60 the server refuses to start. |
 
-If DBF cannot be reached the page shows "Keine Daten", an empty list shows "Keine Abfahrten". More details are in `pages/bahn/README.md`.
+If DBF cannot be reached the page shows "Keine Daten", an empty list shows "Keine Abfahrten". Full description: [bahn](templates/bahn.md).
 
 ## Page type: clock
 
-A large clock with weekday and date, meant as the starting point for your own pages.
+A large clock with weekday and date, meant as the starting point for your own pages. Full description: [clock](templates/clock.md).
 
 ```yaml
 - type: clock
@@ -105,6 +120,36 @@ A large clock with weekday and date, meant as the starting point for your own pa
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `lang` | top-level `lang` | `de` or `en`. |
+
+## Page type: weather
+
+Current weather, today's high and low and the next 4 hours, from [Open-Meteo](https://open-meteo.com) (free, no key). Full description: [weather](templates/weather.md).
+
+```yaml
+- type: weather
+  location: Frankfurt am Main     # or latitude: / longitude:
+```
+
+## Page type: kuma
+
+The state of your server from an [Uptime Kuma](https://github.com/louislam/uptime-kuma) status page: a big "14/14 OK", or a red header with the services that are down. No token and no rights on your server. Full description, including how to install Uptime Kuma: [kuma](templates/kuma.md).
+
+```yaml
+- type: kuma
+  url: http://homeserver.lan:3001
+  slug: homelab
+  refresh: 30
+```
+
+## Page type: ai
+
+How much of an AI plan or budget you have used, one provider per page: `claude` (plan limits, sent by Claude Code on your computer), `anthropic-api`, `openai-api`, `xai-api` (cost or credit) and `copilot` (monthly usage). Keys belong in `.env`, see [Secrets and environment variables](#secrets-and-environment-variables). Full description and setup per provider: [ai](templates/ai.md).
+
+```yaml
+- type: ai
+  provider: claude
+  refresh: 30
+```
 
 ## How the playlist behaves
 

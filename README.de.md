@@ -2,7 +2,7 @@
 
 # Glance Box
 
-Glance Box macht aus dem **GeekMagic SmallTV Ultra** (ein kleines WLAN-Display mit 240x240 Pixeln) ein winziges Web-Display. Du schreibst die Seiten als HTML oder richtest den Server auf irgendeine Webseite, und das Display zeigt sie der Reihe nach an: Abfahrten, eine Uhr, eine Statusseite aus deinem Home Assistant, alles, was auf 240x240 Pixel passt.
+Glance Box macht aus dem **GeekMagic SmallTV Ultra** (ein kleines WLAN-Display mit 240x240 Pixeln) ein winziges Web-Display. Du schreibst die Seiten als HTML oder richtest den Server auf irgendeine Webseite, und das Display zeigt sie der Reihe nach an: Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, eine Statusseite aus deinem Home Assistant, alles, was auf 240x240 Pixel passt. Vieles davon gibt es als fertige Vorlage, die du nur in die `config.yaml` einträgst.
 
 Das Projekt hat zwei Teile:
 
@@ -16,6 +16,12 @@ config.yaml ──▶ Glance-Box-Server (Docker) ──JPEG über HTTP──▶ 
 - **Server** (Docker, läuft auf einem PC, NAS oder Raspberry Pi): rendert deine Seiten nach einer Playlist zu kleinen JPEG-Bildern und liefert sie ans Display.
 
 ![Vorschau einer Abfahrtstafel](docs/vorschau.png)
+
+## Vorlagen
+
+Fertige Seiten brauchen kein HTML: `weather` (Vorhersage von Open-Meteo), `kuma` (Uptime-Kuma-Statusseite) und `ai` (Claude-Limits, API-Kosten, GitHub-Copilot-Nutzung). Siehe den [Vorlagenkatalog](docs/de/templates/README.md).
+
+![Wetter](docs/img/templates/weather.png) ![Uptime Kuma](docs/img/templates/kuma-ok.png) ![Claude-Limits](docs/img/templates/ai-claude.png)
 
 ## Was du brauchst
 
@@ -62,6 +68,7 @@ Lade `glancebox-ultra-<version>.bin` und die zugehörige `.md5`-Datei von der [R
 | Erstes Flashen, Sicherung | [flashing.md](docs/en/flashing.md) | [flashing.md](docs/de/flashing.md) |
 | WLAN-Einrichtung, Passwort | [setup.md](docs/en/setup.md) | [setup.md](docs/de/setup.md) |
 | Server-Konfiguration | [configuration.md](docs/en/configuration.md) | [configuration.md](docs/de/configuration.md) |
+| Vorlagen-Katalog (Seiten mit Vorschau) | [README.md](docs/en/templates/README.md) | [README.md](docs/de/templates/README.md) |
 | Eigene Seiten schreiben | [writing-pages.md](docs/en/writing-pages.md) | [writing-pages.md](docs/de/writing-pages.md) |
 | Firmware aktualisieren | [updating.md](docs/en/updating.md) | [updating.md](docs/de/updating.md) |
 | Safe Mode, serielle Rettung | [recovery.md](docs/en/recovery.md) | [recovery.md](docs/de/recovery.md) |
@@ -78,6 +85,7 @@ Die meisten brauchen das nie: Auf der Releases-Seite liegt die fertige Firmware,
 ## Danksagung
 
 - **[DBF / db-infoscreen](https://dbf.finalrewind.org)** von derf liefert die Abfahrtsdaten für die `bahn`-Seite. Bitte geh sorgsam mit diesem kostenlosen Dienst um; die Seite hält sich an seine Regel von höchstens einer Anfrage pro Bahnhof und Minute.
+- **[Open-Meteo](https://open-meteo.com)** liefert die Wetterdaten für die `weather`-Seite (CC BY 4.0). Bitte geh sorgsam mit diesem kostenlosen Dienst um; die Seite fragt höchstens alle 15 Minuten an.
 - Die **ESPHome-Community** hat die Pinbelegung der SmallTV-Displays herausgefunden (SPI-Pins, Hintergrundbeleuchtung, kein Chip-Select). Erst dadurch wurde eine offene Firmware möglich.
 - **[TJpgDec](http://elm-chan.org/fsw/tjpgd/)** von ChaN (mitgeliefert, sein Lizenzkopf bleibt erhalten) dekodiert die JPEG-Bilder auf dem Gerät.
 - **[TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)** von Bodmer steuert das Display an.

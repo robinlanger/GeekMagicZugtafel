@@ -57,3 +57,30 @@ def test_file_only_in_de_fails(tmp_path):
     r = run(tmp_path)
     assert r.returncode == 1
     assert "extra.md" in r.stderr
+
+
+def test_nested_file_missing_fails(tmp_path):
+    make(tmp_path, {}, {})
+    (tmp_path / "docs" / "en" / "templates").mkdir()
+    (tmp_path / "docs" / "en" / "templates" / "x.md").write_text("# X\n")
+    r = run(tmp_path)
+    assert r.returncode == 1
+    assert "docs/de/templates/x.md is missing" in r.stdout + r.stderr
+
+
+def test_nested_matching_pair_passes(tmp_path):
+    make(tmp_path, {}, {})
+    for sub in ("en", "de"):
+        d = tmp_path / "docs" / sub / "templates"
+        d.mkdir()
+        (d / "x.md").write_text("# X\n## Y\n")
+    assert run(tmp_path).returncode == 0
+
+
+def test_nested_heading_mismatch_fails(tmp_path):
+    make(tmp_path, {}, {})
+    for sub, text in (("en", "# X\n## Y\n"), ("de", "# X\n### Y\n")):
+        d = tmp_path / "docs" / sub / "templates"
+        d.mkdir()
+        (d / "x.md").write_text(text)
+    assert run(tmp_path).returncode == 1

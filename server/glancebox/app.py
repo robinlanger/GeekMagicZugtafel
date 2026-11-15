@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 import os
+import secrets
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -18,7 +20,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from . import __version__
 from .config import AppConfig
 from .frames import TEMPLATES_DIR, Frame, FrameStore, run_worker
-from .pages import PageType, load_page_types
+from .pages import PageType, load_page_types, merge_push_keys
+from .push import CHANNEL_RE, MAX_BODY, PushInbox
 from .render import Renderer
 from .schedule import clamp_next_in, select
 
@@ -53,6 +56,24 @@ def on_worker_done(task: asyncio.Task, exit_process: Callable[[int], object] = o
     exit_process(1)
 
 
+def _bearer_ok(header: str | None, key: str) -> bool:
+    """True if ``header`` is ``Bearer <key>``; constant-time in the key comparison."""
+    scheme, _, token = (header or "").partition(" ")
+    # Compare even on a bad scheme so the timing does not tell the two apart.
+    match = secrets.compare_digest(token.encode("utf-8"), key.encode("utf-8"))
+    return scheme == "Bearer" and match
+
+
+async def _read_limited(request: Request, limit: int) -> bytes | None:
+    """The request body, or None as soon as it grows beyond ``limit`` bytes."""
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf += chunk
+        if len(buf) > limit:
+            return None
+    return bytes(buf)
+
+
 def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = time.time, *,
                types: dict[str, PageType] | None = None, start_worker: bool = True) -> FastAPI:
     @contextlib.asynccontextmanager
@@ -63,7 +84,8 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
         page_types = types if types is not None else load_page_types(cfg.pages_dirs)
         async with Renderer() as renderer:
             await store.build_error_frame(renderer)
-            task = asyncio.create_task(run_worker(cfg, page_types, renderer, store))
+            task = asyncio.create_task(
+                run_worker(cfg, page_types, renderer, store, app.state.inbox))
             task.add_done_callback(on_worker_done)
             app.state.renderer, app.state.worker_task = renderer, task
             try:
@@ -76,6 +98,10 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.renderer = app.state.worker_task = None  # set by lifespan when the worker runs
+    # Pushed data lives in RAM only. The allowlist comes from the page types' PUSH_KEYS;
+    # without explicit types (tests) nothing can be pushed.
+    app.state.inbox = inbox = PushInbox()
+    push_allow = merge_push_keys(types) if types is not None else {}
     durations = [p.duration for p in cfg.pages]
     tz = ZoneInfo(cfg.timezone)
 
@@ -123,6 +149,32 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
                 "has_frame": current is not None,
             })
         return _env.get_template("index.html").render(pages=rows, version=__version__)
+
+    @app.post("/api/v1/push/{channel}", status_code=204)
+    async def push(channel: str, request: Request) -> Response:
+        # Order matters: never reveal more than needed to an unauthenticated client.
+        # The body and the key are never logged.
+        if not cfg.push_key:
+            raise HTTPException(404)
+        allowed = push_allow.get(channel)
+        if allowed is None or not CHANNEL_RE.fullmatch(channel):
+            raise HTTPException(404)
+        if not _bearer_ok(request.headers.get("authorization"), cfg.push_key):
+            raise HTTPException(401, headers={"WWW-Authenticate": "Bearer"})
+        declared = request.headers.get("content-length", "")
+        if declared.isascii() and declared.isdigit() and int(declared) > MAX_BODY:
+            raise HTTPException(413)
+        raw = await _read_limited(request, MAX_BODY)
+        if raw is None:
+            raise HTTPException(413)
+        try:
+            body = json.loads(raw)
+        except (ValueError, RecursionError):
+            body = None
+        if not isinstance(body, dict):
+            raise HTTPException(422, "body must be a JSON object")
+        inbox.put(channel, {k: body[k] for k in allowed if k in body}, clock())
+        return Response(status_code=204)
 
     @app.get("/healthz")
     def healthz() -> JSONResponse:

@@ -38,11 +38,13 @@ def _serve(args) -> int:
 
 async def _render(cfg, types, index: int) -> bytes:
     from .frames import render_page
+    from .push import PushInbox
     from .render import Renderer
 
     page = cfg.pages[index]
     async with Renderer() as renderer:
-        return await render_page(page, types[page.type], cfg, renderer, time.time())
+        return await render_page(page, types[page.type], cfg, renderer, time.time(),
+                                 PushInbox())
 
 
 def _render_cmd(args) -> int:

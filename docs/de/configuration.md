@@ -23,9 +23,24 @@ Der Server prüft die Datei beim Start. Stimmt etwas nicht (Tippfehler bei einem
 | `timezone` | `Europe/Berlin` | Zeitzone für Uhren und Uhrzeiten auf Seiten (IANA-Name). |
 | `lang` | `de` | Standardsprache der mitgelieferten Seiten (`de` oder `en`). |
 | `custom_pages_dir` | nicht gesetzt | Ordner mit deinen eigenen Seitentypen. Relative Pfade gelten ab dem Ordner der Konfigurationsdatei. Er darf fehlen, der Server warnt dann im Log und nutzt nur die mitgelieferten Seiten. In Docker `/config/pages`. |
+| `push_key` | nicht gesetzt | Schlüssel für gepushte Daten (nötig für die `ai`-Seite mit Provider `claude`). Mindestens 16 Zeichen, nur ASCII (Buchstaben, Ziffern, `-`, `_`), erzeugen mit `openssl rand -hex 24`. Ohne ihn ist der Push-Endpunkt aus. Nur im Heimnetz (LAN) verwenden. In `.env` ablegen und `push_key: ${GLANCEBOX_PUSH_KEY}` schreiben. |
 | `pages` | Pflicht | Die Playlist, mindestens eine Seite. |
 
 Unbekannte Schlüssel auf oberster Ebene werden abgelehnt.
+
+## Geheimnisse und Umgebungsvariablen
+
+Schreibe Tokens und Schlüssel nie direkt in die `config.yaml`. Lege sie in eine Datei `.env` neben der `docker-compose.yml`, eine Zeile `NAME=Wert` pro Eintrag, und verweise in der Konfiguration darauf:
+
+```yaml
+push_key: ${GLANCEBOX_PUSH_KEY}
+```
+
+- Ersetzt wird nur ein Wert, der genau `${NAME}` lautet. In einem längeren Text wie `http://${HOST}:3001` bleibt es einfach Text.
+- Fehlt die Variable oder ist sie leer, startet der Server nicht und nennt die Stelle in der Datei, zum Beispiel `pages[2].token: environment variable KUMA_TOKEN is not set`.
+- Ein ersetzter Wert ist immer Text. Optionen, die eine Zahl brauchen, etwa `refresh` oder `budget`, können `${NAME}` nicht nutzen.
+- Docker liest `.env` nur beim Erstellen des Containers. Nach einer Änderung `docker compose up -d` ausführen; `docker compose restart` übernimmt sie nicht.
+- Die mitgelieferte `docker-compose.yml` lädt `.env` per `env_file` mit `path`/`required: false`, die Datei darf also fehlen. Diese Form braucht Docker Compose 2.24 oder neuer (`docker compose version`).
 
 ## Optionen, die jede Seite hat
 
@@ -38,11 +53,11 @@ pages:
 
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
-| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock` oder ein eigener. |
+| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock`, `weather`, `kuma`, `ai` oder ein eigener. Die fertigen Seiten stehen im [Vorlagen-Katalog](templates/README.md). |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 | `refresh` | `duration` | Eine Seite wird höchstens alle `refresh` Sekunden neu gerendert. Nimm einen größeren Wert für Daten, die sich langsam ändern, oder für Dienste, die Anfragen begrenzen. |
 
-Alle anderen Schlüssel gehören zum Seitentyp und stehen unten.
+Alle anderen Schlüssel gehören zum Seitentyp und stehen unten. Fertige Seiten mit Vorschaubildern findest du im [Vorlagen-Katalog](templates/README.md).
 
 ## Seitentyp: url
 
@@ -90,11 +105,11 @@ Live-Abfahrten für einen deutschen Bahnhof von [DBF](https://dbf.finalrewind.or
 | `dbf_url` | `https://dbf.finalrewind.org` | Adresse einer DBF-Instanz, falls du eine eigene betreibst. |
 | `refresh` | `60` | **Mindestens 60.** Das ist die DBF-Regel von einer Anfrage pro Bahnhof und Minute. Setzt du `refresh` nicht, wird es automatisch auf 60 angehoben. Setzt du einen Wert unter 60, startet der Server nicht. |
 
-Ist DBF nicht erreichbar, zeigt die Seite „Keine Daten“, eine leere Liste zeigt „Keine Abfahrten“. Mehr steht in `pages/bahn/README.md`.
+Ist DBF nicht erreichbar, zeigt die Seite „Keine Daten“, eine leere Liste zeigt „Keine Abfahrten“. Vollständige Beschreibung: [bahn](templates/bahn.md).
 
 ## Seitentyp: clock
 
-Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene Seiten.
+Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene Seiten. Vollständige Beschreibung: [clock](templates/clock.md).
 
 ```yaml
 - type: clock
@@ -105,6 +120,36 @@ Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene S
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
 | `lang` | `lang` von oberster Ebene | `de` oder `en`. |
+
+## Seitentyp: weather
+
+Aktuelles Wetter, Höchst- und Tiefstwert des Tages und die nächsten 4 Stunden, von [Open-Meteo](https://open-meteo.com) (kostenlos, ohne Key). Ausführlich: [weather](templates/weather.md).
+
+```yaml
+- type: weather
+  location: Frankfurt am Main     # oder latitude: / longitude:
+```
+
+## Seitentyp: kuma
+
+Der Zustand deines Servers aus einer Statusseite von [Uptime Kuma](https://github.com/louislam/uptime-kuma): groß „14/14 OK“ oder eine rote Kopfzeile mit den gestörten Diensten. Kein Token und keine Rechte auf deinem Server. Ausführlich, auch wie du Uptime Kuma installierst: [kuma](templates/kuma.md).
+
+```yaml
+- type: kuma
+  url: http://homeserver.lan:3001
+  slug: homelab
+  refresh: 30
+```
+
+## Seitentyp: ai
+
+Wie viel von einem KI-Abo oder Budget verbraucht ist, ein Anbieter pro Seite: `claude` (Abo-Limits, die Claude Code auf deinem Rechner schickt), `anthropic-api`, `openai-api`, `xai-api` (Kosten oder Guthaben) und `copilot` (Verbrauch im Monat). Schlüssel gehören in die `.env`, siehe [Geheimnisse und Umgebungsvariablen](#geheimnisse-und-umgebungsvariablen). Ausführlich und mit Einrichtung je Anbieter: [ai](templates/ai.md).
+
+```yaml
+- type: ai
+  provider: claude
+  refresh: 30
+```
 
 ## So verhält sich die Playlist
 

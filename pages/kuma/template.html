@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% block head %}
+<style>
+.ok{position:absolute;left:0;top:34px;width:240px;height:198px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.ok svg{display:block;margin-bottom:12px;}
+.ok .big{font-size:30px;font-weight:700;line-height:34px;}
+.ok .line{margin-top:6px;font-size:13px;color:var(--muted);}
+.ok .pend{margin-top:6px;font-size:13px;color:var(--orange);}
+.head{position:absolute;left:0;top:34px;width:240px;height:58px;padding:2px 7px 0;box-sizing:border-box;}
+.head .big{font-size:34px;font-weight:700;line-height:38px;color:var(--red);white-space:nowrap;}
+.head .line{font-size:13px;line-height:16px;color:var(--muted);white-space:nowrap;}
+.rows{position:absolute;left:0;top:94px;width:240px;}
+.row{height:28px;box-sizing:border-box;padding:0 7px;display:flex;align-items:center;border-top:1px solid var(--divider);}
+.dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--red);margin-right:8px;}
+.name{flex:1;min-width:0;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:8px;}
+.since{flex:none;font-size:13px;color:var(--muted);white-space:nowrap;}
+.more{height:20px;line-height:20px;padding:0 7px;font-size:13px;color:var(--muted);border-top:1px solid var(--divider);}
+</style>
+{% endblock %}
+{% block body %}
+{% set de = lang == "de" %}
+{% if state == "ok" %}
+{{ ui.header(title, clock) }}
+<div class="ok">
+  <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="rgb(60,200,110)"/><path d="M18 33 L28 43 L47 22" fill="none" stroke="rgb(8,10,14)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="big">{{ up }}/{{ total }} OK</div>
+  {%- if uptime %}
+  <div class="line">{{ "Verfügbarkeit 24 h" if de else "Uptime 24 h" }}: {{ uptime }}</div>
+  {%- endif %}
+  {%- if pending %}
+  <div class="pend">{{ pending }} {{ "wird geprüft" if de else "being checked" }}</div>
+  {%- endif %}
+</div>
+{% elif state == "down" %}
+{{ ui.header(title, clock, alert=True) }}
+<div class="head">
+  <div class="big">{{ down|length + more }} {{ "gestört" if de else "down" }}</div>
+  <div class="line">{{ up }} {{ "von" if de else "of" }} {{ total }} {{ "laufen" if de else "up" }}</div>
+</div>
+<div class="rows">
+{%- for d in down %}
+  <div class="row"><span class="dot"></span><span class="name">{{ d.name }}</span><span class="since">{{ "seit" if de else "for" }} {{ d.since }}</span></div>
+{%- endfor %}
+{%- if more %}
+  <div class="more">+ {{ more }} {{ "weitere" if de else "more" }}</div>
+{%- endif %}
+</div>
+{% elif state in ("error", "pending") %}
+{{ ui.header(title, clock) }}
+{{ ui.notice(message, sub, "warn") }}
+{% else %}
+{{ ui.header(title, clock) }}
+{{ ui.notice(message) }}
+{% endif %}
+{% endblock %}

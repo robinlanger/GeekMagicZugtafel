@@ -1,5 +1,7 @@
 # clock: example page
 
+User documentation: [docs/en/templates/clock.md](../../docs/en/templates/clock.md) ([Deutsch](../../docs/de/templates/clock.md)). Developer notes below.
+
 The smallest useful page type. It shows the time (large), the weekday and the date. Use it as a starting point for your own pages.
 
 ```yaml

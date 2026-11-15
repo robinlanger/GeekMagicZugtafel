@@ -1,0 +1,47 @@
+import pytest
+import requests
+
+from glancebox import http
+
+
+class FakeResponse:
+    def __init__(self, fail=False):
+        self.fail = fail
+        self.checked = False
+
+    def raise_for_status(self):
+        self.checked = True
+        if self.fail:
+            raise requests.HTTPError("500")
+
+    def json(self):
+        return {"ok": True}
+
+
+def _patch(monkeypatch, resp):
+    calls = {}
+
+    def fake_get(url, **kwargs):
+        calls["url"] = url
+        calls.update(kwargs)
+        return resp
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    return calls
+
+
+def test_get_json_defaults(monkeypatch):
+    resp = FakeResponse()
+    calls = _patch(monkeypatch, resp)
+    assert http.get_json("http://x", params={"a": 1}, headers={"X-Key": "k"}) == {"ok": True}
+    assert calls["timeout"] == 10
+    assert calls["params"] == {"a": 1}
+    assert calls["headers"]["User-Agent"].startswith("glancebox/")
+    assert calls["headers"]["X-Key"] == "k"
+    assert resp.checked
+
+
+def test_get_json_propagates_http_error(monkeypatch):
+    _patch(monkeypatch, FakeResponse(fail=True))
+    with pytest.raises(requests.HTTPError):
+        http.get_json("http://x")
