@@ -152,6 +152,26 @@ def test_monitor_without_beats_is_pending(kuma, serve):
     assert data["state"] == "ok" and data["pending"] == 1 and data["up"] == 1
 
 
+@pytest.mark.parametrize(("lang", "message"), [("de", "Wird geprüft"), ("en", "Being checked")])
+def test_only_pending_is_not_ok(kuma, serve, lang, message):
+    serve(*build({1: ("A", [beat(2, 5)], 1.0), 2: ("B", [], 1.0), 3: ("C", [beat(2, 1)], 1.0)}))
+    data = kuma.fetch(OPTIONS, ctx(lang))
+    assert data["state"] == "pending"
+    assert data["message"] == message and data["sub"] == "0/3 OK"
+    assert data["up"] == 0 and data["pending"] == 3 and data["down"] == []
+
+
+def test_only_pending_template_orange_not_red():
+    from glancebox.frames import _jinja_env
+
+    html = _jinja_env([PAGES_DIR / "kuma"]).get_template("template.html").render(
+        title="Homelab", clock="14:05", lang="de", state="pending", up=0, total=3,
+        uptime=None, pending=3, down=[], more=0, message="Wird geprüft", sub="0/3 OK")
+    assert "ui-tone-warn" in html and "Wird geprüft" in html and "0/3 OK" in html
+    assert 'class="ui-hdr"' in html and "ui-hdr ui-alert" not in html  # header not red
+    assert 'class="ok"' not in html  # no green check view
+
+
 def test_down_without_up_beat_uses_ge(kuma, serve):
     serve(*build({1: ("A", [beat(0, 40), beat(0, 20), beat(0, 1)], 0.0)}))
     data = kuma.fetch(OPTIONS, ctx())
@@ -250,6 +270,7 @@ async def test_template_renders_ok_and_down(kuma, serve, monkeypatch):
                        2: ("Ein sehr langer Monitorname der abgeschnitten wird",
                            [beat(1, 30), beat(0, 12)], 0.9)}),
         "unreachable": None,
+        "pending": build({1: ("A", [beat(2, 5)], 1.0)}),
     }
     frames = {}
     async with Renderer() as r:
@@ -268,3 +289,5 @@ async def test_template_renders_ok_and_down(kuma, serve, monkeypatch):
     assert down_hdr[0] > 120 > down_hdr[2] and ok_hdr[2] > ok_hdr[0]  # red vs blue header
     assert frames["ok"].convert("L").getextrema()[1] > 150
     assert frames["unreachable"].convert("L").getextrema()[1] > 150
+    pending_hdr = frames["pending"].getpixel((120, 4))
+    assert pending_hdr[2] > pending_hdr[0]  # pending never turns the header red

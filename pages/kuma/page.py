@@ -33,9 +33,9 @@ DOWN, UP, PENDING, MAINTENANCE = 0, 1, 2, 3
 
 TEXT = {
     "de": {"error": "Keine Verbindung zu Uptime Kuma", "asof": "Stand",
-           "empty": "Keine Monitore auf der Statusseite"},
+           "empty": "Keine Monitore auf der Statusseite", "pending": "Wird geprüft"},
     "en": {"error": "Cannot reach Uptime Kuma", "asof": "As of",
-           "empty": "No monitors on this status page"},
+           "empty": "No monitors on this status page", "pending": "Being checked"},
 }
 
 
@@ -137,6 +137,9 @@ def fetch(options: dict, ctx) -> dict:
 
     if not monitors:
         return result("empty", message=texts["empty"])
+    if not rows and up == 0:  # only pending monitors: not an "all OK" (and not red either)
+        return result("pending", up=0, total=len(monitors), pending=pending,
+                      message=texts["pending"], sub=f"0/{len(monitors)} OK")
     return result("down" if rows else "ok", up=up, total=len(monitors), pending=pending,
                   uptime=_uptime_text(values, lang), down=rows[:MAX_ROWS],
                   more=max(len(rows) - MAX_ROWS, 0))

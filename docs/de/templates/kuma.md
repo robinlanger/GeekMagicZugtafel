@@ -11,6 +11,7 @@ Den Zustand einer [Uptime-Kuma](https://github.com/louislam/uptime-kuma)-Statuss
 - **Etwas gestört:** die Kopfzeile wird rot und zeigt, wie viele Dienste gestört sind (`2 gestört`), wie viele laufen, und eine Zeile je ausgefallenem Dienst mit der Zeit seit wann (`seit 12 min`, `seit 3 h`, `seit 2 d`). Es passen bis zu vier Zeilen. Weitere stehen als `+ 2 weitere`. Kennt Kuma für einen Dienst keinen früheren erfolgreichen Check, ist die Zeit eine Untergrenze, zum Beispiel `≥ 40 min`.
 - **Keine Verbindung:** ein oranger Hinweis `Keine Verbindung zu Uptime Kuma` mit der Uhrzeit des letzten Versuchs. Die Seite zeigt nie ein altes „alles OK“ weiter.
 - **Leere Statusseite:** der Hinweis `Keine Monitore auf der Statusseite`.
+- **Nur pending:** läuft noch kein Monitor und werden alle noch geprüft, zum Beispiel direkt nach dem Start von Kuma, erscheint statt des grünen Häkchens ein oranger Hinweis `Wird geprüft` mit `0/3 OK`.
 
 Pending und Wartung machen die Kopfzeile nie rot.
 

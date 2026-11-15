@@ -46,7 +46,7 @@
   <div class="more">+ {{ more }} {{ "weitere" if de else "more" }}</div>
 {%- endif %}
 </div>
-{% elif state == "error" %}
+{% elif state in ("error", "pending") %}
 {{ ui.header(title, clock) }}
 {{ ui.notice(message, sub, "warn") }}
 {% else %}

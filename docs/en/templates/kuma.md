@@ -11,6 +11,7 @@ The state of an [Uptime Kuma](https://github.com/louislam/uptime-kuma) status pa
 - **Something down:** the header turns red and shows how many services are down (`2 down`), how many are up, and a row for each failed service with the time since when (`for 12 min`, `for 3 h`, `for 2 d`). Up to four rows fit. More are summarized as `+ 2 more`. If Kuma has no earlier up beat for a service, the time is a lower bound, for example `≥ 40 min`.
 - **No connection:** an orange notice `Cannot reach Uptime Kuma` with the time of the last attempt. The page never keeps showing an old "all OK".
 - **Empty status page:** the notice `No monitors on this status page`.
+- **Only pending:** if no monitor is up yet and all are still being checked, for example right after Kuma started, an orange notice `Being checked` with `0/3 OK` instead of the green check.
 
 Pending and maintenance never turn the header red.
 
