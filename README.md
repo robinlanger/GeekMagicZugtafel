@@ -17,6 +17,12 @@ config.yaml ──▶ Glance Box server (Docker) ──JPEG over HTTP──▶ G
 
 ![Preview of a departure board page](docs/vorschau.png)
 
+## Templates
+
+Ready-made pages need no HTML: `weather` (forecast from Open-Meteo), `kuma` (Uptime Kuma status page) and `ai` (Claude limits, API cost, GitHub Copilot usage). See the [template catalog](docs/en/templates/README.md).
+
+![Weather](docs/img/templates/weather.png) ![Uptime Kuma](docs/img/templates/kuma-ok.png) ![Claude limits](docs/img/templates/ai-claude.png)
+
 ## What you need
 
 - A **GeekMagic SmallTV Ultra** (ESP8266 version). The SmallTV Pro (ESP32) and other models are **not** supported.

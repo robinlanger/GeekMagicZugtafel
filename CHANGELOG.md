@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Template library: the `weather` (Open-Meteo forecast), `kuma` (Uptime Kuma status page) and
+  `ai` pages. `ai` selects its source with `provider:`: `claude` (5-hour and weekly limits,
+  pushed from a Claude Code status line), `anthropic-api`, `openai-api` and `xai-api` (cost or
+  balance, optional budget bar) and `copilot` (official GitHub billing usage, needs
+  `monthly_allowance`, unit `ai-credits` or `premium-requests`). All pages support `de` and `en`.
+- `${VAR}` in `config.yaml` (whole value only, an empty variable is an error) and an optional
+  `.env` file that Docker Compose passes to the server, so secrets stay out of the config.
+- Top-level `push_key` and `POST /api/v1/push/<channel>`: a key-protected inbox on the home
+  network that pages use to receive data. It answers 404 without `push_key`.
+- Shared UI macros (`ui.html`) for the page templates and the `glancebox.http.get_json` helper
+  with timeout and `glancebox/<version>` User-Agent.
+- Status-line scripts for Claude Code in `tools/statusline/` (shell and PowerShell) that push
+  the rate limits to the server.
+- Template catalog in the docs (`docs/en/templates/`, `docs/de/templates/`) with preview images
+  in `docs/img/templates/`; the EN/DE docs parity check now covers subfolders.
+
 ## [0.2.0]
 
 ### Added
