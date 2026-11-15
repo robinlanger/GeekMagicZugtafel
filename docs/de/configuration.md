@@ -23,7 +23,7 @@ Der Server prüft die Datei beim Start. Stimmt etwas nicht (Tippfehler bei einem
 | `timezone` | `Europe/Berlin` | Zeitzone für Uhren und Uhrzeiten auf Seiten (IANA-Name). |
 | `lang` | `de` | Standardsprache der mitgelieferten Seiten (`de` oder `en`). |
 | `custom_pages_dir` | nicht gesetzt | Ordner mit deinen eigenen Seitentypen. Relative Pfade gelten ab dem Ordner der Konfigurationsdatei. Er darf fehlen, der Server warnt dann im Log und nutzt nur die mitgelieferten Seiten. In Docker `/config/pages`. |
-| `push_key` | nicht gesetzt | Schlüssel für gepushte Daten (nötig für die `ai`-Seite mit Provider `claude`). Mindestens 16 Zeichen, erzeugen mit `openssl rand -hex 24`. Ohne ihn ist der Push-Endpunkt aus. Nur im Heimnetz (LAN) verwenden. In `.env` ablegen und `push_key: ${GLANCEBOX_PUSH_KEY}` schreiben. |
+| `push_key` | nicht gesetzt | Schlüssel für gepushte Daten (nötig für die `ai`-Seite mit Provider `claude`). Mindestens 16 Zeichen, nur ASCII (Buchstaben, Ziffern, `-`, `_`), erzeugen mit `openssl rand -hex 24`. Ohne ihn ist der Push-Endpunkt aus. Nur im Heimnetz (LAN) verwenden. In `.env` ablegen und `push_key: ${GLANCEBOX_PUSH_KEY}` schreiben. |
 | `pages` | Pflicht | Die Playlist, mindestens eine Seite. |
 
 Unbekannte Schlüssel auf oberster Ebene werden abgelehnt.
@@ -38,7 +38,9 @@ push_key: ${GLANCEBOX_PUSH_KEY}
 
 - Ersetzt wird nur ein Wert, der genau `${NAME}` lautet. In einem längeren Text wie `http://${HOST}:3001` bleibt es einfach Text.
 - Fehlt die Variable oder ist sie leer, startet der Server nicht und nennt die Stelle in der Datei, zum Beispiel `pages[2].token: environment variable KUMA_TOKEN is not set`.
+- Ein ersetzter Wert ist immer Text. Optionen, die eine Zahl brauchen, etwa `refresh` oder `budget`, können `${NAME}` nicht nutzen.
 - Docker liest `.env` nur beim Erstellen des Containers. Nach einer Änderung `docker compose up -d` ausführen; `docker compose restart` übernimmt sie nicht.
+- Die mitgelieferte `docker-compose.yml` lädt `.env` per `env_file` mit `path`/`required: false`, die Datei darf also fehlen. Diese Form braucht Docker Compose 2.24 oder neuer (`docker compose version`).
 
 ## Optionen, die jede Seite hat
 
@@ -51,7 +53,7 @@ pages:
 
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
-| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock` oder ein eigener. |
+| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock`, `weather`, `kuma`, `ai` oder ein eigener. Die fertigen Seiten stehen im [Vorlagen-Katalog](templates/README.md). |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 | `refresh` | `duration` | Eine Seite wird höchstens alle `refresh` Sekunden neu gerendert. Nimm einen größeren Wert für Daten, die sich langsam ändern, oder für Dienste, die Anfragen begrenzen. |
 

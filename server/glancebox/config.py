@@ -156,5 +156,9 @@ def load_config(path: Path) -> AppConfig:
         raise ConfigError(
             f"push_key must be a string of at least {MIN_PUSH_KEY_LENGTH} characters"
         )
+    if push_key is not None and not push_key.isascii():
+        # Starlette decodes request headers as latin-1, so a non-ASCII key could never match.
+        raise ConfigError("push_key must contain only ASCII characters (for example letters, "
+                          "digits, - and _; openssl rand -hex 24 makes a good one)")
 
     return AppConfig(interval, timezone, lang, pages, tuple(pages_dirs), push_key)

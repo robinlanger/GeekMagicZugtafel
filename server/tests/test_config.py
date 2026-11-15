@@ -131,5 +131,11 @@ def test_push_key_too_short(tmp_path):
         load_config(write(tmp_path, "push_key: short\npages:\n  - type: clock\n"))
 
 
+def test_push_key_must_be_ascii(tmp_path):
+    # Starlette decodes headers as latin-1, so a non-ASCII key could never match.
+    with pytest.raises(ConfigError, match="push_key must contain only ASCII"):
+        load_config(write(tmp_path, f"push_key: {'ä' * 32}\npages:\n  - type: clock\n"))
+
+
 def test_push_key_default_none(tmp_path):
     assert load_config(write(tmp_path, "pages:\n  - type: clock\n")).push_key is None
