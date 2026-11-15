@@ -23,9 +23,22 @@ Der Server prüft die Datei beim Start. Stimmt etwas nicht (Tippfehler bei einem
 | `timezone` | `Europe/Berlin` | Zeitzone für Uhren und Uhrzeiten auf Seiten (IANA-Name). |
 | `lang` | `de` | Standardsprache der mitgelieferten Seiten (`de` oder `en`). |
 | `custom_pages_dir` | nicht gesetzt | Ordner mit deinen eigenen Seitentypen. Relative Pfade gelten ab dem Ordner der Konfigurationsdatei. Er darf fehlen, der Server warnt dann im Log und nutzt nur die mitgelieferten Seiten. In Docker `/config/pages`. |
+| `push_key` | nicht gesetzt | Schlüssel für gepushte Daten (nötig für die `ai`-Seite mit Provider `claude`). Mindestens 16 Zeichen, erzeugen mit `openssl rand -hex 24`. Ohne ihn ist der Push-Endpunkt aus. Nur im Heimnetz (LAN) verwenden. In `.env` ablegen und `push_key: ${GLANCEBOX_PUSH_KEY}` schreiben. |
 | `pages` | Pflicht | Die Playlist, mindestens eine Seite. |
 
 Unbekannte Schlüssel auf oberster Ebene werden abgelehnt.
+
+## Geheimnisse und Umgebungsvariablen
+
+Schreibe Tokens und Schlüssel nie direkt in die `config.yaml`. Lege sie in eine Datei `.env` neben der `docker-compose.yml`, eine Zeile `NAME=Wert` pro Eintrag, und verweise in der Konfiguration darauf:
+
+```yaml
+push_key: ${GLANCEBOX_PUSH_KEY}
+```
+
+- Ersetzt wird nur ein Wert, der genau `${NAME}` lautet. In einem längeren Text wie `http://${HOST}:3001` bleibt es einfach Text.
+- Fehlt die Variable oder ist sie leer, startet der Server nicht und nennt die Stelle in der Datei, zum Beispiel `pages[2].token: environment variable KUMA_TOKEN is not set`.
+- Docker liest `.env` nur beim Erstellen des Containers. Nach einer Änderung `docker compose up -d` ausführen; `docker compose restart` übernimmt sie nicht.
 
 ## Optionen, die jede Seite hat
 

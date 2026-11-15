@@ -4,6 +4,12 @@ services:
     image: glancebox:dev
     container_name: glancebox
     restart: unless-stopped
+    # Secrets (tokens, keys) go into a .env file next to this file and are referenced
+    # as ${NAME} in config.yaml. After editing .env run `docker compose up -d`;
+    # `docker compose restart` does not re-read it.
+    env_file:
+      - path: .env
+        required: false
     ports:
       # Host port: set GLANCEBOX_PORT in a .env file next to this file if 8080 is taken.
       - "${GLANCEBOX_PORT:-8080}:8080"

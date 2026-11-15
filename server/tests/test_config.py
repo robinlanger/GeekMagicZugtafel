@@ -97,3 +97,39 @@ def test_unknown_timezone_rejected(tmp_path, tz):
 def test_valid_timezone_accepted(tmp_path):
     cfg = load_config(write(tmp_path, "timezone: America/New_York\npages:\n  - type: bahn\n"))
     assert cfg.timezone == "America/New_York"
+
+
+def test_env_whole_value_is_expanded(tmp_path, monkeypatch):
+    monkeypatch.setenv("KUMA_URL", "http://kuma.lan:3001")
+    cfg = load_config(write(tmp_path, "pages:\n  - type: clock\n    url: ${KUMA_URL}\n"))
+    assert cfg.pages[0].options["url"] == "http://kuma.lan:3001"
+
+
+def test_env_inside_longer_string_stays_literal(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOST", "x")
+    cfg = load_config(write(tmp_path, "pages:\n  - type: clock\n    url: http://${HOST}:1\n"))
+    assert cfg.pages[0].options["url"] == "http://${HOST}:1"
+
+
+@pytest.mark.parametrize("value", [None, ""])
+def test_env_missing_or_empty_names_path_and_variable(tmp_path, monkeypatch, value):
+    monkeypatch.delenv("NOPE", raising=False)
+    if value is not None:
+        monkeypatch.setenv("NOPE", value)
+    with pytest.raises(ConfigError, match=r"pages\[0\]\.token: environment variable NOPE"):
+        load_config(write(tmp_path, "pages:\n  - type: clock\n    token: ${NOPE}\n"))
+
+
+def test_push_key_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("GLANCEBOX_PUSH_KEY", "k" * 32)
+    cfg = load_config(write(tmp_path, "push_key: ${GLANCEBOX_PUSH_KEY}\npages:\n  - type: clock\n"))
+    assert cfg.push_key == "k" * 32
+
+
+def test_push_key_too_short(tmp_path):
+    with pytest.raises(ConfigError, match="push_key"):
+        load_config(write(tmp_path, "push_key: short\npages:\n  - type: clock\n"))
+
+
+def test_push_key_default_none(tmp_path):
+    assert load_config(write(tmp_path, "pages:\n  - type: clock\n")).push_key is None
