@@ -121,6 +121,36 @@ A large clock with weekday and date, meant as the starting point for your own pa
 | --- | --- | --- |
 | `lang` | top-level `lang` | `de` or `en`. |
 
+## Page type: weather
+
+Current weather, today's high and low and the next 4 hours, from [Open-Meteo](https://open-meteo.com) (free, no key). Full description: [weather](templates/weather.md).
+
+```yaml
+- type: weather
+  location: Frankfurt am Main     # or latitude: / longitude:
+```
+
+## Page type: kuma
+
+The state of your server from an [Uptime Kuma](https://github.com/louislam/uptime-kuma) status page: a big "14/14 OK", or a red header with the services that are down. No token and no rights on your server. Full description, including how to install Uptime Kuma: [kuma](templates/kuma.md).
+
+```yaml
+- type: kuma
+  url: http://homeserver.lan:3001
+  slug: homelab
+  refresh: 30
+```
+
+## Page type: ai
+
+How much of an AI plan or budget you have used, one provider per page: `claude` (plan limits, sent by Claude Code on your computer), `anthropic-api`, `openai-api`, `xai-api` (cost or credit) and `copilot` (monthly usage). Keys belong in `.env`, see [Secrets and environment variables](#secrets-and-environment-variables). Full description and setup per provider: [ai](templates/ai.md).
+
+```yaml
+- type: ai
+  provider: claude
+  refresh: 30
+```
+
 ## How the playlist behaves
 
 - The page currently shown follows from the **clock**: the durations of all pages add up to one cycle, and the position in the cycle is the current time modulo that sum. The server keeps no state per device, so several displays show the same page at the same time.

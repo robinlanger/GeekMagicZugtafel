@@ -29,7 +29,7 @@ Beschreibung und Titel folgen der Sprache der Seite (`de` oder `en`).
 | `latitude`, `longitude` | | Koordinaten in Grad (zum Beispiel `50.11` und `8.68`). Immer beide setzen und nie zusammen mit `location`. |
 | `title` | der gefundene Ortsname, sonst `Wetter` | Text in der Kopfzeile. |
 | `lang` | oberstes `lang` | `de` oder `en`. Bestimmt die Beschreibung und den Standardtitel. |
-| `refresh` | `60` | Sekunden zwischen zwei neuen Bildern, **mindestens 60**. Bild und Uhrzeit bleiben aktuell, Open-Meteo wird aber höchstens alle 15 Minuten gefragt, weil sich das Wetter langsam ändert und der Dienst kostenlos ist. Bei einem Wert unter 60 startet der Server nicht. |
+| `refresh` | `duration`, mindestens `60` | Sekunden zwischen zwei neuen Bildern, **mindestens 60**. Bild und Uhrzeit bleiben aktuell, Open-Meteo wird aber höchstens alle 15 Minuten gefragt, weil sich das Wetter langsam ändert und der Dienst kostenlos ist. Bei einem Wert unter 60 startet der Server nicht. |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 
 Die Zeitzone kommt aus `timezone` auf oberster Ebene. Die vier Stunden sind die nächsten vier vollen Stunden in dieser Zone, auch über Mitternacht hinweg.

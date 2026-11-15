@@ -29,7 +29,7 @@ The description and the title follow the page language (`de` or `en`).
 | `latitude`, `longitude` | | Coordinates in degrees (for example `50.11` and `8.68`). Always set both, and never together with `location`. |
 | `title` | the found place name, else `Weather` | Header text. |
 | `lang` | top-level `lang` | `de` or `en`. Sets the description and the default title. |
-| `refresh` | `60` | Seconds between two new pictures, **at least 60**. The picture and its clock stay current, but Open-Meteo is asked at most every 15 minutes, because weather changes slowly and the service is free. If the value is below 60 the server refuses to start. |
+| `refresh` | `duration`, at least `60` | Seconds between two new pictures, **at least 60**. The picture and its clock stay current, but Open-Meteo is asked at most every 15 minutes, because weather changes slowly and the service is free. If the value is below 60 the server refuses to start. |
 | `duration` | `interval` | How many seconds the page stays on the display. |
 
 The time zone comes from the top-level `timezone`. The four hours are the next four full hours in that zone, also across midnight.

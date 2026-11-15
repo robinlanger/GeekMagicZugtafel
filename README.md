@@ -2,7 +2,7 @@
 
 # Glance Box
 
-Glance Box turns the **GeekMagic SmallTV Ultra** (a small 240x240 Wi-Fi display) into a tiny web display. You write the pages as HTML, or point the server at any web page, and the display shows them in turn: departures, a clock, a status page from your Home Assistant, whatever fits on 240x240 pixels.
+Glance Box turns the **GeekMagic SmallTV Ultra** (a small 240x240 Wi-Fi display) into a tiny web display. You write the pages as HTML, or point the server at any web page, and the display shows them in turn: departures, a clock, the weather, the state of your home server, how much of your AI plan is left, a status page from your Home Assistant, whatever fits on 240x240 pixels. Many of these come as ready-made templates that you only add to `config.yaml`.
 
 It has two parts:
 

@@ -121,6 +121,36 @@ Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene S
 | --- | --- | --- |
 | `lang` | `lang` von oberster Ebene | `de` oder `en`. |
 
+## Seitentyp: weather
+
+Aktuelles Wetter, Höchst- und Tiefstwert des Tages und die nächsten 4 Stunden, von [Open-Meteo](https://open-meteo.com) (kostenlos, ohne Key). Ausführlich: [weather](templates/weather.md).
+
+```yaml
+- type: weather
+  location: Frankfurt am Main     # oder latitude: / longitude:
+```
+
+## Seitentyp: kuma
+
+Der Zustand deines Servers aus einer Statusseite von [Uptime Kuma](https://github.com/louislam/uptime-kuma): groß „14/14 OK“ oder eine rote Kopfzeile mit den gestörten Diensten. Kein Token und keine Rechte auf deinem Server. Ausführlich, auch wie du Uptime Kuma installierst: [kuma](templates/kuma.md).
+
+```yaml
+- type: kuma
+  url: http://homeserver.lan:3001
+  slug: homelab
+  refresh: 30
+```
+
+## Seitentyp: ai
+
+Wie viel von einem KI-Abo oder Budget verbraucht ist, ein Anbieter pro Seite: `claude` (Abo-Limits, die Claude Code auf deinem Rechner schickt), `anthropic-api`, `openai-api`, `xai-api` (Kosten oder Guthaben) und `copilot` (Verbrauch im Monat). Schlüssel gehören in die `.env`, siehe [Geheimnisse und Umgebungsvariablen](#geheimnisse-und-umgebungsvariablen). Ausführlich und mit Einrichtung je Anbieter: [ai](templates/ai.md).
+
+```yaml
+- type: ai
+  provider: claude
+  refresh: 30
+```
+
 ## So verhält sich die Playlist
 
 - Welche Seite gerade läuft, ergibt sich aus der **Uhrzeit**: Die Anzeigedauern aller Seiten ergeben zusammen einen Zyklus, und die Position im Zyklus ist die aktuelle Zeit modulo dieser Summe. Der Server merkt sich nichts pro Gerät, also zeigen mehrere Displays gleichzeitig dieselbe Seite.
