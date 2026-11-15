@@ -7,11 +7,11 @@ This page takes you from the stock GeekMagic firmware to Glance Box. Read the wh
 You need the **GeekMagic SmallTV Ultra** (ESP8266). Other models, including the SmallTV Pro, are not supported and flashing them will not work.
 
 > [!WARNING]
-> **There is no way back to the stock firmware without a serial backup.** The activation code of the stock firmware is bound to the MAC address of your device, and there is no public image to flash instead. If you do not make the backup below, the flash is a one-way street. Making the backup is optional, but **strongly recommended**.
+> **There is no way back to the stock firmware without a serial backup.** The activation code of the stock firmware is bound to the MAC address of your device, and there is no public image to flash instead. If you do not make the backup below, the flash is a one-way street. The backup is optional: flashing itself needs no soldering, the backup does (or at least clip leads). Decide before you start whether you want to be able to go back.
 
-How the first flash works: the stock firmware has a web page for firmware updates. You upload the Glance Box `.bin` there. This route is reported to work by the community. It will be re-confirmed by the maintainer on a real device before the first release (this page is updated if anything differs). If the upload fails, nothing is lost: the device stays on the stock firmware.
+How the first flash works: the stock firmware has a web page for firmware updates. You upload the Glance Box `.bin` there. The maintainer has tested this route on a real SmallTV Ultra. Other stock firmware versions may differ. If the upload fails, nothing is lost: the device stays on the stock firmware.
 
-## Step 1: Back up the stock firmware (recommended)
+## Step 1: Back up the stock firmware (optional)
 
 The backup is a copy of the whole flash chip. You make it over the serial connection of the ESP-12F module inside the display. It needs a USB-to-serial adapter, a little patience, and you have to open the case.
 

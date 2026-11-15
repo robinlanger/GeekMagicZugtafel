@@ -2,9 +2,44 @@
 
 # Glance Box
 
-Glance Box turns the **GeekMagic SmallTV Ultra** (a small 240x240 Wi-Fi display) into a tiny web display. You write the pages as HTML, or point the server at any web page, and the display shows them in turn: departures, a clock, the weather, the state of your home server, how much of your AI plan is left, a status page from your Home Assistant, whatever fits on 240x240 pixels. Many of these come as ready-made templates that you only add to `config.yaml`.
+[![Release](https://img.shields.io/github/v/release/robinlanger/glancebox?sort=semver)](https://github.com/robinlanger/glancebox/releases/latest)
+[![CI](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/robinlanger/glancebox)](LICENSE)
 
-It has two parts:
+<!-- HERO: replace docs/img/hero.png with a photo (or GIF) of the real display. -->
+![Glance Box on the GeekMagic SmallTV Ultra](docs/img/hero.png)
+
+**Glance Box turns the ~15 € GeekMagic SmallTV Ultra into a 240x240 Wi-Fi display for anything you can write as HTML:** open-source firmware for the display, plus a small Docker server that renders your pages and sends them over as images. Departures, a clock, the weather, the state of your home server, how much of your AI plan is left, a status page from your Home Assistant, whatever fits on 240x240 pixels.
+
+> [!TIP]
+> **No soldering needed.** You flash Glance Box through the **"Firmware update"** menu of the stock firmware, in your browser. No case to open, no wires.
+
+## Highlights
+
+- **Pages are just HTML.** Write a page as a template, or point the server at any web page. The server renders it with headless Chromium, the same engine as in Chrome.
+- **Ready-made templates** for the weather, Uptime Kuma, AI usage (Claude, OpenAI, xAI, GitHub Copilot), departures and a clock. You only add them to `config.yaml`.
+- **Open firmware for the ESP8266**: Wi-Fi setup portal, a small settings page, night mode with its own brightness (or backlight off).
+- **Safe updates over Wi-Fi**: password-protected, every image is checked against its MD5. A wrong file is rejected and the old firmware keeps running. After a broken update the device starts in safe mode instead of a boot loop.
+- **Runs in Docker** on a PC, NAS or home server. The display only shows pictures; all the work happens on the server.
+- **MIT licensed**, no cloud, no account. The display only talks to your own server.
+
+Tested on a real SmallTV Ultra: first flash through the stock "Firmware update" menu, OTA updates with MD5 check, safe mode after a broken update, night mode, and the departure board and clock pages.
+
+## Gallery
+
+| `bahn`: live departures | `clock`: clock and date | `weather`: forecast |
+| --- | --- | --- |
+| ![Departure board page](docs/img/templates/bahn.png) | ![Clock page](docs/img/templates/clock.png) | ![Weather page](docs/img/templates/weather.png) |
+| Delays, platform changes and cancellations for German stations. | Large clock with weekday and date. A good start for your own pages. | Now, today's high and low and the next four hours, from Open-Meteo. |
+
+| `kuma`: Uptime Kuma | `ai`: Claude limits | `ai`: API cost |
+| --- | --- | --- |
+| ![Uptime Kuma page](docs/img/templates/kuma-down.png) | ![Claude limits page](docs/img/templates/ai-claude.png) | ![API cost page](docs/img/templates/ai-cost.png) |
+| All green, or which services are down and since when. | 5-hour and weekly limits of your Claude plan. | Monthly cost or balance of the Anthropic, OpenAI or xAI API, or your GitHub Copilot usage. |
+
+The pictures are 240x240 frames rendered by the server with sample data, exactly as the display gets them. Every template, with all options, is in the [template catalog](docs/en/templates/README.md). The `url` page type shows any web page you point it at, for example a status page from Home Assistant. Write your own pages with [docs/en/writing-pages.md](docs/en/writing-pages.md).
+
+## How it works
 
 ```
 config.yaml ──▶ Glance Box server (Docker) ──JPEG over HTTP──▶ Glance Box firmware (SmallTV Ultra)
@@ -12,54 +47,52 @@ config.yaml ──▶ Glance Box server (Docker) ──JPEG over HTTP──▶ G
                  with headless Chromium
 ```
 
-- **Firmware** (open source, ESP8266): shows the frames, has a Wi-Fi setup portal, a small web page for settings, and password-protected, verified over-the-air updates with a safe mode if an update goes wrong.
-- **Server** (Docker, runs on a PC, NAS or Raspberry Pi): renders your pages to small JPEG images on a playlist and serves them to the display.
-
-![Preview of a departure board page](docs/vorschau.png)
-
-## Templates
-
-Ready-made pages need no HTML: `weather` (forecast from Open-Meteo), `kuma` (Uptime Kuma status page) and `ai` (Claude limits, API cost, GitHub Copilot usage). See the [template catalog](docs/en/templates/README.md).
-
-![Weather](docs/img/templates/weather.png) ![Uptime Kuma](docs/img/templates/kuma-ok.png) ![Claude limits](docs/img/templates/ai-claude.png)
+- **Firmware** (open source, ESP8266): fetches the next frame from your server, shows it, and asks again when the server says so.
+- **Server** (Docker): renders your pages on a playlist to small JPEG images (240x240, at most 24 KB) and serves them to the display. If a page fails, the server keeps sending the last good picture for a while, then a picture with the error instead of a black screen.
 
 ## What you need
 
 - A **GeekMagic SmallTV Ultra** (ESP8266 version). The SmallTV Pro (ESP32) and other models are **not** supported.
-- A computer or small server in your home network that runs Docker (amd64 or arm64, for example a Raspberry Pi 4).
+- A computer or small server in your home network that runs Docker. The image is built for amd64 and arm64; the maintainer has tested it on amd64 so far, arm64 (for example a Raspberry Pi 4) is not tested yet.
 - A 2.4 GHz Wi-Fi network. The server and the display must be in the same network.
-- Strongly recommended: a USB-to-serial adapter (a Raspberry Pi Pico or a CH340 module) and a thin soldering iron or clip leads for a backup of the original firmware. See the warning below.
+- Optional: a USB-to-serial adapter and a soldering iron or clip leads, only if you want a backup of the stock firmware (see the next section).
 
-## Warning
+## Before you flash: a one-way decision
 
 > [!WARNING]
-> **There is no way back to the original firmware without a serial backup.** The stock firmware is tied to your device (the activation code is bound to the MAC address), and nobody offers an image you could flash instead. If you want to be able to go back, make a serial backup of the flash **before** the first flash, check it twice and keep it safe. See [docs/en/flashing.md](docs/en/flashing.md).
->
-> Flashing replaces the firmware on your device. You do this at your own risk. The project comes without any warranty (MIT license).
+> **Flashing Glance Box is a one-way street unless you make a serial backup first.** The stock firmware is tied to your device (the activation code is bound to the MAC address), and nobody offers an image you could flash instead. Without a backup there is no way back to the stock firmware.
+
+Decide before the first flash:
+
+- **Flash without a backup** (no soldering): you accept that the device stays on open firmware. Glance Box itself is updated over Wi-Fi; if that ever fails, [docs/en/recovery.md](docs/en/recovery.md) describes safe mode and the serial way.
+- **Make a serial backup first**: open the case, connect a 3.3 V USB-to-serial adapter to the ESP-12F module, read the flash twice and compare. [docs/en/flashing.md](docs/en/flashing.md) shows how.
+
+Flashing replaces the firmware on your device. You do this at your own risk. The project comes without any warranty (MIT license).
 
 ## Quickstart
 
-### 1. Start the server
+1. **Start the server.**
 
-```sh
-git clone https://github.com/robinlanger/glancebox.git
-cd glancebox
-cp config.example.yaml config.yaml
-mkdir pages-custom
-```
+   ```sh
+   git clone https://github.com/robinlanger/glancebox.git
+   cd glancebox
+   cp config.example.yaml config.yaml
+   mkdir pages-custom
+   ```
 
-Open `config.yaml` and adjust the pages (at least the station of the `bahn` page, or remove the page; remove or change the `url` page). Then:
+   Open `config.yaml` and adjust the pages (at least the station of the `bahn` page, or remove the page; remove or change the `url` page). Then:
 
-```sh
-docker compose up -d --build
-docker compose logs -f
-```
+   ```sh
+   docker compose up -d --build
+   ```
 
-Open `http://<server-ip>:8080/` in your browser. You should see a preview of every page. Details: [docs/en/configuration.md](docs/en/configuration.md).
+   Open `http://<server-ip>:8080/` in your browser. You should see a preview of every page. Details: [docs/en/configuration.md](docs/en/configuration.md).
 
-### 2. Flash and set up the display
+2. **Download the firmware.** Get `glancebox-ultra-<version>.bin` and its `.md5` file from the [releases page](https://github.com/robinlanger/glancebox/releases).
 
-Download `glancebox-ultra-<version>.bin` and its `.md5` file from the [releases page](https://github.com/robinlanger/glancebox/releases), then follow [docs/en/flashing.md](docs/en/flashing.md) (first flash through the stock web interface) and [docs/en/setup.md](docs/en/setup.md) (Wi-Fi, server address and update password).
+3. **Flash it through the stock web interface.** Open `http://<display-ip>/`, go to **"Firmware update"**, upload the `.bin` and wait about a minute. Step by step: [docs/en/flashing.md](docs/en/flashing.md).
+
+4. **Set it up.** Join the `GlanceBox-XXXX` Wi-Fi, choose your network, enter the server address and an update password: [docs/en/setup.md](docs/en/setup.md). The display restarts and shows your first page.
 
 ## Documentation
 
@@ -73,11 +106,11 @@ Download `glancebox-ultra-<version>.bin` and its `.md5` file from the [releases 
 | Updating the firmware | [updating.md](docs/en/updating.md) | [updating.md](docs/de/updating.md) |
 | Safe mode, serial recovery | [recovery.md](docs/en/recovery.md) | [recovery.md](docs/de/recovery.md) |
 
-Maintainers: [docs/RELEASING.md](docs/RELEASING.md) (English only).
+Maintainers: [docs/RELEASING.md](docs/RELEASING.md) (English only). Changes per version: [CHANGELOG.md](CHANGELOG.md).
 
 ## Building from source
 
-Most people never need this: the release page has the ready-made firmware, and the server image is built by `docker compose up --build`.
+Most people never need this: the release page has the ready-made firmware, and the server image is built by `docker compose up --build`. Releases also publish the image `ghcr.io/robinlanger/glancebox:<version>`.
 
 - Server: `python -m glancebox serve` from `server/` (Python 3.12, see `server/pyproject.toml`), or `docker compose build`.
 - Firmware: install [PlatformIO](https://platformio.org/) and run `pio run -e ultra` in `firmware/`. On an **Apple Silicon Mac** the ESP8266 toolchain is x86-only, so you need Rosetta or you build inside a Docker container.

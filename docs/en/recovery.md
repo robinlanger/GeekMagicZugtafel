@@ -47,7 +47,7 @@ The counter lives in a memory area that survives restarts. At every start the fi
 
 ## Serial flashing
 
-The last resort. It works even if the firmware is completely broken, because it talks to the chip's built-in bootloader. You need the same adapter as for the backup, see [Flashing](flashing.md#step-1-back-up-the-stock-firmware-recommended).
+The last resort. It works even if the firmware is completely broken, because it talks to the chip's built-in bootloader. You need the same adapter as for the backup, see [Flashing](flashing.md#step-1-back-up-the-stock-firmware-optional).
 
 ### What you need
 

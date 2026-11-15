@@ -47,7 +47,7 @@ Der Zähler liegt in einem Speicherbereich, der Neustarts überlebt. Bei jedem S
 
 ## Serielles Flashen
 
-Die letzte Möglichkeit. Sie funktioniert auch bei komplett kaputter Firmware, weil sie mit dem eingebauten Bootloader des Chips spricht. Du brauchst denselben Adapter wie für die Sicherung, siehe [Flashen](flashing.md#schritt-1-original-firmware-sichern-empfohlen).
+Die letzte Möglichkeit. Sie funktioniert auch bei komplett kaputter Firmware, weil sie mit dem eingebauten Bootloader des Chips spricht. Du brauchst denselben Adapter wie für die Sicherung, siehe [Flashen](flashing.md#schritt-1-original-firmware-sichern-optional).
 
 ### Was du brauchst
 

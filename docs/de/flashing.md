@@ -7,11 +7,11 @@ Diese Seite führt dich von der Original-Firmware von GeekMagic zu Glance Box. L
 Du brauchst den **GeekMagic SmallTV Ultra** (ESP8266). Andere Modelle, auch der SmallTV Pro, werden nicht unterstützt, und das Flashen funktioniert dort nicht.
 
 > [!WARNING]
-> **Ohne serielle Sicherung gibt es keinen Weg zurück zur Original-Firmware.** Der Aktivierungscode der Original-Firmware ist an die MAC-Adresse deines Geräts gebunden, und es gibt kein öffentliches Abbild zum Aufspielen. Ohne die Sicherung unten ist das Flashen eine Einbahnstraße. Die Sicherung ist freiwillig, aber **dringend empfohlen**.
+> **Ohne serielle Sicherung gibt es keinen Weg zurück zur Original-Firmware.** Der Aktivierungscode der Original-Firmware ist an die MAC-Adresse deines Geräts gebunden, und es gibt kein öffentliches Abbild zum Aufspielen. Ohne die Sicherung unten ist das Flashen eine Einbahnstraße. Die Sicherung ist freiwillig: Das Flashen selbst braucht kein Löten, die Sicherung schon (oder zumindest Prüfklemmen). Entscheide vor dem Start, ob du zurück können willst.
 
-So funktioniert das erste Flashen: Die Original-Firmware hat eine Webseite für Firmware-Updates. Dort lädst du die `.bin` von Glance Box hoch. Dieser Weg funktioniert laut Berichten aus der Community. Der Maintainer bestätigt ihn vor dem ersten Release selbst an einem echten Gerät (diese Seite wird angepasst, falls etwas abweicht). Schlägt der Upload fehl, ist nichts verloren: Das Gerät bleibt bei der Original-Firmware.
+So funktioniert das erste Flashen: Die Original-Firmware hat eine Webseite für Firmware-Updates. Dort lädst du die `.bin` von Glance Box hoch. Der Maintainer hat diesen Weg an einem echten SmallTV Ultra getestet. Andere Versionen der Original-Firmware können abweichen. Schlägt der Upload fehl, ist nichts verloren: Das Gerät bleibt bei der Original-Firmware.
 
-## Schritt 1: Original-Firmware sichern (empfohlen)
+## Schritt 1: Original-Firmware sichern (optional)
 
 Die Sicherung ist eine Kopie des gesamten Flash-Chips. Du machst sie über die serielle Schnittstelle des ESP-12F-Moduls im Display. Dafür brauchst du einen USB-Seriell-Adapter und etwas Geduld, und du musst das Gehäuse öffnen.
 

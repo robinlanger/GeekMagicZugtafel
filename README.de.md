@@ -2,9 +2,44 @@
 
 # Glance Box
 
-Glance Box macht aus dem **GeekMagic SmallTV Ultra** (ein kleines WLAN-Display mit 240x240 Pixeln) ein winziges Web-Display. Du schreibst die Seiten als HTML oder richtest den Server auf irgendeine Webseite, und das Display zeigt sie der Reihe nach an: Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, eine Statusseite aus deinem Home Assistant, alles, was auf 240x240 Pixel passt. Vieles davon gibt es als fertige Vorlage, die du nur in die `config.yaml` einträgst.
+[![Release](https://img.shields.io/github/v/release/robinlanger/glancebox?sort=semver)](https://github.com/robinlanger/glancebox/releases/latest)
+[![CI](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml)
+[![Lizenz: MIT](https://img.shields.io/github/license/robinlanger/glancebox)](LICENSE)
 
-Das Projekt hat zwei Teile:
+<!-- HERO: docs/img/hero.png durch ein Foto (oder GIF) des echten Displays ersetzen. -->
+![Glance Box auf dem GeekMagic SmallTV Ultra](docs/img/hero.png)
+
+**Glance Box macht aus dem GeekMagic SmallTV Ultra für ca. 15 € ein WLAN-Display mit 240x240 Pixeln für alles, was du als HTML schreiben kannst:** eine Open-Source-Firmware für das Display und ein kleiner Docker-Server, der deine Seiten rendert und als Bilder ans Display schickt. Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, eine Statusseite aus deinem Home Assistant, alles, was auf 240x240 Pixel passt.
+
+> [!TIP]
+> **Kein Löten nötig.** Du flashst Glance Box über das Menü **„Firmware update“** der Original-Firmware, im Browser. Kein Gehäuse öffnen, keine Kabel.
+
+## Highlights
+
+- **Seiten sind einfach HTML.** Schreib eine Seite als Vorlage oder richte den Server auf irgendeine Webseite. Der Server rendert sie mit Headless-Chromium, derselben Engine wie in Chrome.
+- **Fertige Vorlagen** für Wetter, Uptime Kuma, KI-Nutzung (Claude, OpenAI, xAI, GitHub Copilot), Abfahrten und eine Uhr. Du trägst sie nur in die `config.yaml` ein.
+- **Offene Firmware für den ESP8266**: WLAN-Einrichtungsportal, eine kleine Einstellungsseite, Nachtmodus mit eigener Helligkeit (oder Hintergrundbeleuchtung aus).
+- **Sichere Updates über WLAN**: passwortgeschützt, jedes Abbild wird gegen seine MD5 geprüft. Eine falsche Datei wird abgelehnt, und die alte Firmware läuft weiter. Nach einem kaputten Update startet das Gerät im Safe Mode statt in einer Boot-Schleife.
+- **Läuft in Docker** auf einem PC, NAS oder Homeserver. Das Display zeigt nur Bilder an; die ganze Arbeit macht der Server.
+- **MIT-Lizenz**, keine Cloud, kein Konto. Das Display spricht nur mit deinem eigenen Server.
+
+Am echten SmallTV Ultra getestet: erstes Flashen über das Menü „Firmware update“ der Original-Firmware, OTA-Updates mit MD5-Prüfung, Safe Mode nach einem kaputten Update, Nachtmodus sowie die Seiten Abfahrtstafel und Uhr.
+
+## Galerie
+
+| `bahn`: Live-Abfahrten | `clock`: Uhr und Datum | `weather`: Vorhersage |
+| --- | --- | --- |
+| ![Seite mit Abfahrtstafel](docs/img/templates/bahn.png) | ![Seite mit Uhr](docs/img/templates/clock.png) | ![Seite mit Wetter](docs/img/templates/weather.png) |
+| Verspätungen, Gleiswechsel und Ausfälle für deutsche Bahnhöfe. | Große Uhr mit Wochentag und Datum. Ein guter Start für eigene Seiten. | Jetzt, Tageshoch und -tief und die nächsten vier Stunden, von Open-Meteo. |
+
+| `kuma`: Uptime Kuma | `ai`: Claude-Limits | `ai`: API-Kosten |
+| --- | --- | --- |
+| ![Seite mit Uptime Kuma](docs/img/templates/kuma-down.png) | ![Seite mit Claude-Limits](docs/img/templates/ai-claude.png) | ![Seite mit API-Kosten](docs/img/templates/ai-cost.png) |
+| Alles grün, oder welche Dienste seit wann ausgefallen sind. | 5-Stunden- und Wochenlimit deines Claude-Abos. | Monatskosten oder Guthaben der API von Anthropic, OpenAI oder xAI, oder deine GitHub-Copilot-Nutzung. |
+
+Die Bilder sind 240x240-Frames, die der Server mit Beispieldaten rendert, genau so, wie das Display sie bekommt. Alle Vorlagen mit allen Optionen stehen im [Vorlagenkatalog](docs/de/templates/README.md). Der Seitentyp `url` zeigt jede Webseite, auf die du ihn richtest, zum Beispiel eine Statusseite aus Home Assistant.
+
+## So funktioniert es
 
 ```
 config.yaml ──▶ Glance-Box-Server (Docker) ──JPEG über HTTP──▶ Glance-Box-Firmware (SmallTV Ultra)
@@ -12,54 +47,52 @@ config.yaml ──▶ Glance-Box-Server (Docker) ──JPEG über HTTP──▶ 
                  mit Headless-Chromium
 ```
 
-- **Firmware** (Open Source, ESP8266): zeigt die Bilder an, hat ein WLAN-Einrichtungsportal, eine kleine Webseite für die Einstellungen und passwortgeschützte, geprüfte Updates über WLAN (OTA) mit einem Safe Mode, falls ein Update schiefgeht.
-- **Server** (Docker, läuft auf einem PC, NAS oder Raspberry Pi): rendert deine Seiten nach einer Playlist zu kleinen JPEG-Bildern und liefert sie ans Display.
-
-![Vorschau einer Abfahrtstafel](docs/vorschau.png)
-
-## Vorlagen
-
-Fertige Seiten brauchen kein HTML: `weather` (Vorhersage von Open-Meteo), `kuma` (Uptime-Kuma-Statusseite) und `ai` (Claude-Limits, API-Kosten, GitHub-Copilot-Nutzung). Siehe den [Vorlagenkatalog](docs/de/templates/README.md).
-
-![Wetter](docs/img/templates/weather.png) ![Uptime Kuma](docs/img/templates/kuma-ok.png) ![Claude-Limits](docs/img/templates/ai-claude.png)
+- **Firmware** (Open Source, ESP8266): holt das nächste Bild von deinem Server, zeigt es an und fragt wieder, wenn der Server es sagt.
+- **Server** (Docker): rendert deine Seiten nach einer Playlist zu kleinen JPEG-Bildern (240x240, höchstens 24 KB) und liefert sie ans Display. Schlägt eine Seite fehl, schickt der Server noch eine Weile das letzte gute Bild und danach ein Bild mit dem Fehler statt eines schwarzen Bildschirms.
 
 ## Was du brauchst
 
 - Einen **GeekMagic SmallTV Ultra** (Version mit ESP8266). Der SmallTV Pro (ESP32) und andere Modelle werden **nicht** unterstützt.
-- Einen Computer oder kleinen Server im Heimnetz, auf dem Docker läuft (amd64 oder arm64, zum Beispiel ein Raspberry Pi 4).
+- Einen Computer oder kleinen Server im Heimnetz, auf dem Docker läuft. Das Image wird für amd64 und arm64 gebaut; der Maintainer hat es bisher auf amd64 getestet, arm64 (zum Beispiel ein Raspberry Pi 4) ist noch nicht getestet.
 - Ein 2,4-GHz-WLAN. Server und Display müssen im selben Netzwerk sein.
-- Dringend empfohlen: einen USB-Seriell-Adapter (Raspberry Pi Pico oder CH340-Modul) und einen feinen Lötkolben oder Prüfklemmen für eine Sicherung der Original-Firmware. Siehe den Warnhinweis unten.
+- Optional: einen USB-Seriell-Adapter und einen Lötkolben oder Prüfklemmen, nur wenn du die Original-Firmware sichern willst (siehe nächster Abschnitt).
 
-## Warnung
+## Vor dem Flashen: eine Entscheidung ohne Rückweg
 
 > [!WARNING]
-> **Ohne serielle Sicherung gibt es keinen Weg zurück zur Original-Firmware.** Die Original-Firmware ist an dein Gerät gebunden (der Aktivierungscode hängt an der MAC-Adresse), und niemand stellt ein Abbild bereit, das du stattdessen aufspielen könntest. Wenn du später zurück willst, mach **vor** dem ersten Flashen eine serielle Sicherung des Flash-Speichers, prüfe sie doppelt und bewahre sie sicher auf. Siehe [docs/de/flashing.md](docs/de/flashing.md).
->
-> Beim Flashen wird die Firmware deines Geräts ersetzt. Das machst du auf eigene Gefahr. Das Projekt kommt ohne jede Gewährleistung (MIT-Lizenz).
+> **Ohne vorherige serielle Sicherung ist das Flashen von Glance Box eine Einbahnstraße.** Die Original-Firmware ist an dein Gerät gebunden (der Aktivierungscode hängt an der MAC-Adresse), und niemand stellt ein Abbild bereit, das du stattdessen aufspielen könntest. Ohne Sicherung gibt es keinen Weg zurück zur Original-Firmware.
+
+Entscheide vor dem ersten Flashen:
+
+- **Ohne Sicherung flashen** (kein Löten): Du nimmst in Kauf, dass das Gerät bei der offenen Firmware bleibt. Glance Box selbst aktualisierst du über WLAN; falls das einmal scheitert, beschreibt [docs/de/recovery.md](docs/de/recovery.md) den Safe Mode und den seriellen Weg.
+- **Erst seriell sichern**: Gehäuse öffnen, einen USB-Seriell-Adapter mit 3,3 V an das ESP-12F-Modul anschließen, den Flash-Speicher zweimal auslesen und vergleichen. Wie das geht, steht in [docs/de/flashing.md](docs/de/flashing.md).
+
+Beim Flashen wird die Firmware deines Geräts ersetzt. Das machst du auf eigene Gefahr. Das Projekt kommt ohne jede Gewährleistung (MIT-Lizenz).
 
 ## Schnellstart
 
-### 1. Server starten
+1. **Server starten.**
 
-```sh
-git clone https://github.com/robinlanger/glancebox.git
-cd glancebox
-cp config.example.yaml config.yaml
-mkdir pages-custom
-```
+   ```sh
+   git clone https://github.com/robinlanger/glancebox.git
+   cd glancebox
+   cp config.example.yaml config.yaml
+   mkdir pages-custom
+   ```
 
-Öffne `config.yaml` und passe die Seiten an (mindestens den Bahnhof der `bahn`-Seite, oder entferne die Seite; entferne oder ändere die `url`-Seite). Dann:
+   Öffne `config.yaml` und passe die Seiten an (mindestens den Bahnhof der `bahn`-Seite, oder entferne die Seite; entferne oder ändere die `url`-Seite). Dann:
 
-```sh
-docker compose up -d --build
-docker compose logs -f
-```
+   ```sh
+   docker compose up -d --build
+   ```
 
-Öffne `http://<server-ip>:8080/` im Browser. Du solltest eine Vorschau jeder Seite sehen. Mehr dazu: [docs/de/configuration.md](docs/de/configuration.md).
+   Öffne `http://<server-ip>:8080/` im Browser. Du solltest eine Vorschau jeder Seite sehen. Mehr dazu: [docs/de/configuration.md](docs/de/configuration.md).
 
-### 2. Display flashen und einrichten
+2. **Firmware herunterladen.** Hol dir `glancebox-ultra-<version>.bin` und die zugehörige `.md5`-Datei von der [Releases-Seite](https://github.com/robinlanger/glancebox/releases).
 
-Lade `glancebox-ultra-<version>.bin` und die zugehörige `.md5`-Datei von der [Releases-Seite](https://github.com/robinlanger/glancebox/releases) herunter. Folge dann [docs/de/flashing.md](docs/de/flashing.md) (erstes Flashen über die Original-Weboberfläche) und [docs/de/setup.md](docs/de/setup.md) (WLAN, Serveradresse und Update-Passwort).
+3. **Über die Original-Weboberfläche flashen.** Öffne `http://<display-ip>/`, geh zu **„Firmware update“**, lade die `.bin` hoch und warte etwa eine Minute. Schritt für Schritt: [docs/de/flashing.md](docs/de/flashing.md).
+
+4. **Einrichten.** Verbinde dich mit dem WLAN `GlanceBox-XXXX`, wähle dein Netzwerk, gib die Serveradresse und ein Update-Passwort ein: [docs/de/setup.md](docs/de/setup.md). Das Display startet neu und zeigt deine erste Seite.
 
 ## Dokumentation
 
@@ -73,11 +106,11 @@ Lade `glancebox-ultra-<version>.bin` und die zugehörige `.md5`-Datei von der [R
 | Firmware aktualisieren | [updating.md](docs/en/updating.md) | [updating.md](docs/de/updating.md) |
 | Safe Mode, serielle Rettung | [recovery.md](docs/en/recovery.md) | [recovery.md](docs/de/recovery.md) |
 
-Für Maintainer: [docs/RELEASING.md](docs/RELEASING.md) (nur Englisch).
+Für Maintainer: [docs/RELEASING.md](docs/RELEASING.md) (nur Englisch). Änderungen je Version: [CHANGELOG.md](CHANGELOG.md).
 
 ## Aus dem Quellcode bauen
 
-Die meisten brauchen das nie: Auf der Releases-Seite liegt die fertige Firmware, und das Server-Image baut `docker compose up --build` selbst.
+Die meisten brauchen das nie: Auf der Releases-Seite liegt die fertige Firmware, und das Server-Image baut `docker compose up --build` selbst. Releases veröffentlichen außerdem das Image `ghcr.io/robinlanger/glancebox:<version>`.
 
 - Server: `python -m glancebox serve` im Ordner `server/` (Python 3.12, siehe `server/pyproject.toml`) oder `docker compose build`.
 - Firmware: [PlatformIO](https://platformio.org/) installieren und in `firmware/` `pio run -e ultra` ausführen. Auf einem **Mac mit Apple Silicon** gibt es die ESP8266-Toolchain nur für x86. Du brauchst also Rosetta oder baust in einem Docker-Container.
