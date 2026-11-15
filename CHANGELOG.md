@@ -17,6 +17,7 @@ firmware for the GeekMagic SmallTV Ultra (ESP8266) that shows them.
   24 576 bytes), frame endpoint `GET /api/v1/frame` with `ETag`/`304` and a clamped `X-Next-In`,
   last-good-frame fallback (600 s) and an error frame instead of a black screen.
 - Built-in `bahn` page that respects the 60 s minimum refresh.
+- Built-in `clock` page; host port of the Docker setup configurable with `GLANCEBOX_PORT` in `.env`.
 - Firmware: Wi-Fi setup portal (`GlanceBox-XXXX` access point), stream-decoded JPEG frame loop,
   offline status screen after 120 s without a frame, DE/EN device web UI with `/status`.
 - OTA updates over HTTP with Basic auth and a mandatory MD5; a wrong checksum or a bad image is
