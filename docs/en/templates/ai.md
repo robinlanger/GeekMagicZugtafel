@@ -20,7 +20,7 @@ For each limit there is a line with its name and the time of the reset on the ri
 For `claude`:
 
 - **Reset:** less than a day away as `in 2:13` (hours:minutes), otherwise as weekday and time, for example `Thu 09:00`. If the reset time has already passed, the bar shows `0 %` and `reset`.
-- **Age:** at the bottom the page always shows when the values arrived, for example `As of 13:58`.
+- **Age:** at the bottom the page always shows when the values arrived, for example `As of 13:58`, or `As of Sat 13:58` when they are from an earlier day.
 - **No data yet:** until the first values arrive the page shows the notice `No data yet` with `Set up the status-line script`.
 - **No limit data:** values arrived but without usable limits, for example after the `curl` test under [When something is wrong](#when-something-is-wrong). The next answer of Claude Code brings the real values. Claude Code only has limits with a Claude plan (Pro or Max); with an API key the script sends nothing and the page stays on `No data yet`.
 - If your plan has no weekly limit, only the 5-hour bar appears.

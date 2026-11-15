@@ -60,7 +60,8 @@ def fetch(options: dict, ctx) -> dict:
         return {"message": texts["nodata"], "sub": texts["setup"]}
 
     received = datetime.fromtimestamp(pushed.received_at, ctx.now.tzinfo)
-    stand = f"{texts['asof']} {received:%H:%M}"
+    day = "" if received.date() == ctx.now.date() else f"{WEEKDAYS[lang][received.weekday()]} "
+    stand = f"{texts['asof']} {day}{received:%H:%M}"  # weekday once the push is not from today
     limits = pushed.data.get("rate_limits")
     rows = []
     for key, labels in WINDOWS:

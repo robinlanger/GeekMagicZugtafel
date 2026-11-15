@@ -76,6 +76,15 @@ def test_claude_rows(ai):
     assert data["stand"] == "Stand 13:58"
 
 
+def test_claude_stand_from_another_day_shows_weekday(ai):
+    yesterday = RECEIVED - 24 * 3600
+    for lang, stand in (("de", "Stand Sa 13:58"), ("en", "As of Sat 13:58")):
+        item = Pushed(limits(), yesterday)
+        context = PageContext(now=NOW, lang=lang, timezone="Europe/Berlin",
+                              pushed=lambda c, item=item: item)
+        assert ai.fetch({**OPTIONS, "lang": lang}, context)["stand"] == stand
+
+
 def test_claude_rows_english_and_title(ai):
     data = ai.fetch({**OPTIONS, "lang": "en", "title": "Claude Max"},
                     ctx(limits(five=(7.6, IN_2H13))))
