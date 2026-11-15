@@ -1,0 +1,15 @@
+{% macro header(title, clock, alert=False) -%}
+<div class="ui-hdr{% if alert %} ui-alert{% endif %}"><span class="ui-title">{{ title }}</span><span class="ui-clock">{{ clock }}</span></div>
+{%- endmacro %}
+
+{% macro notice(message, sub=None, tone="muted") -%}
+<div class="ui-notice ui-tone-{{ tone }}"><h1>{{ message }}</h1>{% if sub %}<p>{{ sub }}</p>{% endif %}</div>
+{%- endmacro %}
+
+{% macro level(percent) -%}
+{%- if percent >= 90 %}ui-bad{% elif percent >= 75 %}ui-warn{% else %}ui-ok{% endif -%}
+{%- endmacro %}
+
+{% macro bar(percent, text, height=30) -%}
+<div class="ui-bar" style="height:{{ height }}px;line-height:{{ height }}px"><div class="ui-fill {{ level(percent) }}" style="width:{{ [[percent,0]|max,100]|min }}%"></div><span class="ui-bar-text">{{ text }}</span></div>
+{%- endmacro %}

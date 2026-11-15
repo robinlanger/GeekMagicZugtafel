@@ -29,7 +29,7 @@ def fetch(options: dict, ctx) -> dict:
 ```
 
 - `fetch(options, ctx)` is **required**. It returns a dict. Every key becomes a variable in the template. It runs in a worker thread (blocking calls such as HTTP requests are fine) and must finish within 20 seconds.
-- **Give every network call a timeout**, for example `requests.get(url, timeout=10)`. The 20-second limit only stops waiting for the result: a call that hangs keeps its worker thread busy, and a few of them can stall all script pages.
+- **Give every network call a timeout**, for example `requests.get(url, timeout=10)`. Better: `from glancebox import http` and `http.get_json(url, params=..., headers=...)`. It sets a 10-second timeout and the User-Agent `glancebox/<version>`, raises on HTTP errors and returns the parsed JSON. The 20-second limit only stops waiting for the result: a call that hangs keeps its worker thread busy, and a few of them can stall all script pages.
 - `validate(options)` is optional. Raise `ValueError("...")` to reject a bad configuration. The server then refuses to start and shows your message with the page number.
 - `MIN_REFRESH = 60` is optional (an integer). It sets the smallest allowed `refresh` for your page, for example to respect a rate limit.
 - Other `.py` files in the same folder can be imported with `from .helper import something`.
@@ -48,7 +48,7 @@ A page may instead catch the error and return data for a picture that says so. T
 
 ### template.html
 
-A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dark background, the bundled DejaVu fonts (with umlauts) and these CSS variables: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`.
+A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dark background, the bundled DejaVu fonts (with umlauts) and these CSS variables: `--bg`, `--header-bg`, `--fg`, `--muted`, `--divider`, `--orange`, `--red`, `--yellow`, `--green`, `--blue`, `--header-alert`.
 
 ```html
 {% extends "base.html" %}
@@ -57,6 +57,26 @@ A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dar
 ```
 
 Values are HTML-escaped automatically. The canvas is exactly 240x240 pixels and nothing scrolls, so anything that does not fit is cut off. On the SmallTV Ultra the housing hides roughly the bottom 6 pixel rows, so keep at least 8 px free at the bottom. The fonts are "DejaVu Sans" and "DejaVu Sans Condensed" (regular and bold). The condensed one gives you more characters per line.
+
+## Building blocks
+
+`base.html` also ships ready-made pieces for the common look. Import the macros in your template:
+
+```html
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% block body %}
+{{ ui.header("Server", "14:05", alert=False) }}
+<div style="position:absolute;top:50px;left:7px;right:7px">{{ ui.bar(82, "82 %") }}</div>
+{% endblock %}
+```
+
+- `ui.header(title, clock, alert=False)`: the 34 px title bar with the title on the left and the clock on the right. `alert=True` makes it red (`--header-alert`).
+- `ui.notice(message, sub=None, tone="muted")`: a centered message below the header. `tone` is `muted`, `warn` (orange) or `bad` (red).
+- `ui.bar(percent, text, height=30)`: a bar filled to `percent` (limited to 0 to 100) with `text` on its right. Green below 75 %, orange from 75 %, red from 90 %.
+- `ui.level(percent)`: only the class name (`ui-ok`, `ui-warn` or `ui-bad`) for colouring your own elements.
+
+New CSS variables: `--green` (`rgb(60,200,110)`), `--blue` (`rgb(90,160,255)`) and `--header-alert` (`rgb(150,25,25)`).
 
 ## Walkthrough: the clock page
 
