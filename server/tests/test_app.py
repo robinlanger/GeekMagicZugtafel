@@ -21,13 +21,17 @@ def make_client(store=None, now=NOW):
     return TestClient(create_app(cfg, store, lambda: now, start_worker=False)), store
 
 
-def filled_store() -> FrameStore:
+def filled_store_at(t: float) -> FrameStore:
     store = FrameStore(2)
-    store.put(0, b"jpeg0", NOW - 1)
-    store.put(1, b"jpeg1", NOW - 1)
-    store.mark_attempt(0, NOW - 1, None)
-    store.mark_attempt(1, NOW - 1, None)
+    store.put(0, b"jpeg0", t - 1)
+    store.put(1, b"jpeg1", t - 1)
+    store.mark_attempt(0, t - 1, None)
+    store.mark_attempt(1, t - 1, None)
     return store
+
+
+def filled_store() -> FrameStore:
+    return filled_store_at(NOW)
 
 
 def test_frame_200_with_headers():
@@ -151,3 +155,26 @@ def test_worker_returning_is_also_fatal(caplog):
     codes = []
     on_worker_done(_FakeTask(done=True), exit_process=codes.append)
     assert codes == [1]
+
+
+def test_frame_has_local_time_header():
+    # NOW = 1970-01-12 13:46:40 UTC -> 14:46:40 Europe/Berlin (CET)
+    client, _ = make_client(filled_store())
+    assert client.get("/api/v1/frame").headers["x-local-time"] == "14:46:40"
+
+
+def test_local_time_on_304_and_error_frame():
+    client, _ = make_client(filled_store())
+    etag = client.get("/api/v1/frame").headers["etag"]
+    r = client.get("/api/v1/frame", headers={"If-None-Match": etag})
+    assert r.status_code == 304
+    assert r.headers["x-local-time"] == "14:46:40"
+    empty, _ = make_client(FrameStore(2))
+    assert empty.get("/api/v1/frame").headers["x-local-time"] == "14:46:40"
+
+
+def test_local_time_respects_dst():
+    # 2026-07-01 00:30:00 UTC -> 02:30:00 CEST
+    t = 1782865800.0
+    client, _ = make_client(filled_store_at(t), now=t)
+    assert client.get("/api/v1/frame").headers["x-local-time"] == "02:30:00"

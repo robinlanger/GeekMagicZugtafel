@@ -8,6 +8,8 @@ import logging
 import os
 import time
 from collections.abc import Callable
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import jinja2
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -75,10 +77,13 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.renderer = app.state.worker_task = None  # set by lifespan when the worker runs
     durations = [p.duration for p in cfg.pages]
+    tz = ZoneInfo(cfg.timezone)
 
     def jpeg_response(request: Request, frame: Frame, next_in: int) -> Response:
         headers = {"ETag": f'"{frame.etag}"', "X-Next-In": str(next_in),
-                   "Cache-Control": "no-store"}
+                   "Cache-Control": "no-store",
+                   # Device clock for night mode: local wall time in the configured zone.
+                   "X-Local-Time": datetime.fromtimestamp(clock(), tz).strftime("%H:%M:%S")}
         if _etag_matches(request.headers.get("if-none-match"), frame.etag):
             return Response(status_code=304, headers=headers)
         return Response(frame.jpeg, media_type="image/jpeg", headers=headers)
