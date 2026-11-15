@@ -45,6 +45,14 @@ enum class Msg : uint8_t {
   SafeTitle,
   SafeExplain,
   BootNormal,
+  NightStart,
+  NightEnd,
+  NightBrightness,
+  NightHint,
+  LocalTime,
+  Night,
+  ErrNightTime,
+  ErrNightBrightness,
   Count
 };
 

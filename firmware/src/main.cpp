@@ -5,6 +5,7 @@
 #include "display.h"
 #include "frame_client.h"
 #include "frame_poll.h"
+#include "night.h"
 #include "portal.h"
 #include "rtc_boot.h"
 #include "safe_mode.h"
@@ -28,6 +29,9 @@ uint32_t framesOk = 0;
 uint32_t lastSuccessMs = 0;
 bool anySuccess = false;
 uint32_t nextPollMs = 0;
+gb::LocalClock localClock;      // synced from X-Local-Time, carried on with millis()
+int lastBacklight = -1;         // last applied backlight %, -1 = not yet applied by the loop
+uint32_t lastBacklightCheckMs = 0;
 
 void formatIp(char* buf, size_t cap) {
   const IPAddress ip = WiFi.localIP();
@@ -56,6 +60,7 @@ void pollFrame() {
     const FrameResult r = fetchFrame(settings.serverUrl, etag);
     status = r.status;
     nextIn = r.nextIn;
+    if (r.status > 0 && r.localSec >= 0) localClock.sync(static_cast<uint32_t>(r.localSec), millis());
     if (status == 200) {  // already drawn (stream decode)
       memcpy(etag, r.etag, sizeof(etag));
       ++framesOk;
@@ -75,6 +80,17 @@ void pollFrame() {
   if (o.clearEtag) etag[0] = '\0';
   if (o.drawOffline) showOfflineScreen();
   nextPollMs = now + o.delayMs;
+}
+
+// Night mode: apply the effective backlight at most once per second, only on change.
+void updateBacklight(uint32_t now) {
+  if (lastBacklight >= 0 && now - lastBacklightCheckMs < 1000) return;
+  lastBacklightCheckMs = now;
+  const uint8_t pct = gb::effectiveBrightness(settings, localClock.known(),
+                                              localClock.known() ? localClock.secondOfDay(now) : 0);
+  if (pct == lastBacklight) return;
+  displaySetBacklight(pct);
+  lastBacklight = pct;
 }
 
 }  // namespace
@@ -106,6 +122,14 @@ void setup() {
   };
   st.safeMode = []() { return false; };
   st.bootFailed = []() { return bootState.failed; };
+  st.localMinute = []() -> int32_t {
+    return localClock.known() ? static_cast<int32_t>(localClock.secondOfDay(millis()) / 60) : -1;
+  };
+  st.night = []() {
+    return localClock.known() &&
+           gb::nightActive(settings.nightStart, settings.nightEnd,
+                           static_cast<uint16_t>(localClock.secondOfDay(millis()) / 60));
+  };
   webUiBegin(settings, st);
 
   showBootScreen();
@@ -128,5 +152,6 @@ void loop() {
 #endif
 
   if (static_cast<int32_t>(now - nextPollMs) >= 0) pollFrame();
+  updateBacklight(millis());
   delay(1);  // yield: watchdog, Wi-Fi stack
 }

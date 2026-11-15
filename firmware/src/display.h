@@ -5,6 +5,8 @@
 // Initialise the ST7789 (inversion on) and the inverted PWM backlight on GPIO5.
 void displayBegin(uint8_t brightnessPct);
 void displaySetBrightness(uint8_t pct);
+// Raw backlight 0..100 % (0 = fully off); used by night mode.
+void displaySetBacklight(uint8_t pct);
 enum class JpegStreamResult : uint8_t { Ok, InputError, DecodeError };
 // Decodes a baseline 240x240 JPEG of exactly len bytes straight from the stream to (0,0),
 // block by block (no frame buffer). Never reads beyond len bytes; gives up when the body
