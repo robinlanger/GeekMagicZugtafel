@@ -56,7 +56,7 @@ A Jinja2 template. Extend `base.html`, which sets up the 240x240 canvas, the dar
 {% block body %}<h1>{{ title }}</h1>{% endblock %}
 ```
 
-Values are HTML-escaped automatically. The canvas is exactly 240x240 pixels and nothing scrolls, so anything that does not fit is cut off. The fonts are "DejaVu Sans" and "DejaVu Sans Condensed" (regular and bold). The condensed one gives you more characters per line.
+Values are HTML-escaped automatically. The canvas is exactly 240x240 pixels and nothing scrolls, so anything that does not fit is cut off. On the SmallTV Ultra the housing hides roughly the bottom 6 pixel rows, so keep at least 8 px free at the bottom. The fonts are "DejaVu Sans" and "DejaVu Sans Condensed" (regular and bold). The condensed one gives you more characters per line.
 
 ## Walkthrough: the clock page
 
