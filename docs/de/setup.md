@@ -30,11 +30,24 @@ Nach dem ersten Flashen (oder nach einem Zurücksetzen) öffnet das Display ein 
 
 Öffne `http://<display-ip>/` (die IP steht beim Start auf dem Display und in deinem Router). Sie zeigt Version, Laufzeit, Signalstärke, die Anzahl empfangener Bilder, Fehlstarts und ob der Safe Mode aktiv ist. Darunter kannst du:
 
-- die Server-URL und die Helligkeit ändern und ein neues Update-Passwort setzen (diese Änderungen brauchen das Update-Passwort, Benutzer `admin`),
+- die Server-URL, die Helligkeit und den [Nachtmodus](#nachtmodus) ändern und ein neues Update-Passwort setzen (diese Änderungen brauchen das Update-Passwort, Benutzer `admin`),
 - ein Firmware-Update hochladen (siehe [Aktualisieren](updating.md)),
 - das Gerät neu starten oder **Einstellungen und WLAN zurücksetzen** (zurück ins Einrichtungsportal).
 
 `http://<display-ip>/status` liefert dieselben Angaben als JSON, ohne Passwort. Praktisch für Skripte und für Home Assistant.
+
+## Nachtmodus
+
+Steht das Display im Schlafzimmer, kann es nachts dunkler werden oder ganz ausgehen. Stell dafür auf der Geräteseite ein:
+
+- **Nacht von** und **Nacht bis**, zum Beispiel 22:00 und 07:00. Der Zeitraum darf über Mitternacht gehen.
+- **Helligkeit nachts** von 0 bis 100 %. **0 % heißt ganz dunkel**, die Hintergrundbeleuchtung ist dann aus.
+
+Sind beide Zeiten gleich (Standard: 00:00 und 00:00), ist der Nachtmodus aus. Das Display holt nachts weiter Bilder, morgens steht also sofort das aktuelle Bild da.
+
+Die Uhrzeit bekommt das Display vom Glance-Box-Server, in der Zeitzone aus `timezone` in deiner `config.yaml` (Sommerzeit inklusive). **Dafür muss auch der Server mindestens Version 0.2.0 haben.** Mit einem älteren Server zeigt die Geräteseite bei „Uhrzeit“ nur „-“, und der Nachtmodus greift nicht. Fällt der Server aus, zählt das Display die Zeit selbst weiter. Startet es aber nachts neu und erreicht den Server nicht, kennt es die Uhrzeit noch nicht und bleibt hell, bis der Server antwortet. Im Safe Mode gibt es keinen Nachtmodus.
+
+`/status` zeigt die aktuelle Uhrzeit (`local_time`) und ob gerade Nacht ist (`night`).
 
 ## WLAN später ändern
 

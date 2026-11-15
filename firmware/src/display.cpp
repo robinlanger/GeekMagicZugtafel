@@ -60,14 +60,16 @@ int jpegOutput(JDEC*, void* bitmap, JRECT* rect) {
 
 TFT_eSPI& displayTft() { return tft; }
 
-void displaySetBrightness(uint8_t pct) {
-  // Backlight is active-low: duty = max - scaled percentage.
-  analogWrite(kBacklightPin, kPwmRange - gb::clampBrightness(pct));
+void displaySetBacklight(uint8_t pct) {
+  // Backlight is active-low: duty = max - percentage.
+  analogWrite(kBacklightPin, kPwmRange - (pct > 100 ? 100 : pct));
 }
+
+void displaySetBrightness(uint8_t pct) { displaySetBacklight(gb::clampBrightness(pct)); }
 
 void displayBegin(uint8_t brightnessPct) {
   analogWriteRange(kPwmRange);
-  displaySetBrightness(0);  // keep dark until the controller is initialised
+  displaySetBacklight(0);  // keep dark until the controller is initialised
   tft.init();
   tft.invertDisplay(true);
   tft.setSwapBytes(true);  // TJpgDec emits native-endian RGB565

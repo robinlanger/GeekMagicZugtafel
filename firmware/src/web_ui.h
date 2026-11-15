@@ -16,6 +16,8 @@ struct StatusProvider {
   int32_t (*lastFrameAgeS)() = nullptr;  // < 0: no frame yet (reported as null)
   bool (*safeMode)() = nullptr;
   uint8_t (*bootFailed)() = nullptr;
+  int32_t (*localMinute)() = nullptr;  // < 0 or unset: time unknown (reported as null)
+  bool (*night)() = nullptr;           // unset: false (safe mode)
 };
 
 // Normal mode: GET /, GET /update (redirect to the form), POST /settings, /restart, /reset, GET /status, POST /update.

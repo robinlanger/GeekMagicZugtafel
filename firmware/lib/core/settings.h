@@ -12,6 +12,10 @@ struct Settings {
   char serverUrl[96] = {};
   char updatePassword[33] = {};
   uint8_t brightness = kDefaultBrightness;
+  // Night mode: minutes since midnight (0-1439); start == end means off.
+  uint16_t nightStart = 0;
+  uint16_t nightEnd = 0;
+  uint8_t nightBrightness = 0;  // 0-100, 0 = backlight off
 };
 
 // Returns the normalized "http://host[:port][/path]" URL without trailing
@@ -19,6 +23,8 @@ struct Settings {
 std::optional<std::string> normalizeServerUrl(std::string in, std::string* error);
 bool validPassword(const std::string& pw);
 uint8_t clampBrightness(int pct);
+// Night brightness: 0..100 (0 allowed, unlike the day brightness).
+uint8_t clampNightBrightness(int pct);
 
 // Normalize and store the server URL. On failure *error is one of
 // "https_unsupported", "unsupported_scheme", "empty_host", "too_long" and s is unchanged.
@@ -29,7 +35,8 @@ bool applyPassword(Settings& s, const std::string& pw, std::string* error);
 // True when the device can run: valid server URL and update password.
 bool settingsComplete(const Settings& s);
 
-// Flat JSON object {"server_url", "update_password", "brightness"} plus newline.
+// Flat JSON object {"server_url", "update_password", "brightness", "night_start",
+// "night_end", "night_brightness"} plus newline.
 std::string encodeSettings(const Settings& s);
 // Strict parser for the encodeSettings format (unknown string/int keys are ignored,
 // missing keys keep defaults). Returns false on any syntax error or overlong value;

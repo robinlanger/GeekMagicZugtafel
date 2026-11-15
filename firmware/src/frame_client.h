@@ -10,6 +10,7 @@ struct FrameResult {
   size_t len;               // Content-Length of a 200 response
   char etag[gb::kEtagCap];  // ETag of a drawn 200 frame ("" if absent, too long or not drawn)
   int nextIn;               // X-Next-In seconds, -1 if absent/malformed
+  int32_t localSec;         // X-Local-Time as seconds of the day, -1 if absent/malformed
 };
 
 // One blocking request (connect/read timeout 8 s). A 200 body is stream-decoded straight

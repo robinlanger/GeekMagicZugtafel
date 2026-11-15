@@ -3,7 +3,9 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 
+#include "arduino_str.h"
 #include "display.h"
+#include "night.h"
 #include "poll_timing.h"
 #include "version.h"
 
@@ -12,7 +14,7 @@ constexpr uint16_t kTimeoutMs = 8000;
 }  // namespace
 
 FrameResult fetchFrame(const char* serverUrl, const char* etag) {
-  FrameResult r{gb::kErrBadUrl, 0, "", -1};
+  FrameResult r{gb::kErrBadUrl, 0, "", -1, -1};
   char url[192];
   const int n = snprintf(url, sizeof(url), "%s/api/v1/frame?id=%06x&fw=%s", serverUrl,
                          static_cast<unsigned>(ESP.getChipId()), gbVersion());
@@ -23,12 +25,15 @@ FrameResult fetchFrame(const char* serverUrl, const char* etag) {
   http.setTimeout(kTimeoutMs);
   http.setReuse(false);
   if (!http.begin(client, url)) return r;
-  const char* headers[] = {"ETag", "X-Next-In"};
-  http.collectHeaders(headers, 2);
+  const char* headers[] = {"ETag", "X-Next-In", "X-Local-Time"};
+  http.collectHeaders(headers, 3);
   if (etag != nullptr && etag[0] != '\0') http.addHeader(F("If-None-Match"), etag);
 
   r.status = http.GET();
-  if (r.status > 0) r.nextIn = gb::parseNextIn(http.header("X-Next-In").c_str());
+  if (r.status > 0) {
+    r.nextIn = gb::parseNextIn(strOrEmpty(http.header("X-Next-In")));
+    r.localSec = gb::parseLocalTime(strOrEmpty(http.header("X-Local-Time")));
+  }
   if (r.status == HTTP_CODE_OK) {
     const int len = http.getSize();  // -1 without Content-Length (e.g. chunked): rejected
     WiFiClient* stream = http.getStreamPtr();

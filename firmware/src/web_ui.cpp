@@ -9,6 +9,7 @@
 #include "i18n.h"
 #include "ota_check.h"
 #include "arduino_str.h"
+#include "night.h"
 #include "ota_flow.h"
 #include "rtc_boot.h"
 #include "settings_store.h"
@@ -179,17 +180,25 @@ String statusJson() {
   char ageBuf[12] = "null";
   if (age >= 0) snprintf(ageBuf, sizeof(ageBuf), "%ld", static_cast<long>(age));
   const String reset = ESP.getResetReason();
-  char buf[384];
+  const int32_t minute = status.localMinute ? status.localMinute() : -1;
+  char timeBuf[10] = "null";
+  if (minute >= 0) {
+    snprintf(timeBuf, sizeof(timeBuf), "\"%s\"", gb::formatHhMm(static_cast<uint16_t>(minute)).c_str());
+  }
+  const bool night = status.night ? status.night() : false;
+  char buf[440];
   snprintf_P(buf, sizeof(buf),
              PSTR("{\"version\":\"%s\",\"uptime_s\":%lu,\"heap_free\":%u,\"rssi\":%s,"
                   "\"boot_failed\":%u,\"safe_mode\":%s,\"frames_ok\":%lu,"
-                  "\"last_frame_age_s\":%s,\"flash_size\":%u,\"reset_reason\":\"%s\"}"),
+                  "\"last_frame_age_s\":%s,\"flash_size\":%u,\"reset_reason\":\"%s\","
+                  "\"local_time\":%s,\"night\":%s}"),
              gbVersion(), static_cast<unsigned long>(uptimeS()),
              static_cast<unsigned>(ESP.getFreeHeap()), rssi,
              static_cast<unsigned>(status.bootFailed ? status.bootFailed() : 0),
              (status.safeMode ? status.safeMode() : safeModeUi) ? "true" : "false",
              static_cast<unsigned long>(status.framesOk ? status.framesOk() : 0), ageBuf,
-             static_cast<unsigned>(ESP.getFlashChipRealSize()), reset.c_str());
+             static_cast<unsigned>(ESP.getFlashChipRealSize()), reset.c_str(), timeBuf,
+             night ? "true" : "false");
   return String(buf);
 }
 
@@ -273,6 +282,10 @@ void handleRoot() {
   addRow(b, tr(l, Msg::Frames), String(status.framesOk ? status.framesOk() : 0));
   addRow(b, tr(l, Msg::LastFrame), age >= 0 ? String(age) + F(" s") : String('-'));
   addRow(b, tr(l, Msg::BootFailures), String(status.bootFailed ? status.bootFailed() : 0));
+  const int32_t minute = status.localMinute ? status.localMinute() : -1;
+  addRow(b, tr(l, Msg::LocalTime),
+         minute >= 0 ? String(gb::formatHhMm(static_cast<uint16_t>(minute)).c_str()) : String('-'));
+  addRow(b, tr(l, Msg::Night), (status.night && status.night()) ? F("on") : F("off"));
   addRow(b, tr(l, Msg::SafeMode),
          (status.safeMode ? status.safeMode() : safeModeUi) ? F("on") : F("off"));
   b += F("</table><h2>");
@@ -288,6 +301,20 @@ void handleRoot() {
   b += F("<input name=brightness type=number min=5 max=100 required value=");
   b += settings->brightness;
   b += F("></label><label>");
+  b += tr(l, Msg::NightStart);
+  b += F("<input name=night_start type=time required value=");
+  b += gb::formatHhMm(settings->nightStart).c_str();
+  b += F("></label><label>");
+  b += tr(l, Msg::NightEnd);
+  b += F("<input name=night_end type=time required value=");
+  b += gb::formatHhMm(settings->nightEnd).c_str();
+  b += F("></label><label>");
+  b += tr(l, Msg::NightBrightness);
+  b += F("<input name=night_brightness type=number min=0 max=100 required value=");
+  b += settings->nightBrightness;
+  b += F("></label><p><small>");
+  b += tr(l, Msg::NightHint);
+  b += F("</small><label>");
   b += tr(l, Msg::NewPassword);
   b += F("<input name=password type=password maxlength=32 autocomplete=new-password>"
          "</label><button>");
@@ -351,9 +378,18 @@ void handleSettings() {
     return sendMessage(400, l, tr(l, Msg::ErrBrightness), true);
   }
   next.brightness = gb::clampBrightness(static_cast<int>(pct));
+  if (!gb::applyNight(next, server.arg(F("night_start")).c_str(),
+                      server.arg(F("night_end")).c_str(),
+                      server.arg(F("night_brightness")).c_str(), &err)) {
+    return sendMessage(400, l,
+                       tr(l, err == "bad_time" ? Msg::ErrNightTime : Msg::ErrNightBrightness),
+                       true);
+  }
   if (!settingsSave(next)) return sendMessage(500, l, tr(l, Msg::ErrSaveFailed), true);
   *settings = next;
-  displaySetBrightness(settings->brightness);
+  // Normal mode: the main loop applies day/night brightness within a second. Safe mode has
+  // no night mode, so apply the day brightness right away.
+  if (safeModeUi) displaySetBrightness(settings->brightness);
   server.sendHeader(F("Location"), F("/?saved=1"));
   server.send(303);
 }

@@ -6,6 +6,7 @@
 #include "boot_guard.h"
 #include "frame_poll.h"
 #include "ota_check.h"
+#include "night.h"
 #include "ota_flow.h"
 #include "poll_timing.h"
 #include "safe_policy.h"
@@ -155,7 +156,7 @@ void test_settings_roundtrip_with_escapes() {
   std::string text = encodeSettings(s);
   TEST_ASSERT_EQUAL_STRING(
       "{\"server_url\":\"http://homeserver:8080\",\"update_password\":\"pa\\\"ss\\\\w:rd\","
-      "\"brightness\":42}\n",
+      "\"brightness\":42,\"night_start\":0,\"night_end\":0,\"night_brightness\":0}\n",
       text.c_str());
   Settings back;
   TEST_ASSERT_TRUE(parseSettings(text, &back));
@@ -593,6 +594,130 @@ void test_poller_failure_count_saturates() {
   TEST_ASSERT_EQUAL_UINT32(30000, p.onFailure(-1, 1000).delayMs);
 }
 
+// ---- night mode ----
+
+void test_parse_local_time() {
+  TEST_ASSERT_EQUAL_INT32(0, parseLocalTime("00:00:00"));
+  TEST_ASSERT_EQUAL_INT32(86399, parseLocalTime("23:59:59"));
+  TEST_ASSERT_EQUAL_INT32(14 * 3600 + 46 * 60 + 40, parseLocalTime("14:46:40"));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime("24:00:00"));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime("12:60:00"));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime("12:00:60"));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime("1:00:00"));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime("12:00:00 "));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime("ab:cd:ef"));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime(""));
+  TEST_ASSERT_EQUAL_INT32(-1, parseLocalTime(nullptr));
+}
+
+void test_parse_format_hhmm() {
+  TEST_ASSERT_EQUAL_INT(1320, parseHhMm("22:00"));
+  TEST_ASSERT_EQUAL_INT(0, parseHhMm("00:00"));
+  TEST_ASSERT_EQUAL_INT(1439, parseHhMm("23:59"));
+  TEST_ASSERT_EQUAL_INT(-1, parseHhMm("24:00"));
+  TEST_ASSERT_EQUAL_INT(-1, parseHhMm("22:00:00"));
+  TEST_ASSERT_EQUAL_INT(-1, parseHhMm("7:00"));
+  TEST_ASSERT_EQUAL_INT(-1, parseHhMm(""));
+  TEST_ASSERT_EQUAL_STRING("07:05", formatHhMm(425).c_str());
+  TEST_ASSERT_EQUAL_STRING("00:00", formatHhMm(0).c_str());
+  TEST_ASSERT_EQUAL_STRING("23:59", formatHhMm(1439).c_str());
+}
+
+void test_night_window() {
+  TEST_ASSERT_FALSE(nightActive(0, 0, 0));          // start == end: off
+  TEST_ASSERT_FALSE(nightActive(600, 600, 600));
+  TEST_ASSERT_TRUE(nightActive(1320, 420, 1439));   // 23:59
+  TEST_ASSERT_TRUE(nightActive(1320, 420, 0));      // 00:00
+  TEST_ASSERT_TRUE(nightActive(1320, 420, 419));    // 06:59
+  TEST_ASSERT_FALSE(nightActive(1320, 420, 420));   // 07:00
+  TEST_ASSERT_FALSE(nightActive(1320, 420, 1319));  // 21:59
+  TEST_ASSERT_TRUE(nightActive(1320, 420, 1320));   // 22:00
+  TEST_ASSERT_TRUE(nightActive(60, 120, 60));       // same-day window
+  TEST_ASSERT_TRUE(nightActive(60, 120, 119));
+  TEST_ASSERT_FALSE(nightActive(60, 120, 120));
+  TEST_ASSERT_FALSE(nightActive(60, 120, 59));
+}
+
+void test_local_clock() {
+  LocalClock c;
+  TEST_ASSERT_FALSE(c.known());
+  c.sync(86390, 1000);  // 23:59:50
+  TEST_ASSERT_TRUE(c.known());
+  TEST_ASSERT_EQUAL_UINT32(86390, c.secondOfDay(1000));
+  TEST_ASSERT_EQUAL_UINT32(86395, c.secondOfDay(6000));
+  TEST_ASSERT_EQUAL_UINT32(10, c.secondOfDay(21000));  // past midnight
+  LocalClock w;
+  w.sync(0, 0xFFFFF000u);  // millis() about to overflow
+  TEST_ASSERT_EQUAL_UINT32(10, w.secondOfDay(0xFFFFF000u + 10000u));
+  LocalClock d;  // several days without resync
+  d.sync(3600, 0);
+  TEST_ASSERT_EQUAL_UINT32(3600 + 5, d.secondOfDay(3u * 86400000u + 5000u));
+}
+
+void test_effective_brightness() {
+  Settings s;
+  s.brightness = 80;
+  s.nightStart = 1320;
+  s.nightEnd = 420;
+  s.nightBrightness = 0;
+  TEST_ASSERT_EQUAL_UINT8(80, effectiveBrightness(s, false, 23 * 3600));  // time unknown
+  TEST_ASSERT_EQUAL_UINT8(0, effectiveBrightness(s, true, 23 * 3600));
+  TEST_ASSERT_EQUAL_UINT8(0, effectiveBrightness(s, true, 6 * 3600 + 59 * 60 + 59));
+  TEST_ASSERT_EQUAL_UINT8(80, effectiveBrightness(s, true, 7 * 3600));
+  TEST_ASSERT_EQUAL_UINT8(80, effectiveBrightness(s, true, 12 * 3600));
+  Settings off;  // defaults: night mode off
+  off.brightness = 60;
+  TEST_ASSERT_EQUAL_UINT8(60, effectiveBrightness(off, true, 23 * 3600));
+}
+
+void test_apply_night() {
+  Settings s;
+  std::string err;
+  TEST_ASSERT_TRUE(applyNight(s, "22:00", "07:00", "10", &err));
+  TEST_ASSERT_EQUAL_UINT16(1320, s.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(420, s.nightEnd);
+  TEST_ASSERT_EQUAL_UINT8(10, s.nightBrightness);
+  TEST_ASSERT_TRUE(applyNight(s, "22:00", "07:00", "0", &err));
+  TEST_ASSERT_EQUAL_UINT8(0, s.nightBrightness);
+  TEST_ASSERT_FALSE(applyNight(s, "25:00", "07:00", "10", &err));
+  TEST_ASSERT_EQUAL_STRING("bad_time", err.c_str());
+  TEST_ASSERT_FALSE(applyNight(s, "22:00", "", "10", &err));
+  TEST_ASSERT_EQUAL_STRING("bad_time", err.c_str());
+  TEST_ASSERT_FALSE(applyNight(s, "21:00", "07:00", "101", &err));
+  TEST_ASSERT_EQUAL_STRING("bad_night_brightness", err.c_str());
+  TEST_ASSERT_FALSE(applyNight(s, "21:00", "07:00", "", &err));
+  TEST_ASSERT_FALSE(applyNight(s, "21:00", "07:00", "5x", &err));
+  TEST_ASSERT_FALSE(applyNight(s, "21:00", "07:00", "-1", &err));
+  TEST_ASSERT_EQUAL_UINT16(1320, s.nightStart);  // unchanged on failure
+  TEST_ASSERT_EQUAL_UINT8(0, s.nightBrightness);
+}
+
+void test_settings_night_roundtrip_and_old_file() {
+  Settings s;
+  s.nightStart = 1320;
+  s.nightEnd = 420;
+  s.nightBrightness = 5;
+  Settings back;
+  TEST_ASSERT_TRUE(parseSettings(encodeSettings(s), &back));
+  TEST_ASSERT_EQUAL_UINT16(1320, back.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(420, back.nightEnd);
+  TEST_ASSERT_EQUAL_UINT8(5, back.nightBrightness);
+  Settings old;  // 0.1.0 file without night keys
+  TEST_ASSERT_TRUE(parseSettings(
+      "{\"server_url\":\"http://h:8090\",\"update_password\":\"abcdefgh\",\"brightness\":70}\n",
+      &old));
+  TEST_ASSERT_EQUAL_UINT8(70, old.brightness);
+  TEST_ASSERT_EQUAL_UINT16(0, old.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(0, old.nightEnd);
+  TEST_ASSERT_EQUAL_UINT8(0, old.nightBrightness);
+  Settings bad;  // out-of-range minutes fall back to 0, brightness clamped
+  TEST_ASSERT_TRUE(parseSettings(
+      "{\"night_start\":5000,\"night_end\":-3,\"night_brightness\":250}\n", &bad));
+  TEST_ASSERT_EQUAL_UINT16(0, bad.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(0, bad.nightEnd);
+  TEST_ASSERT_EQUAL_UINT8(100, bad.nightBrightness);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_boot_fresh_magic);
@@ -644,5 +769,12 @@ int main() {
   RUN_TEST(test_poller_millis_wraparound);
   RUN_TEST(test_poller_decode_error_clears_etag);
   RUN_TEST(test_poller_failure_count_saturates);
+  RUN_TEST(test_parse_local_time);
+  RUN_TEST(test_parse_format_hhmm);
+  RUN_TEST(test_night_window);
+  RUN_TEST(test_local_clock);
+  RUN_TEST(test_effective_brightness);
+  RUN_TEST(test_apply_night);
+  RUN_TEST(test_settings_night_roundtrip_and_old_file);
   return UNITY_END();
 }
