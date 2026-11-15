@@ -4,7 +4,7 @@ Nach dem ersten Flashen (oder nach einem Zurücksetzen) öffnet das Display ein 
 
 ## Was du zuerst brauchst
 
-- Den laufenden Glance-Box-Server, erreichbar aus deinem Heimnetz, siehe [README](../../README.de.md#schnellstart). Notiere seine Adresse, zum Beispiel `http://192.168.1.20:8080`. Gib dem Server im Router eine feste IP-Adresse (oder einen festen Namen), sonst verliert das Display ihn nach einem Router-Neustart.
+- Den laufenden Glance-Box-Server, erreichbar aus deinem Heimnetz, siehe [README](../../README.de.md#schnellstart). Notiere seine Adresse, zum Beispiel `http://192.168.1.20:8080`. Ist Port 8080 schon belegt (zum Beispiel durch Pi-hole), leg neben `docker-compose.yml` eine Datei `.env` mit `GLANCEBOX_PORT=8090` an und starte neu. Die Adresse lautet dann `…:8090`. Gib dem Server im Router eine feste IP-Adresse (oder einen festen Namen), sonst verliert das Display ihn nach einem Router-Neustart.
 - Name und Passwort deines 2,4-GHz-WLANs.
 - Ein selbst gewähltes Passwort für Updates (mindestens 8, höchstens 32 Zeichen, nur druckbares ASCII, keine Umlaute).
 
