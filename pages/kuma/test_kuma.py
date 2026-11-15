@@ -172,6 +172,25 @@ def test_unreachable_gives_error_state(kuma, monkeypatch):
     assert data["message"] == "Cannot reach Uptime Kuma" and data["sub"] == "As of 14:05"
 
 
+def test_failure_is_logged(kuma, monkeypatch, caplog):
+    def boom(*a, **k):
+        raise requests.ConnectionError("no route")
+    monkeypatch.setattr(glancebox.http, "get_json", boom)
+    with caplog.at_level("WARNING"):
+        kuma.fetch(OPTIONS, ctx())
+    assert len(caplog.records) == 1
+    assert "kuma: status page unavailable: ConnectionError: no route" in caplog.text
+
+
+def test_parse_error_is_logged(kuma, serve, caplog):
+    page, hb = build({1: ("A", UP, 1.0)})
+    del page["publicGroupList"][0]["monitorList"][0]["id"]
+    serve(page, hb)
+    with caplog.at_level("WARNING"):
+        assert kuma.fetch(OPTIONS, ctx())["state"] == "error"
+    assert "KeyError" in caplog.text
+
+
 def test_second_request_failure_is_error(kuma, monkeypatch):
     page, _hb = build({1: ("A", UP, 1.0)})
 

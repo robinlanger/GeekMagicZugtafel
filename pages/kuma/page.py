@@ -15,11 +15,14 @@ Status codes: 0 down, 1 up, 2 pending, 3 maintenance. The parser also accepts IS
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 from glancebox import http
+
+log = logging.getLogger(__name__)
 
 LANGS = ("de", "en")
 SLUG_RE = re.compile(r"^[a-z0-9-]+$")
@@ -128,7 +131,8 @@ def fetch(options: dict, ctx) -> dict:
         rows = [{"name": name,
                  "since": ("≥ " if lb else "") + _duration((now_utc - since).total_seconds())}
                 for since, name, lb in down]
-    except Exception:  # noqa: BLE001 - any failure must show the notice, never a stale "all OK"
+    except Exception as exc:  # noqa: BLE001 - any failure must show the notice, never a stale "all OK"
+        log.warning("kuma: status page unavailable: %s: %s", type(exc).__name__, exc)
         return result("error", message=texts["error"], sub=f"{texts['asof']} {clock}")
 
     if not monitors:
