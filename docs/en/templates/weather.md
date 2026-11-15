@@ -19,7 +19,6 @@ The description and the title follow the page language (`de` or `en`).
 - type: weather
   location: Frankfurt am Main
   lang: en
-  refresh: 900
 ```
 
 ## Options
@@ -30,7 +29,7 @@ The description and the title follow the page language (`de` or `en`).
 | `latitude`, `longitude` | | Coordinates in degrees (for example `50.11` and `8.68`). Always set both, and never together with `location`. |
 | `title` | the found place name, else `Weather` | Header text. |
 | `lang` | top-level `lang` | `de` or `en`. Sets the description and the default title. |
-| `refresh` | `900` | **At least 900** (15 minutes). Weather changes slowly and the service is free, so please do not poll it more often. If the value is below 900 the server refuses to start. |
+| `refresh` | `60` | Seconds between two new pictures, **at least 60**. The picture and its clock stay current, but Open-Meteo is asked at most every 15 minutes, because weather changes slowly and the service is free. If the value is below 60 the server refuses to start. |
 | `duration` | `interval` | How many seconds the page stays on the display. |
 
 The time zone comes from the top-level `timezone`. The four hours are the next four full hours in that zone, also across midnight.
@@ -46,7 +45,7 @@ If the place is not the one you meant, add the country or region to the name, or
 ## Privacy & security
 
 - The page needs no key, so there is no secret to protect.
-- With `location` the place name goes to Open-Meteo once per server start. Every refresh sends the coordinates of the place. Open-Meteo also sees the IP address of your server.
+- With `location` the place name goes to Open-Meteo once per server start. Every forecast request (at most every 15 minutes) sends the coordinates of the place. Open-Meteo also sees the IP address of your server.
 - Nothing is stored on the server beyond the current picture.
 - Open-Meteo data is licensed under CC BY 4.0, see [open-meteo.com/en/license](https://open-meteo.com/en/license).
 
@@ -55,5 +54,5 @@ If the place is not the one you meant, add the country or region to the name, or
 - **The page keeps showing an old picture:** Open-Meteo could not be reached. The last picture stays for up to 10 minutes, after which the display skips the page. The reason is in `docker compose logs`.
 - **`location not found` in the log:** the geocoding service does not know the name. Try another spelling or use `latitude` and `longitude`.
 - **The server refuses to start and names `location`:** use either `location` or both coordinates, never both forms.
-- **The server refuses to start and complains about `refresh`:** the value is below 900. Remove it or raise it.
+- **The server refuses to start and complains about `refresh`:** the value is below 60. Remove it or raise it.
 - **The hours or the clock are off:** set the top-level `timezone` (for example `Europe/Berlin`).

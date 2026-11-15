@@ -15,7 +15,7 @@ pages:
     refresh: 60           # data at most once a minute (DB rule, minimum 60 for bahn)
   # - type: weather
   #   location: Frankfurt am Main
-  #   refresh: 900          # minimum 900 (Open-Meteo, free service)
+  #   refresh: 60           # minimum 60; Open-Meteo is asked at most every 15 min
   # - type: kuma
   #   url: http://192.168.1.20:3001   # your Uptime Kuma
   #   slug: home                    # slug of its status page

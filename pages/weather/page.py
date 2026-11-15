@@ -4,18 +4,24 @@ from __future__ import annotations
 
 import math
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from glancebox import http
 
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-MIN_REFRESH = 900  # free service: be gentle, weather changes slowly
+# The frame (and its header clock) refreshes every minute; Open-Meteo is asked at most every
+# FORECAST_CACHE_S, because the service is free and weather changes slowly.
+MIN_REFRESH = 60
+FORECAST_CACHE_S = 900
 
 LANGS = ("de", "en")
 DEFAULT_TITLE = {"de": "Wetter", "en": "Weather"}
 
 # Successful geocoding lookups, keyed by (location, lang). Places do not move.
 _geocode_cache: dict[tuple[str, str], tuple[float, float, str]] = {}
+# Successful forecasts, keyed by (latitude, longitude, lang, timezone) -> (fetched at, data).
+_forecast_cache: dict[tuple, tuple[float, dict]] = {}
 
 DESCRIPTIONS = {
     0: ("Klar", "Clear"),
@@ -83,6 +89,32 @@ def _geocode(location: str, lang: str) -> tuple[float, float, str]:
     return _geocode_cache[key]
 
 
+def _forecast(lat: float, lon: float, lang: str, timezone: str, now: float) -> dict:
+    key = (lat, lon, lang, timezone)
+    hit = _forecast_cache.get(key)
+    if hit is not None and 0 <= now - hit[0] < FORECAST_CACHE_S:
+        return hit[1]
+    data = http.get_json(FORECAST_URL, params={
+        "latitude": lat, "longitude": lon,
+        "current": "temperature_2m,weather_code,is_day",
+        "hourly": "temperature_2m,precipitation_probability,weather_code,is_day",
+        "daily": "temperature_2m_max,temperature_2m_min",
+        "timezone": timezone, "forecast_days": 2})
+    _forecast_cache[key] = (now, data)  # only reached on success; errors propagate
+    return data
+
+
+def _slot_times(stamps: list[str], tz: ZoneInfo) -> list[datetime]:
+    """Local wall-clock strings -> aware datetimes. A repeated wall-clock hour (DST fall-back,
+    Open-Meteo lists 02:00 twice) is the second pass, fold=1."""
+    out: list[datetime] = []
+    for stamp in stamps:
+        t = datetime.fromisoformat(stamp)
+        fold = 1 if out and t <= out[-1].replace(tzinfo=None) else 0
+        out.append(t.replace(tzinfo=tz, fold=fold))
+    return out
+
+
 def _round(value: float) -> int:
     return math.floor(value + 0.5)  # half-up, also for negatives (-0.5 -> 0)
 
@@ -120,22 +152,19 @@ def fetch(options: dict, ctx) -> dict:
         lat, lon, place = options["latitude"], options["longitude"], None
     title = options.get("title") or place or DEFAULT_TITLE[lang]
 
-    data = http.get_json(FORECAST_URL, params={
-        "latitude": lat, "longitude": lon,
-        "current": "temperature_2m,weather_code,is_day",
-        "hourly": "temperature_2m,precipitation_probability,weather_code,is_day",
-        "daily": "temperature_2m_max,temperature_2m_min",
-        "timezone": ctx.timezone, "forecast_days": 2})
+    data = _forecast(lat, lon, lang, ctx.timezone, ctx.now.timestamp())
 
     cur = data["current"]
     code = int(cur["weather_code"])
-    # Hourly times are local wall-clock strings in ctx.timezone; compare them as such.
-    this_hour = ctx.now.replace(minute=0, second=0, microsecond=0, tzinfo=None)
+    # Hourly times are local wall-clock strings in ctx.timezone; compare them as instants so
+    # the repeated and the skipped hour of a DST change land in the right place.
+    tz = ZoneInfo(ctx.timezone)
+    now = ctx.now if ctx.now.tzinfo else ctx.now.replace(tzinfo=tz)
+    this_hour = now.replace(minute=0, second=0, microsecond=0).timestamp()
     hourly = data["hourly"]
     hours = []
-    for i, stamp in enumerate(hourly["time"]):
-        t = datetime.fromisoformat(stamp)
-        if t <= this_hour:
+    for i, t in enumerate(_slot_times(hourly["time"], tz)):
+        if t.timestamp() <= this_hour:
             continue
         rain = hourly["precipitation_probability"][i]
         hours.append({"hour": f"{t.hour:02d}", "temp": _round(hourly["temperature_2m"][i]),

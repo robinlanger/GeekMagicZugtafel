@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from glancebox.config import AppConfig, ConfigError, PageConfig, load_config
+from glancebox.frames import STALE_AFTER_S
 from glancebox.pages import PageContext, load_page_types, validate_config
 
 FIX = Path(__file__).parent / "fixtures" / "pages"
@@ -108,3 +109,10 @@ def test_validate_config_from_loaded_yaml(tmp_path):
     p.write_text("pages:\n  - {type: bahn, station: X}\n")
     out = validate_config(load_config(p), load_page_types([REAL]))
     assert out.pages[0].refresh == 60
+
+
+def test_builtin_min_refresh_keeps_frames_fresh():
+    # A frame expires after STALE_AFTER_S; a longer MIN_REFRESH would let it vanish from the
+    # playlist until the next allowed refresh.
+    for name, page_type in load_page_types([REAL]).items():
+        assert page_type.min_refresh <= STALE_AFTER_S, name

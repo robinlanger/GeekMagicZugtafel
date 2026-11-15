@@ -1,4 +1,5 @@
 import io
+import itertools
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -69,7 +70,45 @@ def test_validate_location_xor_coordinates(weather):
 
 
 def test_min_refresh(weather):
-    assert weather.min_refresh == 900
+    assert weather.min_refresh == 60
+
+
+def forecast_calls(calls):
+    return [c for c in calls if "geocoding" not in c[0]]
+
+
+def test_forecast_cached_for_900_s(weather, calls):
+    opts = {"latitude": 50.1, "longitude": 8.7}
+    weather.fetch(opts, ctx())
+    data = weather.fetch(opts, ctx(NOW + timedelta(seconds=299)))
+    assert len(forecast_calls(calls)) == 1
+    assert data["clock"] == "14:09"  # clock and hours follow ctx.now, not the cached answer
+    weather.fetch(opts, ctx(NOW + timedelta(seconds=899)))
+    assert len(forecast_calls(calls)) == 1
+    weather.fetch(opts, ctx(NOW + timedelta(seconds=901)))
+    assert len(forecast_calls(calls)) == 2
+
+
+def test_forecast_cache_keyed_by_coordinates(weather, calls):
+    weather.fetch({"latitude": 50.1, "longitude": 8.7}, ctx())
+    weather.fetch({"latitude": 48.1, "longitude": 11.6}, ctx())
+    assert len(forecast_calls(calls)) == 2
+
+
+def test_failed_forecast_not_cached_and_raises_after_expiry(weather, calls, monkeypatch):
+    opts = {"latitude": 50.1, "longitude": 8.7}
+    weather.fetch(opts, ctx())
+
+    def boom(url, *, params=None, headers=None, timeout=10):
+        calls.append((url, params))
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(glancebox.http, "get_json", boom)
+    weather.fetch(opts, ctx(NOW + timedelta(seconds=600)))  # still cached
+    for seconds in (901, 961):  # expired: every attempt asks again and raises
+        with pytest.raises(RuntimeError):
+            weather.fetch(opts, ctx(NOW + timedelta(seconds=seconds)))
+    assert len(forecast_calls(calls)) == 3
 
 
 def test_fetch_maps_current_and_hours(weather, calls):
@@ -107,11 +146,14 @@ def test_night_icon(weather, calls, monkeypatch):
 
 
 def test_icon_keys(weather, calls, monkeypatch):
+    longitudes = itertools.count(1)
+
     def icon(code, is_day=1):
         forecast = {**FORECAST, "current": {**FORECAST["current"], "weather_code": code,
                                             "is_day": is_day}}
         monkeypatch.setattr(glancebox.http, "get_json", lambda *a, **k: forecast)
-        return weather.fetch({"latitude": 1, "longitude": 1}, ctx())["icon"]
+        # distinct coordinates per call so the forecast cache does not answer
+        return weather.fetch({"latitude": 1, "longitude": next(longitudes)}, ctx())["icon"]
 
     for code, key in [(0, "clear"), (1, "partly"), (3, "cloudy"), (45, "fog"), (61, "rain"),
                       (81, "rain"), (73, "snow"), (86, "snow"), (96, "thunder"), (42, "cloudy")]:
@@ -153,9 +195,50 @@ async def test_template_renders(weather, calls):
     cfg = AppConfig(interval=30, timezone="Europe/Berlin", lang="de",
                     pages=(), pages_dirs=(PAGES_DIR,))
     page = PageConfig(index=0, type="weather", options={"latitude": 50.1, "longitude": 8.7},
-                      duration=30, refresh=900)
+                      duration=30, refresh=60)
     async with Renderer() as r:
         out = await render_page(page, weather, cfg, r, NOW.timestamp())
     img = Image.open(io.BytesIO(out))
     assert img.format == "JPEG" and img.size == (240, 240)
     assert img.convert("L").getextrema()[1] > 150
+
+
+def dst_forecast(stamps: list[str]) -> dict:
+    """Open-Meteo answer with timezone=Europe/Berlin: local wall-clock strings, temp = index."""
+    n = len(stamps)
+    return {**FORECAST, "hourly": {"time": stamps, "temperature_2m": list(range(n)),
+                                   "precipitation_probability": [0] * n,
+                                   "weather_code": [3] * n, "is_day": [1] * n}}
+
+
+def day_stamps(day: str, hours: list[int]) -> list[str]:
+    return [f"{day}T{h:02d}:00" for h in hours]
+
+
+# 2026-10-25: clocks go back 03:00 CEST -> 02:00 CET, so the 02:00 slot occurs twice (25 slots).
+FALL_BACK = day_stamps("2026-10-25", [0, 1, 2, 2, *range(3, 24)])
+# 2026-03-29: clocks go forward 02:00 CET -> 03:00 CEST, there is no 02:00 slot (23 slots).
+SPRING_FORWARD = day_stamps("2026-03-29", [0, 1, *range(3, 24)])
+
+
+@pytest.mark.parametrize(("now", "stamps", "hours", "temps"), [
+    # 01:30 CEST: both 02:00 slots, then 03 and 04
+    (datetime(2026, 10, 25, 1, 30, tzinfo=TZ), FALL_BACK, ["02", "02", "03", "04"], [2, 3, 4, 5]),
+    # 02:30 CEST (first pass): the second 02:00 (CET) is still ahead
+    (datetime(2026, 10, 25, 2, 30, tzinfo=TZ), FALL_BACK, ["02", "03", "04", "05"], [3, 4, 5, 6]),
+    # 02:30 CET (second pass, fold=1)
+    (datetime(2026, 10, 25, 2, 30, fold=1, tzinfo=TZ), FALL_BACK,
+     ["03", "04", "05", "06"], [4, 5, 6, 7]),
+    # 01:30 CET: next slot is 03:00 CEST
+    (datetime(2026, 3, 29, 1, 30, tzinfo=TZ), SPRING_FORWARD, ["03", "04", "05", "06"],
+     [2, 3, 4, 5]),
+    # 03:30 CEST
+    (datetime(2026, 3, 29, 3, 30, tzinfo=TZ), SPRING_FORWARD, ["04", "05", "06", "07"],
+     [3, 4, 5, 6]),
+])
+def test_hours_across_dst(weather, monkeypatch, now, stamps, hours, temps):
+    forecast = dst_forecast(stamps)
+    monkeypatch.setattr(glancebox.http, "get_json", lambda *a, **k: forecast)
+    data = weather.fetch({"latitude": 50.1, "longitude": 8.7}, ctx(now))
+    assert [h["hour"] for h in data["hours"]] == hours
+    assert [h["temp"] for h in data["hours"]] == temps
