@@ -13,3 +13,6 @@ zugtafel.png
 config.yaml
 docker-compose.override.yml
 pages-custom/
+
+# Brainstorming mockups
+.superpowers/
