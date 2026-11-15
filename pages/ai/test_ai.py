@@ -359,9 +359,11 @@ def test_cost_http_401_message_without_key(ai, fake_http, caplog, provider):
 def test_cost_network_and_shape_errors(ai, fake_http, caplog, provider):
     import requests
 
-    for error, pages in ((requests.ConnectionError("refused"), []), (None, [{"odd": 1}])):
-        fake_http(pages, error=error)
-        data = ai.fetch(COST[provider], cost_ctx())
+    for seconds, error, pages in ((0, requests.ConnectionError("refused"), []),
+                                  (61, None, [{"odd": 1}])):  # 61: after the failure cache
+        fake = fake_http(pages, error=error)
+        data = ai.fetch(COST[provider], cost_ctx(NOW + timedelta(seconds=seconds)))
+        assert len(fake.calls) >= 1
         assert data["message"] == "Keine Daten"
     assert COST[provider]["key"] not in caplog.text
 
@@ -393,14 +395,31 @@ def test_cached_for_300s(ai, fake_http, provider):
     assert len(fake.calls) == 3
 
 
-def test_errors_are_not_cached(ai, fake_http):
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api", "xai-api", "copilot"])
+def test_failures_cached_for_60s(ai, fake_http, provider):
+    options = COPILOT if provider == "copilot" else COST[provider]
+    fake = fake_http([], error=http_error(401, options["key"]))
+    for seconds in (0, 30, 59):
+        data = ai.fetch(options, cost_ctx(NOW + timedelta(seconds=seconds)))
+        assert data["message"] == "Keine Daten" and data["alert"] is True
+    assert len(fake.calls) == 1
+    # The notice carries the time of the current attempt, never a stale amount.
+    assert data["sub"] == "Stand 14:05" and data["big"] is None
+    ai.fetch(options, cost_ctx(NOW + timedelta(seconds=61)))
+    assert len(fake.calls) == 2
+
+
+def test_success_after_failure_cache_expired(ai, fake_http):
     import requests
 
     fake_http([], error=requests.ConnectionError("down"))
     assert ai.fetch(COST["openai-api"], cost_ctx())["message"] == "Keine Daten"
     fake = fake_http([openai_page([[18.4]], None)])
-    data = ai.fetch(COST["openai-api"], cost_ctx(NOW + timedelta(seconds=1)))
+    data = ai.fetch(COST["openai-api"], cost_ctx(NOW + timedelta(seconds=61)))
     assert len(fake.calls) == 1 and data["big"]["value"] == "18,40 $"
+    # A success replaces the failure: the amount is now cached for 300 s.
+    ai.fetch(COST["openai-api"], cost_ctx(NOW + timedelta(seconds=200)))
+    assert len(fake.calls) == 1
 
 
 def test_xai_cache_keyed_by_team(ai, fake_http):
@@ -514,8 +533,9 @@ def test_copilot_errors_show_notice_without_key(ai, fake_http, caplog):
     assert data["message"] == "Keine Daten" and data["sub"] == "Stand 14:05"
     assert data["alert"] is True and data["big"] is None and data["rows"] == []
     assert "ai copilot: no data: HTTPError (HTTP 403)" in caplog.text
-    fake_http([{"odd": 1}])
-    assert ai.fetch(COPILOT, cost_ctx())["message"] == "Keine Daten"
+    fake = fake_http([{"odd": 1}])
+    assert ai.fetch(COPILOT, cost_ctx(NOW + timedelta(seconds=61)))["message"] == "Keine Daten"
+    assert len(fake.calls) == 1
     assert GH_KEY not in caplog.text
 
 

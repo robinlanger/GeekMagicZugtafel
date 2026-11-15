@@ -30,7 +30,7 @@ For `anthropic-api`, `openai-api` and `xai-api`:
 - **Amount:** large in the middle, as `$18.40` (`This month`) or, for `xai-api`, `Balance`. The month is the calendar month in UTC, the way the providers bill.
 - **Budget:** with `budget: 50` a bar `Budget` appears below the amount, with the share of the budget already spent and the day it starts again (`Dec 1`). Above 100 % the bar stays full and the text shows the real value, for example `120 %`.
 - **Age:** at the bottom `As of 14:05` shows when the server last got the values. For `anthropic-api` it is the time of Anthropic's data export, which is updated about every 4 hours.
-- **Only every 5 minutes:** cost data changes slowly. The server asks each provider at most every 5 minutes, whatever `refresh` says.
+- **Only every 5 minutes:** cost data changes slowly. The server keeps a successful answer for 5 minutes, whatever `refresh` says. After a failure it asks again after 1 minute at the earliest.
 - **No data:** if the provider cannot be reached or refuses the key, the header turns red and the page shows `No data` with the time, never an old amount.
 
 For `copilot`:
@@ -93,7 +93,7 @@ For the API costs, with the key in `.env` (see [Setup](#setup)):
 | `unit` | `ai-credits` | Only `copilot`: `ai-credits` (usage-based billing, the normal case) or `premium-requests` (an annual plan that stayed on premium requests). |
 | `title` | name of the provider (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`, `GitHub Copilot`) | Header text. |
 | `lang` | top-level `lang` | `de` or `en`. Sets all texts on the page. |
-| `refresh` | `refresh` default | For `claude` we recommend `30`. The page only reads what arrived, so this costs nothing. The API providers ask at most every 5 minutes anyway. |
+| `refresh` | `refresh` default | For `claude` we recommend `30`. The page only reads what arrived, so this costs nothing. For the API providers the server keeps a successful answer for 5 minutes anyway. |
 | `duration` | `interval` | How many seconds the page stays on the display. |
 
 ## Setup

@@ -1,8 +1,10 @@
 """Shared code of the API providers anthropic-api, openai-api, xai-api and copilot.
 
 Cost and usage data change slowly, so each successful result is kept for CACHE_S seconds per
-process, keyed by (provider, sha256(key), and the CACHE_SCOPE options). Errors are not cached. MIN_REFRESH of the page stays 0
-because the claude provider needs a short refresh.
+process, keyed by (provider, sha256(key), and the CACHE_SCOPE options). A failure is kept for
+FAIL_CACHE_S, so a bad or revoked key does not hit the provider on every refresh; meanwhile the
+page shows the "No data" notice, never a stale amount. MIN_REFRESH of the page stays 0 because
+the claude provider needs a short refresh.
 
 Keys only ever travel in request headers. A failure is logged with the exception type and the
 HTTP status only, never with the exception text, so no key or URL detail can reach the log.
@@ -18,6 +20,7 @@ from datetime import UTC, datetime
 log = logging.getLogger(__name__)
 
 CACHE_S = 300
+FAIL_CACHE_S = 60
 MAX_PAGES = 20
 # Options besides the key that change what a provider requests, so they are part of the cache key.
 CACHE_SCOPE = ("team_id", "username", "unit")
@@ -33,6 +36,8 @@ MONTHS_EN = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 
 # (provider, sha256 of the key, *CACHE_SCOPE values) -> (fetched at, (amount, data as of or None))
 _cache: dict[tuple, tuple[float, tuple[float, datetime | None]]] = {}
+# Same key -> (failed at, the exception), re-raised until FAIL_CACHE_S has passed.
+_failures: dict[tuple, tuple[float, Exception]] = {}
 
 
 def require_text(options: dict, name: str) -> None:
@@ -84,13 +89,24 @@ def next_month(now: datetime, lang: str) -> str:
 
 def cached(provider: str, options: dict, now: float,
            load: Callable[[], tuple[float, datetime | None]]):
-    """(fetched at, load()) from the cache if younger than CACHE_S, else calls load()."""
+    """(fetched at, load()) from the cache if younger than CACHE_S, else calls load().
+
+    A failure of load() is re-raised without a new call until it is FAIL_CACHE_S old.
+    """
     cache_key = (provider, hashlib.sha256(options["key"].encode()).hexdigest(),
                  *(options.get(name) for name in CACHE_SCOPE))
+    failed = _failures.get(cache_key)
+    if failed is not None and 0 <= now - failed[0] < FAIL_CACHE_S:
+        raise failed[1].with_traceback(None)
     hit = _cache.get(cache_key)
     if hit is not None and 0 <= now - hit[0] < CACHE_S:
         return hit
-    entry = (now, load())
+    try:
+        entry = (now, load())
+    except Exception as exc:
+        _failures[cache_key] = (now, exc)
+        raise
+    _failures.pop(cache_key, None)
     _cache[cache_key] = entry
     return entry
 

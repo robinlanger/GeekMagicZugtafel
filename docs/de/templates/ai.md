@@ -30,7 +30,7 @@ Für `anthropic-api`, `openai-api` und `xai-api`:
 - **Betrag:** groß in der Mitte, als `18,40 $` (`Diesen Monat`) oder, bei `xai-api`, `Guthaben`. Der Monat ist der Kalendermonat in UTC, so wie die Anbieter abrechnen.
 - **Budget:** mit `budget: 50` erscheint unter dem Betrag ein Balken `Budget` mit dem Anteil, der schon verbraucht ist, und dem Tag, an dem er neu beginnt (`1.12.`). Über 100 % bleibt der Balken voll, und der Text zeigt den echten Wert, zum Beispiel `120 %`.
 - **Alter:** unten zeigt `Stand 14:05`, wann der Server die Werte zuletzt bekommen hat. Bei `anthropic-api` ist es die Zeit des Datenexports von Anthropic, der etwa alle 4 Stunden aktualisiert wird.
-- **Nur alle 5 Minuten:** Kostendaten ändern sich langsam. Der Server fragt jeden Anbieter höchstens alle 5 Minuten, egal was bei `refresh` steht.
+- **Nur alle 5 Minuten:** Kostendaten ändern sich langsam. Der Server behält eine erfolgreiche Antwort 5 Minuten, egal was bei `refresh` steht. Nach einem Fehler fragt er frühestens nach 1 Minute erneut.
 - **Keine Daten:** ist der Anbieter nicht erreichbar oder lehnt er den Key ab, wird die Kopfzeile rot, und die Seite zeigt `Keine Daten` mit der Uhrzeit, nie einen alten Betrag.
 
 Für `copilot`:
@@ -93,7 +93,7 @@ Für die API-Kosten, mit dem Key in `.env` (siehe [Einrichtung](#einrichtung)):
 | `unit` | `ai-credits` | Nur `copilot`: `ai-credits` (nutzungsbasierte Abrechnung, der Normalfall) oder `premium-requests` (ein Jahresabo, das bei Premium-Requests geblieben ist). |
 | `title` | Name des Anbieters (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`, `GitHub Copilot`) | Text der Kopfzeile. |
 | `lang` | oberstes `lang` | `de` oder `en`. Legt alle Texte der Seite fest. |
-| `refresh` | Standard-`refresh` | Für `claude` empfehlen wir `30`. Die Seite liest nur, was angekommen ist, das kostet nichts. Die API-Anbieter fragen ohnehin höchstens alle 5 Minuten. |
+| `refresh` | Standard-`refresh` | Für `claude` empfehlen wir `30`. Die Seite liest nur, was angekommen ist, das kostet nichts. Bei den API-Anbietern behält der Server eine erfolgreiche Antwort ohnehin 5 Minuten. |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 
 ## Einrichtung
