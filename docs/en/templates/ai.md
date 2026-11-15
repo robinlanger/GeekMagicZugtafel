@@ -17,7 +17,7 @@ For `claude`:
 - **Reset:** less than a day away as `in 2:13` (hours:minutes), otherwise as weekday and time, for example `Thu 09:00`. If the reset time has already passed, the bar shows `0 %` and `reset`.
 - **Age:** at the bottom the page always shows when the values arrived, for example `As of 13:58`.
 - **No data yet:** until the first values arrive the page shows the notice `No data yet` with `Set up the status-line script`.
-- **No limit data:** the values arrived but contain no limits. Claude Code only sends them with a Claude plan (Pro or Max), not when you use an API key.
+- **No limit data:** values arrived but without usable limits, for example after the `curl` test under [When something is wrong](#when-something-is-wrong). The next answer of Claude Code brings the real values. Claude Code only has limits with a Claude plan (Pro or Max); with an API key the script sends nothing and the page stays on `No data yet`.
 - If your plan has no weekly limit, only the 5-hour bar appears.
 
 ## What you need
@@ -142,7 +142,7 @@ If you already have a status line, pass its command to the script as arguments. 
 
 ## When something is wrong
 
-- **`No data yet` stays:** check that `push_key` is set and that you ran `docker compose up -d` after changing `.env`. Then test the way from your computer to the server: `curl -i -X POST -H "Authorization: Bearer <the key>" -H "Content-Type: application/json" -d '{"rate_limits":{}}' http://<server>:8080/api/v1/push/claude`. `204` is right (the page then shows `No limit data` until the next answer of Claude Code), `401` means the key differs, `404` means the server has no `push_key`. If `curl` works, check `push.env` (both lines, no spaces around `=`) and the path in `settings.json`.
-- **`No limit data`:** Claude Code sent no limits. That happens with an API key instead of a Claude plan, and with older Claude Code versions.
+- **`No data yet` stays:** Claude Code only sends limits with a Claude plan (Pro or Max) and in recent versions. With an API key instead of a plan, or with an older Claude Code, the script sends nothing and the page stays on `No data yet`; nothing else is wrong then. Otherwise check that `push_key` is set and that you ran `docker compose up -d` after changing `.env`. Then test the way from your computer to the server: `curl -i -X POST -H "Authorization: Bearer <the key>" -H "Content-Type: application/json" -d '{"rate_limits":{}}' http://<server>:8080/api/v1/push/claude`. `204` is right (the page then shows `No limit data` until the next answer of Claude Code), `401` means the key differs, `404` means the server has no `push_key`. If `curl` works, check `push.env` (both lines, no spaces around `=`) and the path in `settings.json`.
+- **`No limit data`:** a push arrived but without usable limit windows, for example the `curl` test above with `{"rate_limits":{}}`. The next answer of Claude Code replaces it with the real values.
 - **The status line is empty:** that is normal without your own status line. To show one, pass its command as arguments.
 - **The server refuses to start and names `provider`:** the value must be one of the providers in the table above.

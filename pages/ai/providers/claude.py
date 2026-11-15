@@ -25,10 +25,10 @@ WEEKDAYS = {"de": ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"),
             "en": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")}
 TEXT = {
     "de": {"nodata": "Noch keine Daten", "setup": "Statuszeilen-Skript einrichten",
-           "nolimits": "Keine Limitdaten", "plan": "Nur mit Claude-Abo (Pro, Max)",
+           "nolimits": "Keine Limitdaten", "next": "Wartet auf die nächste Antwort",
            "reset": "zurückgesetzt", "asof": "Stand"},
     "en": {"nodata": "No data yet", "setup": "Set up the status-line script",
-           "nolimits": "No limit data", "plan": "Only with a Claude plan (Pro, Max)",
+           "nolimits": "No limit data", "next": "Waiting for the next answer",
            "reset": "reset", "asof": "As of"},
 }
 
@@ -80,5 +80,5 @@ def fetch(options: dict, ctx) -> dict:
         rows.append({"label": labels[lang], "reset": reset, "percent": percent,
                      "text": f"{round(percent)} %"})
     if not rows:
-        return {"message": texts["nolimits"], "sub": texts["plan"], "stand": stand}
+        return {"message": texts["nolimits"], "sub": texts["next"], "stand": stand}
     return {"rows": rows, "stand": stand}

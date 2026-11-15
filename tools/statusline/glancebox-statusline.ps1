@@ -16,6 +16,8 @@
 
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::InputEncoding = [Text.Encoding]::UTF8
+# UTF-8 for the status-line output and for text piped to a wrapped command (PowerShell 5.1).
+$OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $inputText = [Console]::In.ReadToEnd()
 
 $url = ''

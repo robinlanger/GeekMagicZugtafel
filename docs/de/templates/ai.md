@@ -17,7 +17,7 @@ Für `claude`:
 - **Reset:** weniger als einen Tag entfernt als `in 2:13` (Stunden:Minuten), sonst als Wochentag und Uhrzeit, zum Beispiel `Do 09:00`. Ist die Reset-Zeit schon vorbei, zeigt der Balken `0 %` und `zurückgesetzt`.
 - **Alter:** unten zeigt die Seite immer, wann die Werte ankamen, zum Beispiel `Stand 13:58`.
 - **Noch keine Daten:** bis die ersten Werte ankommen, zeigt die Seite den Hinweis `Noch keine Daten` mit `Statuszeilen-Skript einrichten`.
-- **Keine Limitdaten:** Werte kamen an, enthalten aber keine Limits. Claude Code schickt sie nur mit einem Claude-Abo (Pro oder Max), nicht mit einem API-Key.
+- **Keine Limitdaten:** Werte kamen an, aber ohne brauchbare Limits, zum Beispiel nach dem `curl`-Test unter [Wenn etwas nicht stimmt](#wenn-etwas-nicht-stimmt). Die nächste Antwort von Claude Code bringt die echten Werte. Limits hat Claude Code nur mit einem Claude-Abo (Pro oder Max); mit einem API-Key schickt das Skript nichts, und die Seite bleibt bei `Noch keine Daten`.
 - Hat dein Abo kein Wochenlimit, erscheint nur der 5-Stunden-Balken.
 
 ## Was du brauchst
@@ -142,7 +142,7 @@ Hast du schon eine Statuszeile, gib ihren Befehl dem Skript als Argumente mit. D
 
 ## Wenn etwas nicht stimmt
 
-- **`Noch keine Daten` bleibt:** prüfe, dass `push_key` gesetzt ist und du nach der Änderung an `.env` `docker compose up -d` ausgeführt hast. Teste dann den Weg von deinem Rechner zum Server: `curl -i -X POST -H "Authorization: Bearer <der Schlüssel>" -H "Content-Type: application/json" -d '{"rate_limits":{}}' http://<server>:8080/api/v1/push/claude`. `204` ist richtig (die Seite zeigt dann `Keine Limitdaten` bis zur nächsten Antwort von Claude Code), `401` heißt, der Schlüssel stimmt nicht, `404` heißt, der Server hat keinen `push_key`. Klappt `curl`, prüfe `push.env` (beide Zeilen, keine Leerzeichen um `=`) und den Pfad in `settings.json`.
-- **`Keine Limitdaten`:** Claude Code hat keine Limits geschickt. Das passiert mit einem API-Key statt eines Claude-Abos und mit älteren Claude-Code-Versionen.
+- **`Noch keine Daten` bleibt:** Claude Code schickt Limits nur mit einem Claude-Abo (Pro oder Max) und in aktuellen Versionen. Mit einem API-Key statt eines Abos oder mit einem älteren Claude Code schickt das Skript nichts, und die Seite bleibt bei `Noch keine Daten`; sonst ist dann nichts falsch. Andernfalls prüfe, dass `push_key` gesetzt ist und du nach der Änderung an `.env` `docker compose up -d` ausgeführt hast. Teste dann den Weg von deinem Rechner zum Server: `curl -i -X POST -H "Authorization: Bearer <der Schlüssel>" -H "Content-Type: application/json" -d '{"rate_limits":{}}' http://<server>:8080/api/v1/push/claude`. `204` ist richtig (die Seite zeigt dann `Keine Limitdaten` bis zur nächsten Antwort von Claude Code), `401` heißt, der Schlüssel stimmt nicht, `404` heißt, der Server hat keinen `push_key`. Klappt `curl`, prüfe `push.env` (beide Zeilen, keine Leerzeichen um `=`) und den Pfad in `settings.json`.
+- **`Keine Limitdaten`:** ein Push kam an, aber ohne brauchbare Limitfenster, zum Beispiel der `curl`-Test oben mit `{"rate_limits":{}}`. Die nächste Antwort von Claude Code ersetzt ihn durch die echten Werte.
 - **Die Statuszeile ist leer:** das ist ohne eigene Statuszeile normal. Um eine zu zeigen, gib ihren Befehl als Argumente mit.
 - **Der Server startet nicht und nennt `provider`:** der Wert muss einer der Anbieter aus der Tabelle oben sein.

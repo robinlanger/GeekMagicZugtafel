@@ -106,6 +106,7 @@ def test_claude_no_windows_in_push(ai):
         data = ai.fetch(OPTIONS, ctx(stored))
         assert data["rows"] == []
         assert data["message"] == "Keine Limitdaten"
+        assert data["sub"] == "Wartet auf die nächste Antwort"
         assert data["stand"] == "Stand 13:58"
 
 
