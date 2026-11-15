@@ -13,7 +13,7 @@ All notable changes to this project are documented here. The format follows
   midnight) and a night brightness from 0 to 100 %; 0 % turns the backlight off. `/status`
   reports `local_time` and `night`.
 - Server: every frame response carries `X-Local-Time: HH:MM:SS` in the configured `timezone`;
-  the display uses it as its clock.
+  the display uses it as its clock. Night mode needs both firmware and server 0.2.0.
 
 ### Fixed
 - The backlight is now fully dark while the display initialises (it was at 5 %).

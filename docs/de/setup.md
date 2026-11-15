@@ -45,7 +45,7 @@ Steht das Display im Schlafzimmer, kann es nachts dunkler werden oder ganz ausge
 
 Sind beide Zeiten gleich (Standard: 00:00 und 00:00), ist der Nachtmodus aus. Das Display holt nachts weiter Bilder, morgens steht also sofort das aktuelle Bild da.
 
-Die Uhrzeit bekommt das Display vom Glance-Box-Server, in der Zeitzone aus `timezone` in deiner `config.yaml` (Sommerzeit inklusive). Fällt der Server aus, zählt das Display die Zeit selbst weiter. Startet es aber nachts neu und erreicht den Server nicht, kennt es die Uhrzeit noch nicht und bleibt hell, bis der Server antwortet. Im Safe Mode gibt es keinen Nachtmodus.
+Die Uhrzeit bekommt das Display vom Glance-Box-Server, in der Zeitzone aus `timezone` in deiner `config.yaml` (Sommerzeit inklusive). **Dafür muss auch der Server mindestens Version 0.2.0 haben.** Mit einem älteren Server zeigt die Geräteseite bei „Uhrzeit“ nur „-“, und der Nachtmodus greift nicht. Fällt der Server aus, zählt das Display die Zeit selbst weiter. Startet es aber nachts neu und erreicht den Server nicht, kennt es die Uhrzeit noch nicht und bleibt hell, bis der Server antwortet. Im Safe Mode gibt es keinen Nachtmodus.
 
 `/status` zeigt die aktuelle Uhrzeit (`local_time`) und ob gerade Nacht ist (`night`).
 

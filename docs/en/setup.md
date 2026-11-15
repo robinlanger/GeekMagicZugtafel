@@ -45,7 +45,7 @@ If the display is in a bedroom, it can dim or go completely dark at night. Set o
 
 If both times are equal (default: 00:00 and 00:00), night mode is off. The display keeps fetching frames at night, so the current picture is there right away in the morning.
 
-The display gets the time from the Glance Box server, in the time zone set as `timezone` in your `config.yaml` (daylight saving time included). If the server goes down, the display keeps counting on its own. If it restarts at night and cannot reach the server, it does not know the time yet and stays bright until the server answers. Safe mode has no night mode.
+The display gets the time from the Glance Box server, in the time zone set as `timezone` in your `config.yaml` (daylight saving time included). **The server must be version 0.2.0 or newer as well.** With an older server the device page shows "-" for "Local time" and night mode never kicks in. If the server goes down, the display keeps counting on its own. If it restarts at night and cannot reach the server, it does not know the time yet and stays bright until the server answers. Safe mode has no night mode.
 
 `/status` shows the current time (`local_time`) and whether it is night (`night`).
 
