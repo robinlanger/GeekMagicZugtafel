@@ -18,6 +18,12 @@ Current weather and the next four hours for one place, from the free Open-Meteo 
 
 ## Server & smart home
 
+### kuma
+
+![Preview of the kuma page](../../img/templates/kuma-down.png)
+
+State of an Uptime Kuma status page: all green, or which services are down and since when. [Details](kuma.md)
+
 ## AI & development
 
 ## Transport

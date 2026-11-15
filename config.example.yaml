@@ -16,6 +16,10 @@ pages:
   # - type: weather
   #   location: Frankfurt am Main
   #   refresh: 900          # minimum 900 (Open-Meteo, free service)
+  # - type: kuma
+  #   url: http://192.168.1.20:3001   # your Uptime Kuma
+  #   slug: home                    # slug of its status page
+  #   refresh: 30
   - type: url
     url: http://homeserver.lan/status-240
     duration: 15          # show this page for 15 s instead of the default interval

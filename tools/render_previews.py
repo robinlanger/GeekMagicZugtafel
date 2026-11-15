@@ -38,6 +38,16 @@ SAMPLES: dict[str, tuple[str, dict, dict]] = {
         "desc": "Partly cloudy", "high": 15, "low": 6,
         "hours": [{"hour": "15", "temp": 12, "rain": 10}, {"hour": "16", "temp": 12, "rain": 20},
                   {"hour": "17", "temp": 10, "rain": 55}, {"hour": "18", "temp": 9, "rain": 70}]}),
+    "kuma-ok": ("kuma", {"url": "http://kuma.lan:3001", "slug": "home", "lang": "en"}, {
+        "title": "Homelab", "clock": "14:32", "lang": "en", "state": "ok", "up": 14,
+        "total": 14, "uptime": "99.9 %", "pending": 0, "down": [], "more": 0,
+        "message": None, "sub": None}),
+    "kuma-down": ("kuma", {"url": "http://kuma.lan:3001", "slug": "home", "lang": "en"}, {
+        "title": "Homelab", "clock": "14:32", "lang": "en", "state": "down", "up": 12,
+        "total": 14, "uptime": "97.1 %", "pending": 0,
+        "down": [{"name": "Nextcloud", "since": "12 min"},
+                 {"name": "Backup server with a very long host name", "since": "3 h"}],
+        "more": 0, "message": None, "sub": None}),
     "bahn": ("bahn", {"station": "Musterstadt"}, {
         "title": "Musterstadt", "clock": "10:42", "message": None, "sub": None,
         "rows": [

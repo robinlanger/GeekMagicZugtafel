@@ -18,6 +18,12 @@ Aktuelles Wetter und die nächsten vier Stunden für einen Ort, vom kostenlosen 
 
 ## Server & Smart Home
 
+### kuma
+
+![Vorschau der Seite kuma](../../img/templates/kuma-down.png)
+
+Zustand einer Uptime-Kuma-Statusseite: alles grün, oder welche Dienste seit wann gestört sind. [Details](kuma.md)
+
 ## KI & Entwicklung
 
 ## Verkehr
