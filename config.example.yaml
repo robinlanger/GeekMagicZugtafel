@@ -13,6 +13,9 @@ pages:
     limit: 4
     title: Heimweg
     refresh: 60           # data at most once a minute (DB rule, minimum 60 for bahn)
+  # - type: weather
+  #   location: Frankfurt am Main
+  #   refresh: 900          # minimum 900 (Open-Meteo, free service)
   - type: url
     url: http://homeserver.lan/status-240
     duration: 15          # show this page for 15 s instead of the default interval

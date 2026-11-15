@@ -33,6 +33,11 @@ PAGES = ROOT / "pages"
 SAMPLES: dict[str, tuple[str, dict, dict]] = {
     "clock": ("clock", {"lang": "en"},
               {"time": "14:32", "weekday": "Thursday", "date": "2026-11-12"}),
+    "weather": ("weather", {"location": "Frankfurt am Main", "lang": "en"}, {
+        "title": "Frankfurt am Main", "clock": "14:32", "icon": "partly", "temp": 11,
+        "desc": "Partly cloudy", "high": 15, "low": 6,
+        "hours": [{"hour": "15", "temp": 12, "rain": 10}, {"hour": "16", "temp": 12, "rain": 20},
+                  {"hour": "17", "temp": 10, "rain": 55}, {"hour": "18", "temp": 9, "rain": 70}]}),
     "bahn": ("bahn", {"station": "Musterstadt"}, {
         "title": "Musterstadt", "clock": "10:42", "message": None, "sub": None,
         "rows": [

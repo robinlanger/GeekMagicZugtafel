@@ -79,6 +79,7 @@ Die meisten brauchen das nie: Auf der Releases-Seite liegt die fertige Firmware,
 ## Danksagung
 
 - **[DBF / db-infoscreen](https://dbf.finalrewind.org)** von derf liefert die Abfahrtsdaten für die `bahn`-Seite. Bitte geh sorgsam mit diesem kostenlosen Dienst um; die Seite hält sich an seine Regel von höchstens einer Anfrage pro Bahnhof und Minute.
+- **[Open-Meteo](https://open-meteo.com)** liefert die Wetterdaten für die `weather`-Seite (CC BY 4.0). Bitte geh sorgsam mit diesem kostenlosen Dienst um; die Seite fragt höchstens alle 15 Minuten an.
 - Die **ESPHome-Community** hat die Pinbelegung der SmallTV-Displays herausgefunden (SPI-Pins, Hintergrundbeleuchtung, kein Chip-Select). Erst dadurch wurde eine offene Firmware möglich.
 - **[TJpgDec](http://elm-chan.org/fsw/tjpgd/)** von ChaN (mitgeliefert, sein Lizenzkopf bleibt erhalten) dekodiert die JPEG-Bilder auf dem Gerät.
 - **[TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)** von Bodmer steuert das Display an.

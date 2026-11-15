@@ -10,6 +10,12 @@ Ready-made pages for the display. Each one has its own page with an example pict
 
 A large clock with weekday and date, and the starting point for your own pages. [Details](clock.md)
 
+### weather
+
+![Preview of the weather page](../../img/templates/weather.png)
+
+Current weather and the next four hours for one place, from the free Open-Meteo service. [Details](weather.md)
+
 ## Server & smart home
 
 ## AI & development

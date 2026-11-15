@@ -79,6 +79,7 @@ Most people never need this: the release page has the ready-made firmware, and t
 ## Credits
 
 - **[DBF / db-infoscreen](https://dbf.finalrewind.org)** by derf provides the departure data for the `bahn` page. Please be kind to this free service; the page respects its rule of at most one request per station and minute.
+- **[Open-Meteo](https://open-meteo.com)** provides the weather data for the `weather` page (CC BY 4.0). Please be kind to this free service; the page asks at most every 15 minutes.
 - The **ESPHome community** worked out the pinout of the SmallTV displays (SPI pins, backlight, no chip-select), which made an open firmware possible.
 - **[TJpgDec](http://elm-chan.org/fsw/tjpgd/)** by ChaN (vendored, its license header is kept) decodes the JPEG frames on the device.
 - **[TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)** by Bodmer drives the display.

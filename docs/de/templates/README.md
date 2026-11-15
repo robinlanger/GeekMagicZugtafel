@@ -10,6 +10,12 @@ Fertige Seiten für das Display. Jede hat eine eigene Seite mit Beispielbild, al
 
 Große Uhr mit Wochentag und Datum, zugleich der Ausgangspunkt für eigene Seiten. [Details](clock.md)
 
+### weather
+
+![Vorschau der Seite weather](../../img/templates/weather.png)
+
+Aktuelles Wetter und die nächsten vier Stunden für einen Ort, vom kostenlosen Dienst Open-Meteo. [Details](weather.md)
+
 ## Server & Smart Home
 
 ## KI & Entwicklung
