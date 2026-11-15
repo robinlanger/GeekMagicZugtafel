@@ -30,11 +30,24 @@ After the first flash (or after a factory reset) the display opens a Wi-Fi setup
 
 Open `http://<display-ip>/` (the IP is shown on the display at boot and in your router). It shows version, uptime, signal strength, the number of frames received, failed boots and whether safe mode is active. Below that you can:
 
-- change the server URL and the brightness and set a new update password (these changes need the update password, user `admin`),
+- change the server URL, the brightness and the [night mode](#night-mode) and set a new update password (these changes need the update password, user `admin`),
 - upload a firmware update (see [Updating](updating.md)),
 - restart the device, or **reset settings and Wi-Fi** (back to the setup portal).
 
 `http://<display-ip>/status` returns the same facts as JSON, without a password. Handy for scripts and for Home Assistant.
+
+## Night mode
+
+If the display is in a bedroom, it can dim or go completely dark at night. Set on the device web page:
+
+- **Night from** and **Night until**, for example 22:00 and 07:00. The window may span midnight.
+- **Night brightness** from 0 to 100 %. **0 % means completely dark**, the backlight is off.
+
+If both times are equal (default: 00:00 and 00:00), night mode is off. The display keeps fetching frames at night, so the current picture is there right away in the morning.
+
+The display gets the time from the Glance Box server, in the time zone set as `timezone` in your `config.yaml` (daylight saving time included). If the server goes down, the display keeps counting on its own. If it restarts at night and cannot reach the server, it does not know the time yet and stays bright until the server answers. Safe mode has no night mode.
+
+`/status` shows the current time (`local_time`) and whether it is night (`night`).
 
 ## Changing Wi-Fi later
 

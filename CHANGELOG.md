@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+- Night mode: on the device web page set a nightly window (for example 22:00–07:00, may span
+  midnight) and a night brightness from 0 to 100 %; 0 % turns the backlight off. `/status`
+  reports `local_time` and `night`.
+- Server: every frame response carries `X-Local-Time: HH:MM:SS` in the configured `timezone`;
+  the display uses it as its clock.
+
+### Fixed
+- The backlight is now fully dark while the display initialises (it was at 5 %).
+
 ## [0.1.0]
 
 First release of Glance Box: a Docker server that renders pages to 240x240 JPEG frames and
