@@ -34,13 +34,14 @@ def fetch(options: dict, ctx) -> dict:
 - `MIN_REFRESH = 60` is optional (an integer). It sets the smallest allowed `refresh` for your page, for example to respect a rate limit.
 - Other `.py` files in the same folder can be imported with `from .helper import something`.
 
-`options` holds every key of the page entry in `config.yaml` except `type`, `duration` and `refresh`. `ctx` has three fields:
+`options` holds every key of the page entry in `config.yaml` except `type`, `duration` and `refresh`. `ctx` has four fields:
 
 | Field | Meaning |
 | --- | --- |
 | `ctx.now` | the current time as a datetime with the time zone from `config.yaml` |
 | `ctx.lang` | the top-level `lang` (`de` or `en`) |
 | `ctx.timezone` | the time zone name |
+| `ctx.pushed(channel)` | the latest data pushed to the server, see [Data pushed to the server](#data-pushed-to-the-server) |
 
 If `fetch` raises an error, the page keeps its last good picture for up to 10 minutes and the error appears in the log and on the preview page. An error in `page.py` while loading (a typo) stops the server at startup with a clear message.
 
@@ -77,6 +78,58 @@ Values are HTML-escaped automatically. The canvas is exactly 240x240 pixels and 
 - `ui.level(percent)`: only the class name (`ui-ok`, `ui-warn` or `ui-bad`) for colouring your own elements.
 
 New CSS variables: `--green` (`rgb(60,200,110)`), `--blue` (`rgb(90,160,255)`) and `--header-alert` (`rgb(150,25,25)`).
+
+## Data pushed to the server
+
+Some data cannot be fetched by the server, because it only exists on another computer. Such a computer can push it to the server instead, and your page reads the latest push. This is meant for your home network (LAN) only.
+
+Declare in `page.py` which channels your page reads and which top-level JSON keys the server keeps:
+
+```python
+PUSH_KEYS = {"claude": ("rate_limits",)}
+
+
+def fetch(options, ctx):
+    pushed = ctx.pushed("claude")
+    if pushed is None:
+        return {"text": "No data yet"}
+    return {"text": str(pushed.data["rate_limits"]), "at": pushed.received_at}
+```
+
+- `PUSH_KEYS` maps each channel name to a tuple of key names. Channel names match `^[a-z0-9_-]{1,32}$`. A malformed `PUSH_KEYS` stops the server at startup with a clear message.
+- `ctx.pushed(channel)` returns the latest push or `None` if nothing arrived since the server started. `.data` is a dict with only the declared keys. `.received_at` is the time of arrival in seconds since the epoch (Unix time).
+- Every other key of a push is dropped. Nothing is written to disk: the data lives in RAM only, so it is gone after a restart.
+- A push does not render the page at once. The page picks up new data on its next `refresh`. Pages that only read pushes need no network, so `refresh: 30` is cheap and recommended.
+
+The endpoint is off until you set `push_key` (see [Configuration](configuration.md)). Put the key in `.env` next to `docker-compose.yml` and refer to it in `config.yaml`:
+
+```
+# .env
+GLANCEBOX_PUSH_KEY=<at least 16 characters, e.g. from openssl rand -hex 24>
+```
+
+```yaml
+push_key: ${GLANCEBOX_PUSH_KEY}
+```
+
+Then a computer on your home network sends the data like this:
+
+```sh
+curl -X POST "http://192.168.1.20:8080/api/v1/push/claude" \
+  -H "Authorization: Bearer $GLANCEBOX_PUSH_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"rate_limits": {"five_hour": {"used_percentage": 12}}}'
+```
+
+| Status | Meaning |
+| --- | --- |
+| 204 | stored |
+| 404 | no `push_key` set, or no page declares this channel |
+| 401 | `Authorization: Bearer <key>` missing or wrong |
+| 413 | body larger than 65 536 bytes |
+| 422 | body is not a JSON object |
+
+Keep the server on your home network. The push endpoint is protected only by the key and is not meant to be reachable from the internet. The server never logs the body or the key.
 
 ## Walkthrough: the clock page
 

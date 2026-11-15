@@ -1,5 +1,8 @@
+import asyncio
+import logging
 import subprocess
 import sys
+import time
 
 from fastapi.testclient import TestClient
 
@@ -178,3 +181,51 @@ def test_local_time_respects_dst():
     t = 1782865800.0
     client, _ = make_client(filled_store_at(t), now=t)
     assert client.get("/api/v1/frame").headers["x-local-time"] == "02:30:00"
+
+
+def test_lifespan_passes_push_inbox_to_worker(monkeypatch):
+    from glancebox import app as app_mod
+
+    seen = {}
+
+    class NoBrowser:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    async def fake_worker(cfg, types, renderer, store, inbox):
+        seen["inbox"] = inbox
+        await asyncio.Event().wait()
+
+    async def no_error_frame(renderer):
+        return None
+
+    monkeypatch.setattr(app_mod, "Renderer", NoBrowser)
+    monkeypatch.setattr(app_mod, "run_worker", fake_worker)
+    store = FrameStore(2)
+    monkeypatch.setattr(store, "build_error_frame", no_error_frame)
+    application = create_app(make_cfg(), store, lambda: NOW, types={})
+    with TestClient(application):
+        for _ in range(100):
+            if "inbox" in seen:
+                break
+            time.sleep(0.01)
+    assert seen["inbox"] is application.state.inbox
+
+
+def test_push_never_logs_body_or_key(caplog):
+    from glancebox.pages import PageType
+
+    caplog.set_level(logging.DEBUG)
+    key = "secret-key-123456789"
+    t = PageType("ai", "script", push_keys={"claude": ("rate_limits",)})
+    cfg = AppConfig(30, "Europe/Berlin", "de", (), (), key)
+    client = TestClient(create_app(cfg, FrameStore(0), lambda: NOW, types={"ai": t},
+                                   start_worker=False))
+    for auth in (key, "wrong-key-0000000000"):
+        client.post("/api/v1/push/claude", json={"rate_limits": "sensitive-body"},
+                    headers={"Authorization": f"Bearer {auth}"})
+    assert "sensitive-body" not in caplog.text
+    assert key not in caplog.text

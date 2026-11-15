@@ -18,6 +18,7 @@ from PIL import Image
 
 from .config import AppConfig, PageConfig
 from .pages import PageContext, PageType
+from .push import PushInbox
 from .render import SIZE, font_face_css
 
 log = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ def _jinja_env(extra_dirs: list) -> jinja2.Environment:
 
 
 async def render_page(page: PageConfig, ptype: PageType, cfg: AppConfig, renderer,
-                       now: float) -> bytes:
+                       now: float, inbox: PushInbox | None = None) -> bytes:
     if ptype.kind == "url":
         o = page.options
         return await renderer.render_url(
@@ -112,6 +113,7 @@ async def render_page(page: PageConfig, ptype: PageType, cfg: AppConfig, rendere
         now=datetime.fromtimestamp(now, ZoneInfo(cfg.timezone)),
         lang=page.options.get("lang", cfg.lang),
         timezone=cfg.timezone,
+        **({} if inbox is None else {"pushed": inbox.get}),
     )
     data = await asyncio.wait_for(
         asyncio.to_thread(ptype.fetch, page.options, ctx), FETCH_TIMEOUT_S)
@@ -120,7 +122,7 @@ async def render_page(page: PageConfig, ptype: PageType, cfg: AppConfig, rendere
 
 
 async def refresh_once(cfg: AppConfig, types: dict[str, PageType], renderer,
-                       store: FrameStore, now: float) -> None:
+                       store: FrameStore, now: float, inbox: PushInbox | None = None) -> None:
     for page in cfg.pages:
         last = store.last_attempt(page.index)
         if last is not None and now - last < page.refresh:
@@ -130,7 +132,7 @@ async def refresh_once(cfg: AppConfig, types: dict[str, PageType], renderer,
             ptype = types.get(page.type)
             if ptype is None:
                 raise LookupError(f"unknown page type {page.type!r}")
-            jpeg = await render_page(page, ptype, cfg, renderer, now)
+            jpeg = await render_page(page, ptype, cfg, renderer, now, inbox)
         except Exception as e:
             log.exception("%s: refresh failed", label)
             store.mark_attempt(page.index, now, f"{type(e).__name__}: {e}")
@@ -140,8 +142,8 @@ async def refresh_once(cfg: AppConfig, types: dict[str, PageType], renderer,
 
 
 async def run_worker(cfg: AppConfig, types: dict[str, PageType], renderer,
-                     store: FrameStore) -> None:
+                     store: FrameStore, inbox: PushInbox | None = None) -> None:
     await store.build_error_frame(renderer)
     while True:
-        await refresh_once(cfg, types, renderer, store, time.time())
+        await refresh_once(cfg, types, renderer, store, time.time(), inbox)
         await asyncio.sleep(1)

@@ -7,13 +7,14 @@ import importlib.util
 import sys
 import types as _types
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
 from .config import AppConfig, ConfigError
+from .push import CHANNEL_RE, Pushed
 
 PACKAGE = "glancebox_pages"
 
@@ -23,19 +24,23 @@ class PageContext:
     now: datetime
     lang: str
     timezone: str
+    # Latest data pushed to a channel (see push.py), or None when nothing arrived yet.
+    pushed: Callable[[str], Pushed | None] = field(default=lambda _c: None)
 
 
 class PageType:
     def __init__(self, name: str, kind: Literal["script", "url"], *, min_refresh: int = 0,
                  validate: Callable[[dict], None] | None = None,
                  fetch: Callable[[dict, PageContext], dict] | None = None,
-                 template_path: Path | None = None) -> None:
+                 template_path: Path | None = None,
+                 push_keys: dict[str, tuple[str, ...]] | None = None) -> None:
         self.name = name
         self.kind = kind
         self.min_refresh = min_refresh
         self._validate = validate
         self._fetch = fetch
         self.template_path = template_path
+        self.push_keys = push_keys if push_keys is not None else {}
 
     def validate(self, options: dict) -> None:
         if self._validate is not None:
@@ -63,6 +68,29 @@ def _validate_url_options(options: dict) -> None:
     wait_for = options.get("wait_for")
     if wait_for is not None and (not isinstance(wait_for, str) or not wait_for):
         raise ValueError("wait_for must be a non-empty CSS selector string")
+
+
+def _check_push_keys(value: object, where: str) -> dict[str, tuple[str, ...]]:
+    """Return a page's ``PUSH_KEYS`` if well-formed, else raise ``ConfigError``."""
+    if not isinstance(value, dict):
+        raise ConfigError(f"{where}: PUSH_KEYS must be a dict of channel -> tuple of key names")
+    for channel, keys in value.items():
+        if not isinstance(channel, str) or not CHANNEL_RE.fullmatch(channel):
+            raise ConfigError(f"{where}: PUSH_KEYS channel {channel!r} must match "
+                              f"{CHANNEL_RE.pattern}")
+        if not isinstance(keys, tuple) or not all(isinstance(k, str) and k for k in keys):
+            raise ConfigError(f"{where}: PUSH_KEYS of channel {channel!r} must be a tuple "
+                              "of non-empty strings")
+    return dict(value)
+
+
+def merge_push_keys(types: dict[str, PageType]) -> dict[str, frozenset[str]]:
+    """Union of every page type's ``PUSH_KEYS``: channel -> keys the server stores."""
+    merged: dict[str, set[str]] = {}
+    for page_type in types.values():
+        for channel, keys in page_type.push_keys.items():
+            merged.setdefault(channel, set()).update(keys)
+    return {channel: frozenset(keys) for channel, keys in merged.items()}
 
 
 def _ensure_parent_package() -> None:
@@ -97,8 +125,10 @@ def _load_script_page(page_dir: Path) -> PageType:
     min_refresh = getattr(module, "MIN_REFRESH", 0)
     if isinstance(min_refresh, bool) or not isinstance(min_refresh, int) or min_refresh < 0:
         raise ConfigError(f"page {name!r} ({page_dir}): MIN_REFRESH must be an integer >= 0")
+    push_keys = _check_push_keys(getattr(module, "PUSH_KEYS", {}),
+                                 f"page {name!r} ({page_dir})")
     return PageType(name, "script", min_refresh=min_refresh, validate=validate, fetch=fetch,
-                    template_path=page_dir / "template.html")
+                    template_path=page_dir / "template.html", push_keys=push_keys)
 
 
 def load_page_types(dirs: Sequence[Path]) -> dict[str, PageType]:
