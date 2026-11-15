@@ -55,7 +55,7 @@ pages:
 | `duration` | `interval` | How many seconds the page stays on the display. |
 | `refresh` | `duration` | A page is rendered again at most every `refresh` seconds. Use a larger value for data that changes slowly or for services that limit requests. |
 
-All other keys belong to the page type and are described below. Ready-made pages with preview pictures are in the [template catalog](templates/README.md). Ready-made pages with preview pictures are in the [template catalog](templates/README.md).
+All other keys belong to the page type and are described below. Ready-made pages with preview pictures are in the [template catalog](templates/README.md).
 
 ## Page type: url
 
