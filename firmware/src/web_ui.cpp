@@ -8,6 +8,7 @@
 #include "display.h"
 #include "i18n.h"
 #include "ota_check.h"
+#include "arduino_str.h"
 #include "ota_flow.h"
 #include "rtc_boot.h"
 #include "settings_store.h"
@@ -54,7 +55,8 @@ bool originOk() {
   // Fail closed: if Origin were no longer collected it would read as absent, and an
   // absent Origin is allowed (curl). Refuse instead of silently dropping the CSRF guard.
   if (!originCollected()) return false;
-  return gb::originAllowed(server.header(F("Origin")).c_str(), server.hostHeader().c_str());
+  return gb::originAllowed(strOrEmpty(server.header(F("Origin"))),
+                          strOrEmpty(server.hostHeader()));
 }
 
 bool credentialsOk() {
