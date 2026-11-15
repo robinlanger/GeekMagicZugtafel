@@ -1,7 +1,7 @@
-"""Shared code of the cost providers anthropic-api, openai-api and xai-api.
+"""Shared code of the API providers anthropic-api, openai-api, xai-api and copilot.
 
-Cost data changes slowly, so each successful result is kept for CACHE_S seconds per process,
-keyed by (provider, sha256(key), team_id). Errors are not cached. MIN_REFRESH of the page stays 0
+Cost and usage data change slowly, so each successful result is kept for CACHE_S seconds per
+process, keyed by (provider, sha256(key), and the CACHE_SCOPE options). Errors are not cached. MIN_REFRESH of the page stays 0
 because the claude provider needs a short refresh.
 
 Keys only ever travel in request headers. A failure is logged with the exception type and the
@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 CACHE_S = 300
 MAX_PAGES = 20
+# Options besides the key that change what a provider requests, so they are part of the cache key.
+CACHE_SCOPE = ("team_id", "username", "unit")
 
 TEXT = {
     "de": {"month": "Diesen Monat", "balance": "Guthaben", "nodata": "Keine Daten",
@@ -29,7 +31,7 @@ TEXT = {
 MONTHS_EN = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
-# (provider, sha256 of the key, team_id) -> (fetched at, (amount in USD, data as of or None))
+# (provider, sha256 of the key, *CACHE_SCOPE values) -> (fetched at, (amount, data as of or None))
 _cache: dict[tuple, tuple[float, tuple[float, datetime | None]]] = {}
 
 
@@ -73,22 +75,34 @@ def usd(amount: float, lang: str) -> str:
     return f"{sign}${text}"
 
 
-def _next_month(now: datetime, lang: str) -> str:
+def next_month(now: datetime, lang: str) -> str:
+    """First day of the next UTC month: '1.12.' (de) or 'Dec 1' (en)."""
     start = month_start(now)
     month = start.month % 12 + 1
     return f"1.{month}." if lang == "de" else f"{MONTHS_EN[month - 1]} 1"
 
 
-def _cached(provider: str, options: dict, now: float,
-            load: Callable[[], tuple[float, datetime | None]]):
+def cached(provider: str, options: dict, now: float,
+           load: Callable[[], tuple[float, datetime | None]]):
+    """(fetched at, load()) from the cache if younger than CACHE_S, else calls load()."""
     cache_key = (provider, hashlib.sha256(options["key"].encode()).hexdigest(),
-                 options.get("team_id"))
+                 *(options.get(name) for name in CACHE_SCOPE))
     hit = _cache.get(cache_key)
     if hit is not None and 0 <= now - hit[0] < CACHE_S:
         return hit
     entry = (now, load())
     _cache[cache_key] = entry
     return entry
+
+
+def no_data(provider: str, exc: Exception, ctx, lang: str) -> dict:
+    """Logs the failure without key or URL detail and returns the 'No data' notice (red)."""
+    texts = TEXT[lang]
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    log.warning("ai %s: no data: %s%s", provider, type(exc).__name__,
+                f" (HTTP {status})" if status else "")
+    return {"message": texts["nodata"], "sub": f"{texts['asof']} {ctx.now:%H:%M}",
+            "alert": True}
 
 
 def show(provider: str, options: dict, ctx, label: str,
@@ -100,13 +114,9 @@ def show(provider: str, options: dict, ctx, label: str,
     lang = options["lang"]
     texts = TEXT[lang]
     try:
-        fetched_at, (amount, as_of) = _cached(provider, options, ctx.now.timestamp(), load)
+        fetched_at, (amount, as_of) = cached(provider, options, ctx.now.timestamp(), load)
     except Exception as exc:  # noqa: BLE001 - every failure shows the notice, never stale data
-        status = getattr(getattr(exc, "response", None), "status_code", None)
-        log.warning("ai %s: no data: %s%s", provider, type(exc).__name__,
-                    f" (HTTP {status})" if status else "")
-        return {"message": texts["nodata"], "sub": f"{texts['asof']} {ctx.now:%H:%M}",
-                "alert": True}
+        return no_data(provider, exc, ctx, lang)
 
     stand = (as_of or datetime.fromtimestamp(fetched_at, UTC)).astimezone(ctx.now.tzinfo)
     data = {"big": {"label": texts[label], "value": usd(amount, lang)},
@@ -114,6 +124,6 @@ def show(provider: str, options: dict, ctx, label: str,
     budget = options.get("budget")
     if budget:
         percent = amount / budget * 100
-        data["rows"] = [{"label": texts["budget"], "reset": _next_month(ctx.now, lang),
+        data["rows"] = [{"label": texts["budget"], "reset": next_month(ctx.now, lang),
                          "percent": percent, "text": f"{round(percent)} %"}]
     return data

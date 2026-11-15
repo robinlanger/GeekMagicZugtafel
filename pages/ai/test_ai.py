@@ -408,3 +408,125 @@ def test_xai_cache_keyed_by_team(ai, fake_http):
     ai.fetch(COST["xai-api"], cost_ctx())
     ai.fetch({**COST["xai-api"], "team_id": "other-team"}, cost_ctx())
     assert len(fake.calls) == 2
+
+
+# --- copilot: premium requests / AI credits against a user-supplied allowance ---------------
+
+GH_KEY = "github_pat_SECRET-copilot"
+COPILOT = {"provider": "copilot", "key": GH_KEY, "username": "octocat",
+           "monthly_allowance": 300, "unit": "premium-requests"}
+GH_HEADERS = {"Authorization": f"Bearer {GH_KEY}", "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2026-03-10"}
+
+
+def gh_usage(*quantities: float, unit_type: str = "requests") -> dict:
+    """Shape of GET /users/{username}/settings/billing/{premium_request,ai_credit}/usage
+    (documented example: one usageItem per model)."""
+    return {"timePeriod": {"year": 2026, "month": 11}, "user": "octocat",
+            "usageItems": [{"product": "Copilot", "sku": "Copilot Premium Request",
+                            "model": f"model-{i}", "unitType": unit_type,
+                            "pricePerUnit": 0.04, "grossQuantity": q, "grossAmount": q * 0.04,
+                            "discountQuantity": q, "discountAmount": q * 0.04,
+                            "netQuantity": 0, "netAmount": 0} for i, q in enumerate(quantities)]}
+
+
+def test_copilot_registered_and_validate(ai):
+    ai.validate(COPILOT)
+    ai.validate({**COPILOT, "unit": "ai-credits", "monthly_allowance": 1500})
+    ai.validate({k: v for k, v in COPILOT.items() if k != "unit"})  # ai-credits by default
+    for name in ("key", "username"):
+        with pytest.raises(ValueError, match=name):
+            ai.validate({k: v for k, v in COPILOT.items() if k != name})
+        with pytest.raises(ValueError, match=name):
+            ai.validate({**COPILOT, name: ""})
+    for bad in (None, 0, -5, "300", True):
+        options = {k: v for k, v in COPILOT.items() if k != "monthly_allowance"}
+        if bad is not None:
+            options["monthly_allowance"] = bad
+        with pytest.raises(ValueError, match="monthly_allowance"):
+            ai.validate(options)
+    with pytest.raises(ValueError, match="unit"):
+        ai.validate({**COPILOT, "unit": "requests"})
+    with pytest.raises(ValueError, match="budget"):
+        ai.validate({**COPILOT, "budget": 10})
+
+
+def test_copilot_premium_requests(ai, fake_http):
+    fake = fake_http([gh_usage(200, 12)])
+    data = ai.fetch(COPILOT, cost_ctx())
+    url, params, headers = fake.calls[0]
+    assert url == "https://api.github.com/users/octocat/settings/billing/premium_request/usage"
+    assert params == {"year": 2026, "month": 11}
+    assert headers == GH_HEADERS
+    assert data["title"] == "GitHub Copilot"
+    assert data["rows"] == [{"label": "Premium-Requests", "reset": "1.12.",
+                             "percent": pytest.approx(212 / 300 * 100), "text": "212 / 300"}]
+    assert data["big"] == {"label": "Übrig", "value": "88"}
+    assert data["stand"] == "Stand 14:05"
+    assert data["message"] is None and data["alert"] is False
+
+
+def test_copilot_ai_credits_english(ai, fake_http):
+    fake = fake_http([gh_usage(1000, 234.25, unit_type="ai-credits")])
+    options = {**COPILOT, "unit": "ai-credits", "monthly_allowance": 1500, "lang": "en"}
+    data = ai.fetch(options, cost_ctx())
+    assert fake.calls[0][0] == (
+        "https://api.github.com/users/octocat/settings/billing/ai_credit/usage")
+    assert data["rows"] == [{"label": "AI credits", "reset": "Dec 1",
+                             "percent": pytest.approx(1234.25 / 1500 * 100),
+                             "text": "1,234 / 1,500"}]
+    assert data["big"] == {"label": "Left", "value": "266"}
+    fake_http([gh_usage(1000, 234.25, unit_type="ai-credits")])
+    de = ai.fetch({**options, "lang": "de", "key": "other"}, cost_ctx())
+    assert de["rows"][0]["label"] == "AI-Credits" and de["rows"][0]["text"] == "1.234 / 1.500"
+
+
+def test_copilot_empty_and_over_allowance(ai, fake_http):
+    fake_http([gh_usage()])
+    data = ai.fetch(COPILOT, cost_ctx())
+    assert data["rows"][0]["text"] == "0 / 300" and data["rows"][0]["percent"] == 0
+    assert data["big"]["value"] == "300"
+    fake_http([gh_usage(320)])
+    over = ai.fetch({**COPILOT, "key": "other"}, cost_ctx())
+    assert over["rows"][0]["text"] == "320 / 300" and over["rows"][0]["percent"] > 100
+    assert over["big"]["value"] == "0"
+
+
+def test_copilot_month_is_utc(ai, fake_http):
+    # 00:30 on 1 Dec in Berlin is still 30 Nov in UTC, where GitHub's month runs.
+    fake = fake_http([gh_usage(5)])
+    data = ai.fetch(COPILOT, cost_ctx(datetime(2026, 12, 1, 0, 30, tzinfo=TZ)))
+    assert fake.calls[0][1] == {"year": 2026, "month": 11}
+    assert data["rows"][0]["reset"] == "1.12."
+
+
+def test_copilot_username_is_quoted(ai, fake_http):
+    fake = fake_http([gh_usage()])
+    ai.fetch({**COPILOT, "username": "a/b?c"}, cost_ctx())
+    assert fake.calls[0][0] == (
+        "https://api.github.com/users/a%2Fb%3Fc/settings/billing/premium_request/usage")
+
+
+def test_copilot_errors_show_notice_without_key(ai, fake_http, caplog):
+    fake_http([], error=http_error(403, GH_KEY))
+    with caplog.at_level("DEBUG"):
+        data = ai.fetch(COPILOT, cost_ctx())
+    assert data["message"] == "Keine Daten" and data["sub"] == "Stand 14:05"
+    assert data["alert"] is True and data["big"] is None and data["rows"] == []
+    assert "ai copilot: no data: HTTPError (HTTP 403)" in caplog.text
+    fake_http([{"odd": 1}])
+    assert ai.fetch(COPILOT, cost_ctx())["message"] == "Keine Daten"
+    assert GH_KEY not in caplog.text
+
+
+def test_copilot_cached_by_key_username_and_unit(ai, fake_http):
+    fake = fake_http([gh_usage(10)])
+    ai.fetch(COPILOT, cost_ctx(NOW))
+    later = ai.fetch(COPILOT, cost_ctx(NOW + timedelta(seconds=299)))
+    assert len(fake.calls) == 1 and later["stand"] == "Stand 14:05"
+    ai.fetch({**COPILOT, "username": "other"}, cost_ctx(NOW))
+    ai.fetch({**COPILOT, "unit": "ai-credits"}, cost_ctx(NOW))
+    assert len(fake.calls) == 3
+    # The allowance is not part of the request, so changing it reuses the cached usage.
+    data = ai.fetch({**COPILOT, "monthly_allowance": 100}, cost_ctx(NOW))
+    assert len(fake.calls) == 3 and data["rows"][0]["text"] == "10 / 100"

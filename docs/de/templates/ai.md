@@ -13,6 +13,7 @@ Wie viel von einem KI-Abo oder -Budget verbraucht ist. Jede Seite zeigt einen An
 | `anthropic-api` | Kosten der Claude-API im laufenden Monat in USD, auf Wunsch gegen dein eigenes Budget | Der Server fragt die Usage and Cost Analytics API von Anthropic mit einem Admin-Key |
 | `openai-api` | Kosten der OpenAI-API im laufenden Monat in USD, auf Wunsch gegen dein eigenes Budget | Der Server fragt die Costs API von OpenAI mit einem Admin-Key |
 | `xai-api` | Prepaid-Guthaben deines xAI-Teams in USD | Der Server fragt die Management API von xAI mit einem Management-Key |
+| `copilot` | Verbrauch von GitHub Copilot im Monat (AI-Credits oder Premium-Requests) gegen das Kontingent deines Abos, das du selbst einträgst | Der Server fragt die Billing-Usage-API von GitHub mit einem Token, das nur lesen darf |
 
 Für jedes Limit gibt es eine Zeile mit dem Namen und rechts der Zeit des Resets, darunter einen breiten Balken mit dem Wert darin. Der Balken ist grün, ab 75 % orange und ab 90 % rot.
 
@@ -32,6 +33,13 @@ Für `anthropic-api`, `openai-api` und `xai-api`:
 - **Nur alle 5 Minuten:** Kostendaten ändern sich langsam. Der Server fragt jeden Anbieter höchstens alle 5 Minuten, egal was bei `refresh` steht.
 - **Keine Daten:** ist der Anbieter nicht erreichbar oder lehnt er den Key ab, wird die Kopfzeile rot, und die Seite zeigt `Keine Daten` mit der Uhrzeit, nie einen alten Betrag.
 
+Für `copilot`:
+
+- **Balken:** `AI-Credits` (oder `Premium-Requests`) mit verbraucht / Kontingent, zum Beispiel `1.234 / 1.500`, und rechts der Tag, an dem das Kontingent neu beginnt (`1.12.`, GitHub setzt am 1. um 00:00 UTC zurück). Darüber groß, was `Übrig` ist.
+- **Dein Kontingent:** Die API von GitHub meldet nur, was du verbraucht hast, nicht, wie viel dein Abo enthält. Das trägst du selbst mit `monthly_allowance` ein, zum Beispiel `1500` für Copilot Pro (siehe [GitHub Copilot](#github-copilot)).
+- **Nur selbst bezahlte Abos:** Der Verbrauch eines Copilot-Platzes, den eine Organisation oder Firma bezahlt, steht nicht in dieser API.
+- Alter, der 5-Minuten-Takt und `Keine Daten` funktionieren wie bei den Kosten-Anbietern.
+
 ## Was du brauchst
 
 Für `claude`:
@@ -43,6 +51,12 @@ Für `claude`:
 Für `anthropic-api`, `openai-api` und `xai-api`:
 
 - Eine Organisation (Anthropic, OpenAI) oder ein Team (xAI) mit API-Abrechnung und das Recht, dort einen Admin- oder Management-Key anzulegen.
+- Internetzugang für den Glance-Box-Server.
+
+Für `copilot`:
+
+- Ein Copilot-Abo, das du selbst gekauft hast (Pro, Pro+ oder Max), auf deinem GitHub-Konto.
+- Ein Fine-grained Personal Access Token mit dem Leserecht `Plan` (siehe [GitHub Copilot](#github-copilot)).
 - Internetzugang für den Glance-Box-Server.
 
 Claude Code gibt seiner [Statuszeile](https://code.claude.com/docs/en/statusline) nach jeder Antwort einen kleinen JSON-Text. Darin stehen deine Limits (`rate_limits`). Das Skript reicht diesen Text im Hintergrund an den Server weiter und zeigt danach deine normale Statuszeile.
@@ -70,11 +84,14 @@ Für die API-Kosten, mit dem Key in `.env` (siehe [Einrichtung](#einrichtung)):
 
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
-| `provider` | | Woher die Werte kommen: `claude`, `anthropic-api`, `openai-api` oder `xai-api`. Pflicht. |
-| `key` | | Nur `anthropic-api`, `openai-api`, `xai-api`, dort Pflicht: der Admin- oder Management-Key. Immer als `${NAME}` aus `.env`, nie direkt in `config.yaml`. |
+| `provider` | | Woher die Werte kommen: `claude`, `anthropic-api`, `openai-api`, `xai-api` oder `copilot`. Pflicht. |
+| `key` | | Nur `anthropic-api`, `openai-api`, `xai-api`, `copilot`, dort Pflicht: der Admin- oder Management-Key, bei `copilot` das GitHub-Token. Immer als `${NAME}` aus `.env`, nie direkt in `config.yaml`. |
 | `budget` | keins | Nur `anthropic-api` und `openai-api`: dein Monatsbudget in USD, eine positive Zahl wie `50`. Ergänzt den Balken `Budget`. |
 | `team_id` | | Nur `xai-api`, dort Pflicht: die ID deines xAI-Teams. |
-| `title` | Name des Anbieters (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`) | Text der Kopfzeile. |
+| `username` | | Nur `copilot`, dort Pflicht: dein GitHub-Benutzername. |
+| `monthly_allowance` | | Nur `copilot`, dort Pflicht: wie viel dein Abo pro Monat enthält, eine positive Zahl wie `1500`. |
+| `unit` | `ai-credits` | Nur `copilot`: `ai-credits` (nutzungsbasierte Abrechnung, der Normalfall) oder `premium-requests` (ein Jahresabo, das bei Premium-Requests geblieben ist). |
+| `title` | Name des Anbieters (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`, `GitHub Copilot`) | Text der Kopfzeile. |
 | `lang` | oberstes `lang` | `de` oder `en`. Legt alle Texte der Seite fest. |
 | `refresh` | Standard-`refresh` | Für `claude` empfehlen wir `30`. Die Seite liest nur, was angekommen ist, das kostet nichts. Die API-Anbieter fragen ohnehin höchstens alle 5 Minuten. |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
@@ -229,20 +246,46 @@ Ein normaler Projekt-API-Key funktioniert nicht; die Costs API braucht einen Adm
 
 Ein Management-Key kann die API-Keys und die Abrechnung des Teams verwalten, behandle ihn also wie ein Passwort.
 
+### GitHub Copilot
+
+1. Öffne auf GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens** und klicke **Generate new token**. Gib ihm einen Namen und ein Ablaufdatum. Setze unter **Permissions → Account permissions** das Recht **Plan** auf **Read-only** und füge nichts weiter hinzu. Das Token kann dann dein Abo und deinen Verbrauch lesen, aber keinen Code und keine Einstellungen. Ein klassisches Token brauchst du nicht.
+2. Trage das Token und deinen Benutzernamen in `.env` ein:
+
+   ```
+   GITHUB_COPILOT_TOKEN=github_pat_...
+   GITHUB_USER=dein-name
+   ```
+
+3. Schau nach, wie viel dein Abo pro Monat enthält, unter [Plans for GitHub Copilot](https://docs.github.com/en/copilot/get-started/plans) oder auf deiner Abrechnungsseite. Im November 2026 enthält Copilot Pro 1.500 AI-Credits, Pro+ 7.000 und Max 20.000. Ein Pro-Jahresabo, das bei Premium-Requests geblieben ist, hat 300 pro Monat (Pro+: 1.500); dann setze `unit: premium-requests`.
+4. Füge die Seite ein:
+
+   ```yaml
+   - type: ai
+     provider: copilot
+     key: ${GITHUB_COPILOT_TOKEN}
+     username: ${GITHUB_USER}
+     monthly_allowance: 1500
+     # unit: premium-requests   # nur für ein Jahresabo mit Premium-Requests
+   ```
+
+Die Seite nutzt die [Billing-Usage-API](https://docs.github.com/en/rest/billing/usage) von GitHub (`/users/{username}/settings/billing/ai_credit/usage` oder `.../premium_request/usage`). GitHub hat keine dokumentierte API, die meldet, wie viel dein Abo enthält; deshalb trägst du `monthly_allowance` selbst ein. Ein Teil des Kontingents (der Flex-Anteil) kann sich mit der Zeit ändern, prüfe die Zahl also ab und zu. Ein Copilot-Platz, den eine Organisation oder Firma bezahlt, erscheint hier nicht.
+
 ## Datenschutz & Sicherheit
 
 - **Nur `rate_limits` wird gespeichert.** Das JSON der Statuszeile enthält auch Dinge wie den Arbeitsordner und die Sitzungs-ID. Der Server verwirft sofort alles außer `rate_limits`, schreibt nichts auf die Platte und protokolliert den Inhalt nicht.
 - **Kein Anthropic-Token verlässt deinen Rechner.** Das Skript schickt nur den Text, den Claude Code der Statuszeile gibt, zusammen mit dem Glance-Box-Schlüssel. Der Server meldet sich nie bei Anthropic an.
 - **Der Push-Schlüssel** erlaubt nur, Werte an dein Display zu schicken. Bewahre ihn in `.env` auf dem Server und in `push.env` (`chmod 600`) auf deinem Rechner auf, nie in `config.yaml`.
 - Der Server und sein Daten-Eingang sind nur für dein Heimnetz gedacht. Mach sie nicht aus dem Internet erreichbar.
-- **API-Keys** (`anthropic-api`, `openai-api`, `xai-api`) sind mächtig: Sie können weit mehr als Kosten lesen. Bewahre sie nur in `.env` auf, schreib `${NAME}` in `config.yaml` und gib `.env` nie weiter. Der Server schickt sie nur an den Anbieter, im Kopf der Anfrage, und schreibt sie nie in sein Log. Die Beträge hält er 5 Minuten im Arbeitsspeicher und speichert nichts auf der Platte.
+- **API-Keys** (`anthropic-api`, `openai-api`, `xai-api`) sind mächtig: Sie können weit mehr als Kosten lesen. Das GitHub-Token für `copilot` braucht nur das Leserecht `Plan`; gib ihm nicht mehr. Bewahre sie nur in `.env` auf, schreib `${NAME}` in `config.yaml` und gib `.env` nie weiter. Der Server schickt sie nur an den Anbieter, im Kopf der Anfrage, und schreibt sie nie in sein Log. Die Beträge hält er 5 Minuten im Arbeitsspeicher und speichert nichts auf der Platte.
 
 ## Wenn etwas nicht stimmt
 
 - **`Noch keine Daten` bleibt:** Claude Code schickt Limits nur mit einem Claude-Abo (Pro oder Max) und in aktuellen Versionen. Mit einem API-Key statt eines Abos oder mit einem älteren Claude Code schickt das Skript nichts, und die Seite bleibt bei `Noch keine Daten`; sonst ist dann nichts falsch. Andernfalls prüfe, dass `push_key` gesetzt ist und du nach der Änderung an `.env` `docker compose up -d` ausgeführt hast. Teste dann den Weg von deinem Rechner zum Server: `curl -i -X POST -H "Authorization: Bearer <der Schlüssel>" -H "Content-Type: application/json" -d '{"rate_limits":{}}' http://<server>:8080/api/v1/push/claude`. `204` ist richtig (die Seite zeigt dann `Keine Limitdaten` bis zur nächsten Antwort von Claude Code), `401` heißt, der Schlüssel stimmt nicht, `404` heißt, der Server hat keinen `push_key`. Klappt `curl`, prüfe `push.env` (beide Zeilen, keine Leerzeichen um `=`) und den Pfad in `settings.json`.
 - **`Keine Limitdaten`:** ein Push kam an, aber ohne brauchbare Limitfenster, zum Beispiel der `curl`-Test oben mit `{"rate_limits":{}}`. Die nächste Antwort von Claude Code ersetzt ihn durch die echten Werte.
 - **Die Statuszeile ist leer:** das ist ohne eigene Statuszeile normal. Um eine zu zeigen, gib ihren Befehl als Argumente mit.
-- **`Keine Daten` mit roter Kopfzeile (API-Anbieter):** der Anbieter war nicht erreichbar oder hat die Anfrage abgelehnt. Im Log des Servers steht eine Zeile wie `ai openai-api: no data: HTTPError (HTTP 401)`. `401` oder `403` heißt, der Key ist falsch, abgelaufen oder hat nicht das nötige Recht; prüfe `.env` und führe nach einer Änderung `docker compose up -d` aus. Bei `xai-api` heißt `404` meist, dass `team_id` nicht stimmt. Die Seite versucht es beim nächsten Neuladen wieder.
+- **`Keine Daten` mit roter Kopfzeile (API-Anbieter):** der Anbieter war nicht erreichbar oder hat die Anfrage abgelehnt. Im Log des Servers steht eine Zeile wie `ai openai-api: no data: HTTPError (HTTP 401)`. `401` oder `403` heißt, der Key ist falsch, abgelaufen oder hat nicht das nötige Recht; prüfe `.env` und führe nach einer Änderung `docker compose up -d` aus. Bei `xai-api` heißt `404` meist, dass `team_id` nicht stimmt. Bei `copilot` heißt `403` meist, dass dem Token das Recht `Plan` fehlt, und `404`, dass `username` nicht stimmt. Die Seite versucht es beim nächsten Neuladen wieder.
 - **Der Anthropic-Betrag wirkt zu niedrig:** Anthropic aktualisiert die Kostendaten etwa alle 4 Stunden; `Stand` zeigt die Zeit der Daten.
 - **Der Server startet nicht und nennt `key`, `team_id` oder `budget`:** `key` (und bei `xai-api` `team_id`) muss gesetzt und nicht leer sein, etwa weil die Variable in `.env` fehlt; `budget` muss eine positive Zahl sein und geht nur mit `anthropic-api` und `openai-api`.
+- **Der Server startet nicht und nennt `username`, `monthly_allowance` oder `unit` (`copilot`):** `username` muss gesetzt sein, `monthly_allowance` muss eine positive Zahl sein, und `unit` ist entweder `ai-credits` oder `premium-requests`.
+- **`copilot` zeigt `0` verbraucht, obwohl du Copilot nutzt:** die API zählt nur ein Abo, das du selbst bezahlst. Prüfe auch, ob `unit` zu deiner Abrechnung passt: Seit Juni 2026 rechnen Monatsabos in AI-Credits ab.
 - **Der Server startet nicht und nennt `provider`:** der Wert muss einer der Anbieter aus der Tabelle oben sein.

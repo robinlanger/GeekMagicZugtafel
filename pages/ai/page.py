@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from .providers import anthropic_api, claude, openai_api, xai_api
+from .providers import anthropic_api, claude, copilot, openai_api, xai_api
 
 LANGS = ("de", "en")
 
@@ -21,6 +21,7 @@ PROVIDERS: dict[str, ModuleType] = {
     "anthropic-api": anthropic_api,
     "openai-api": openai_api,
     "xai-api": xai_api,
+    "copilot": copilot,
 }
 
 # Template data shared by all providers. rows: [{"label", "reset", "percent": float, "text"}];

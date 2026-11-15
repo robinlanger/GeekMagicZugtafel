@@ -30,7 +30,7 @@ State of an Uptime Kuma status page: all green, or which services are down and s
 
 ![Preview of the ai page](../../img/templates/ai-claude.png)
 
-How much of your AI plan or budget you have used. Provider `claude`: the 5-hour and weekly limits of your Claude plan, sent by Claude Code's status line. `anthropic-api`, `openai-api`, `xai-api`: API cost of the month or the prepaid balance. [Details](ai.md)
+How much of your AI plan or budget you have used. Provider `claude`: the 5-hour and weekly limits of your Claude plan, sent by Claude Code's status line. `anthropic-api`, `openai-api`, `xai-api`: API cost of the month or the prepaid balance. `copilot`: GitHub Copilot usage against your plan's allowance. [Details](ai.md)
 
 ## Transport
 
