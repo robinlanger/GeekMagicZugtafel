@@ -55,7 +55,7 @@ pages:
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 | `refresh` | `duration` | Eine Seite wird höchstens alle `refresh` Sekunden neu gerendert. Nimm einen größeren Wert für Daten, die sich langsam ändern, oder für Dienste, die Anfragen begrenzen. |
 
-Alle anderen Schlüssel gehören zum Seitentyp und stehen unten.
+Alle anderen Schlüssel gehören zum Seitentyp und stehen unten. Fertige Seiten mit Vorschaubildern findest du im [Vorlagen-Katalog](templates/README.md).
 
 ## Seitentyp: url
 
@@ -103,11 +103,11 @@ Live-Abfahrten für einen deutschen Bahnhof von [DBF](https://dbf.finalrewind.or
 | `dbf_url` | `https://dbf.finalrewind.org` | Adresse einer DBF-Instanz, falls du eine eigene betreibst. |
 | `refresh` | `60` | **Mindestens 60.** Das ist die DBF-Regel von einer Anfrage pro Bahnhof und Minute. Setzt du `refresh` nicht, wird es automatisch auf 60 angehoben. Setzt du einen Wert unter 60, startet der Server nicht. |
 
-Ist DBF nicht erreichbar, zeigt die Seite „Keine Daten“, eine leere Liste zeigt „Keine Abfahrten“. Mehr steht in `pages/bahn/README.md`.
+Ist DBF nicht erreichbar, zeigt die Seite „Keine Daten“, eine leere Liste zeigt „Keine Abfahrten“. Vollständige Beschreibung: [bahn](templates/bahn.md).
 
 ## Seitentyp: clock
 
-Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene Seiten.
+Eine große Uhr mit Wochentag und Datum, gedacht als Ausgangspunkt für eigene Seiten. Vollständige Beschreibung: [clock](templates/clock.md).
 
 ```yaml
 - type: clock

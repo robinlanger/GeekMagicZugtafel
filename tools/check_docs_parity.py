@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Usage: check_docs_parity.py [repo-root]. Exit 1 if the EN and DE docs drift apart.
 
-Checks README.md <-> README.de.md and docs/en/* <-> docs/de/*: both sides must exist and have
+Checks README.md <-> README.de.md and docs/en/** <-> docs/de/** (recursively, by relative path): both sides must exist and have
 the same heading level sequence (headings inside fenced code blocks are ignored).
 """
 import re
@@ -37,8 +37,10 @@ def pairs(root: Path) -> tuple[list[tuple[Path, Path]], list[str]]:
     elif en.exists():
         found.append((en, de))
     en_dir, de_dir = root / "docs" / "en", root / "docs" / "de"
-    en_files = {p.name for p in en_dir.glob("*") if p.is_file()} if en_dir.is_dir() else set()
-    de_files = {p.name for p in de_dir.glob("*") if p.is_file()} if de_dir.is_dir() else set()
+    def files(d: Path) -> set[str]:
+        return {p.relative_to(d).as_posix() for p in d.rglob("*") if p.is_file() and not p.name.startswith(".")} if d.is_dir() else set()
+
+    en_files, de_files = files(en_dir), files(de_dir)
     for name in sorted(en_files - de_files):
         errors.append(f"docs/de/{name} is missing")
     for name in sorted(de_files - en_files):

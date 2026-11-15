@@ -1,5 +1,7 @@
 # bahn: departure board / Abfahrtstafel
 
+User documentation / Benutzerdokumentation: [docs/en/templates/bahn.md](../../docs/en/templates/bahn.md), [docs/de/templates/bahn.md](../../docs/de/templates/bahn.md). Developer notes below / Entwicklerhinweise unten.
+
 ## English
 
 Live departures for a German station from [DBF](https://dbf.finalrewind.org) (db-infoscreen).

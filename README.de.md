@@ -62,6 +62,7 @@ Lade `glancebox-ultra-<version>.bin` und die zugehörige `.md5`-Datei von der [R
 | Erstes Flashen, Sicherung | [flashing.md](docs/en/flashing.md) | [flashing.md](docs/de/flashing.md) |
 | WLAN-Einrichtung, Passwort | [setup.md](docs/en/setup.md) | [setup.md](docs/de/setup.md) |
 | Server-Konfiguration | [configuration.md](docs/en/configuration.md) | [configuration.md](docs/de/configuration.md) |
+| Vorlagen-Katalog (Seiten mit Vorschau) | [README.md](docs/en/templates/README.md) | [README.md](docs/de/templates/README.md) |
 | Eigene Seiten schreiben | [writing-pages.md](docs/en/writing-pages.md) | [writing-pages.md](docs/de/writing-pages.md) |
 | Firmware aktualisieren | [updating.md](docs/en/updating.md) | [updating.md](docs/de/updating.md) |
 | Safe Mode, serielle Rettung | [recovery.md](docs/en/recovery.md) | [recovery.md](docs/de/recovery.md) |

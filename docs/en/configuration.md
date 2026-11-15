@@ -55,7 +55,7 @@ pages:
 | `duration` | `interval` | How many seconds the page stays on the display. |
 | `refresh` | `duration` | A page is rendered again at most every `refresh` seconds. Use a larger value for data that changes slowly or for services that limit requests. |
 
-All other keys belong to the page type and are described below.
+All other keys belong to the page type and are described below. Ready-made pages with preview pictures are in the [template catalog](templates/README.md). Ready-made pages with preview pictures are in the [template catalog](templates/README.md).
 
 ## Page type: url
 
@@ -103,11 +103,11 @@ Live departures for a German station, from [DBF](https://dbf.finalrewind.org) (d
 | `dbf_url` | `https://dbf.finalrewind.org` | Address of a DBF instance, if you run your own. |
 | `refresh` | `60` | **At least 60.** This is DBF's rule of one request per station and minute. If you do not set `refresh` it is raised to 60 automatically. If you set a value below 60 the server refuses to start. |
 
-If DBF cannot be reached the page shows "Keine Daten", an empty list shows "Keine Abfahrten". More details are in `pages/bahn/README.md`.
+If DBF cannot be reached the page shows "Keine Daten", an empty list shows "Keine Abfahrten". Full description: [bahn](templates/bahn.md).
 
 ## Page type: clock
 
-A large clock with weekday and date, meant as the starting point for your own pages.
+A large clock with weekday and date, meant as the starting point for your own pages. Full description: [clock](templates/clock.md).
 
 ```yaml
 - type: clock
