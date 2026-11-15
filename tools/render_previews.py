@@ -53,6 +53,11 @@ SAMPLES: dict[str, tuple[str, dict, dict]] = {
         "message": None, "sub": None,
         "rows": [{"label": "5 hours", "reset": "in 2:13", "percent": 42.0, "text": "42 %"},
                  {"label": "Week", "reset": "Thu 09:00", "percent": 81.0, "text": "81 %"}]}),
+    "ai-cost": ("ai", {"provider": "openai-api", "key": "${OPENAI_ADMIN_KEY}", "budget": 50,
+                       "lang": "en"}, {
+        "title": "OpenAI API", "clock": "14:05", "stand": "As of 14:05", "message": None,
+        "sub": None, "alert": False, "big": {"label": "This month", "value": "$18.40"},
+        "rows": [{"label": "Budget", "reset": "Dec 1", "percent": 36.8, "text": "37 %"}]}),
     "bahn": ("bahn", {"station": "Musterstadt"}, {
         "title": "Musterstadt", "clock": "10:42", "message": None, "sub": None,
         "rows": [

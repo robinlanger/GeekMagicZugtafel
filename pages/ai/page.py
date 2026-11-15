@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from .providers import claude
+from .providers import anthropic_api, claude, openai_api, xai_api
 
 LANGS = ("de", "en")
 
@@ -18,11 +18,15 @@ PUSH_KEYS = {"claude": ("rate_limits",)}
 
 PROVIDERS: dict[str, ModuleType] = {
     "claude": claude,
+    "anthropic-api": anthropic_api,
+    "openai-api": openai_api,
+    "xai-api": xai_api,
 }
 
 # Template data shared by all providers. rows: [{"label", "reset", "percent": float, "text"}];
-# big: None or {"label", "value"}; stand: "Stand 13:58" or None; message replaces the body.
-EMPTY = {"rows": [], "big": None, "stand": None, "message": None, "sub": None}
+# big: None or {"label", "value"}; stand: "Stand 13:58" or None; message replaces the body;
+# alert: True turns the header red (a provider could not get its data).
+EMPTY = {"rows": [], "big": None, "stand": None, "message": None, "sub": None, "alert": False}
 
 
 def validate(options: dict) -> None:

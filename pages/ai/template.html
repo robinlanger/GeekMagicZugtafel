@@ -14,7 +14,7 @@
 </style>
 {% endblock %}
 {% block body %}
-{{ ui.header(title, clock) }}
+{{ ui.header(title, clock, alert=alert) }}
 {% if message %}
 {{ ui.notice(message, sub) }}
 {% else %}

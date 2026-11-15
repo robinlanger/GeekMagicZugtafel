@@ -30,7 +30,7 @@ Zustand einer Uptime-Kuma-Statusseite: alles grün, oder welche Dienste seit wan
 
 ![Vorschau der Seite ai](../../img/templates/ai-claude.png)
 
-Wie viel von deinem KI-Abo verbraucht ist. Anbieter `claude`: das 5-Stunden- und das Wochenlimit deines Claude-Abos, geschickt von der Statuszeile von Claude Code. [Details](ai.md)
+Wie viel von deinem KI-Abo oder -Budget verbraucht ist. Anbieter `claude`: das 5-Stunden- und das Wochenlimit deines Claude-Abos, geschickt von der Statuszeile von Claude Code. `anthropic-api`, `openai-api`, `xai-api`: API-Kosten des Monats oder das Prepaid-Guthaben. [Details](ai.md)
 
 ## Verkehr
 

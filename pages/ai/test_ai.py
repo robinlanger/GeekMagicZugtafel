@@ -133,3 +133,278 @@ async def test_template_renders_claude(ai):
 
     assert has(full, (60, 200, 110)) and has(full, (240, 70, 60))  # green 42 %, red 95 %
     assert not has(empty, (60, 200, 110))
+
+
+# --- cost providers: anthropic-api, openai-api, xai-api -------------------------------------
+
+UTC_ = ZoneInfo("UTC")
+MONTH_START = datetime(2026, 11, 1, tzinfo=UTC_)
+ANT_KEY = "sk-ant-admin01-SECRET-anthropic"
+OAI_KEY = "sk-admin-SECRET-openai"
+XAI_KEY = "xai-mgmt-SECRET-xai"
+TEAM = "65c1e471-205f-4566-9c5a-07198bcdf4ce"
+COST = {
+    "anthropic-api": {"provider": "anthropic-api", "key": ANT_KEY},
+    "openai-api": {"provider": "openai-api", "key": OAI_KEY},
+    "xai-api": {"provider": "xai-api", "key": XAI_KEY, "team_id": TEAM},
+}
+
+
+def anthropic_page(cents: str, next_page: str | None) -> dict:
+    """Shape of GET /v1/organizations/analytics/cost (documented example, no group_by)."""
+    return {"data": [{"cost": {"amount": cents, "currency": "USD", "list_amount": cents,
+                               "requests": 12},
+                      "starting_at": "2026-11-01T00:00:00Z",
+                      "ending_at": "2026-11-15T13:00:00Z",
+                      "group": {"model": None, "workspace_id": None, "cost_type": None}}],
+            "data_refreshed_at": "2026-11-15T12:02:11Z",
+            "has_more": next_page is not None, "next_page": next_page}
+
+
+def openai_page(values: list[list[float]], next_page: str | None) -> dict:
+    """Shape of GET /v1/organization/costs (documented example)."""
+    day = int(MONTH_START.timestamp())
+    return {"object": "page",
+            "data": [{"object": "bucket", "start_time": day + i * 86400,
+                      "end_time": day + (i + 1) * 86400,
+                      "results": [{"object": "organization.costs.result",
+                                   "amount": {"value": v, "currency": "usd"},
+                                   "line_item": None, "project_id": None} for v in bucket]}
+                     for i, bucket in enumerate(values)],
+            "has_more": next_page is not None, "next_page": next_page}
+
+
+def xai_balance(cents: str) -> dict:
+    """Shape of GET /v1/billing/teams/{team_id}/prepaid/balance (documented example)."""
+    return {"changes": [{"teamId": TEAM, "changeOrigin": "PURCHASE", "topupStatus": "SUCCEEDED",
+                         "amount": {"val": "-5000"},
+                         "createTime": "2026-11-02T15:28:02.308840Z"}],
+            "total": {"val": cents}}
+
+
+# Two pages each; together $18.40.
+TWO_PAGES = {
+    "anthropic-api": [anthropic_page("1200.000000", "page_2"),
+                      anthropic_page("640.000000", None)],
+    "openai-api": [openai_page([[5.0, 3.4]], "page_2"), openai_page([[10.0]], None)],
+    "xai-api": [xai_balance("-1840")],
+}
+
+
+class FakeHTTP:
+    """Stands in for glancebox.http.get_json: answers from `pages` in order, records calls."""
+
+    def __init__(self, pages: list, error: Exception | None = None):
+        self.pages = list(pages)
+        self.error = error
+        self.calls: list[tuple[str, dict, dict]] = []
+
+    def __call__(self, url, *, params=None, headers=None, timeout=10):
+        self.calls.append((url, dict(params or {}), dict(headers or {})))
+        if self.error is not None:
+            raise self.error
+        return self.pages[min(len(self.calls) - 1, len(self.pages) - 1)]
+
+
+@pytest.fixture
+def fake_http(monkeypatch):
+    from glancebox import http
+
+    def install(pages, error=None):
+        fake = FakeHTTP(pages, error)
+        monkeypatch.setattr(http, "get_json", fake)
+        return fake
+    return install
+
+
+def cost_ctx(now: datetime = NOW, lang: str = "de") -> PageContext:
+    return PageContext(now=now, lang=lang, timezone="Europe/Berlin")
+
+
+def http_error(status: int, key: str) -> Exception:
+    import requests
+
+    resp = requests.Response()
+    resp.status_code = status
+    # A real HTTPError names the URL only; this one also carries the key to prove it never
+    # reaches the log, whatever the exception says.
+    return requests.HTTPError(f"{status} Client Error for url: https://x/?k={key}", response=resp)
+
+
+def test_cost_providers_registered(ai):
+    for options in COST.values():
+        ai.validate(options)
+    assert ai.min_refresh == 0
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api", "xai-api"])
+def test_cost_validate_requires_key(ai, provider):
+    options = {k: v for k, v in COST[provider].items() if k != "key"}
+    with pytest.raises(ValueError, match="key"):
+        ai.validate(options)
+    with pytest.raises(ValueError, match="key"):
+        ai.validate({**options, "key": ""})
+
+
+def test_xai_validate_requires_team_id(ai):
+    with pytest.raises(ValueError, match="team_id"):
+        ai.validate({"provider": "xai-api", "key": XAI_KEY})
+    with pytest.raises(ValueError, match="team_id"):
+        ai.validate({"provider": "xai-api", "key": XAI_KEY, "team_id": ""})
+    with pytest.raises(ValueError, match="budget"):
+        ai.validate({**COST["xai-api"], "budget": 50})
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api"])
+def test_cost_validate_budget(ai, provider):
+    ai.validate({**COST[provider], "budget": 50})
+    ai.validate({**COST[provider], "budget": 12.5})
+    for bad in (0, -1, "50", True):
+        with pytest.raises(ValueError, match="budget"):
+            ai.validate({**COST[provider], "budget": bad})
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api"])
+def test_cost_month_sum_over_two_pages(ai, fake_http, provider):
+    fake = fake_http(TWO_PAGES[provider])
+    data = ai.fetch(COST[provider], cost_ctx())
+    assert len(fake.calls) == 2
+    assert fake.calls[1][1]["page"] == "page_2"
+    assert data["big"] == {"label": "Diesen Monat", "value": "18,40 $"}
+    assert data["rows"] == [] and data["message"] is None and data["alert"] is False
+    fake_http(TWO_PAGES[provider])
+    en = ai.fetch({**COST[provider], "lang": "en", "key": provider + "-other"}, cost_ctx())
+    assert en["big"] == {"label": "This month", "value": "$18.40"}
+
+
+def test_anthropic_request(ai, fake_http):
+    fake = fake_http(TWO_PAGES["anthropic-api"])
+    data = ai.fetch(COST["anthropic-api"], cost_ctx())
+    url, params, headers = fake.calls[0]
+    assert url == "https://api.anthropic.com/v1/organizations/analytics/cost"
+    assert params == {"starting_at": "2026-11-01T00:00:00Z"}
+    assert headers == {"x-api-key": ANT_KEY, "anthropic-version": "2026-10-21",
+                       "anthropic-beta": "analytics-usage-cost-2026-08-24"}
+    assert data["title"] == "Anthropic API"
+    assert data["stand"] == "Stand 13:02"  # data_refreshed_at 12:02 UTC
+
+
+def test_openai_request(ai, fake_http):
+    fake = fake_http(TWO_PAGES["openai-api"])
+    data = ai.fetch(COST["openai-api"], cost_ctx())
+    url, params, headers = fake.calls[0]
+    assert url == "https://api.openai.com/v1/organization/costs"
+    assert params == {"start_time": int(MONTH_START.timestamp()), "bucket_width": "1d",
+                      "limit": 31}
+    assert headers == {"Authorization": f"Bearer {OAI_KEY}"}
+    assert data["title"] == "OpenAI API"
+    assert data["stand"] == "Stand 14:05"
+
+
+def test_xai_balance(ai, fake_http):
+    fake = fake_http(TWO_PAGES["xai-api"])
+    data = ai.fetch(COST["xai-api"], cost_ctx())
+    url, params, headers = fake.calls[0]
+    assert url == f"https://management-api.x.ai/v1/billing/teams/{TEAM}/prepaid/balance"
+    assert params == {}
+    assert headers == {"Authorization": f"Bearer {XAI_KEY}"}
+    assert data["title"] == "xAI API"
+    assert data["big"] == {"label": "Guthaben", "value": "18,40 $"}
+    assert data["rows"] == [] and data["stand"] == "Stand 14:05"
+    fake_http([xai_balance("-123456")])
+    en = ai.fetch({**COST["xai-api"], "lang": "en", "key": "other"}, cost_ctx())
+    assert en["big"] == {"label": "Balance", "value": "$1,234.56"}
+    fake_http([xai_balance("250")])
+    owed = ai.fetch({**COST["xai-api"], "key": "third"}, cost_ctx())
+    assert owed["big"]["value"] == "-2,50 $"
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api"])
+def test_cost_budget_row(ai, fake_http, provider):
+    fake_http(TWO_PAGES[provider])
+    data = ai.fetch({**COST[provider], "budget": 50}, cost_ctx())
+    assert data["rows"] == [{"label": "Budget", "reset": "1.12.", "percent": 36.8,
+                             "text": "37 %"}]
+    en = ai.fetch({**COST[provider], "budget": 15.3333, "lang": "en"}, cost_ctx())
+    assert en["rows"][0]["reset"] == "Dec 1"
+    assert en["rows"][0]["text"] == "120 %" and en["rows"][0]["percent"] > 100
+
+
+def test_budget_row_clamps_bar_keeps_text():
+    from glancebox.frames import _jinja_env
+
+    html = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html").render(
+        title="OpenAI API", clock="14:05", message=None, sub=None, alert=False,
+        stand="Stand 14:05", big={"label": "Diesen Monat", "value": "60,00 $"},
+        rows=[{"label": "Budget", "reset": "1.12.", "percent": 120.0, "text": "120 %"}])
+    assert "width:100%" in html and "120 %" in html and "ui-bad" in html
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api", "xai-api"])
+def test_cost_http_401_message_without_key(ai, fake_http, caplog, provider):
+    key = COST[provider]["key"]
+    fake_http([], error=http_error(401, key))
+    with caplog.at_level("DEBUG"):
+        data = ai.fetch(COST[provider], cost_ctx())
+    assert data["message"] == "Keine Daten" and data["sub"] == "Stand 14:05"
+    assert data["alert"] is True and data["big"] is None
+    assert "401" in caplog.text
+    assert key not in caplog.text
+    fake_http([], error=http_error(401, key))
+    en = ai.fetch({**COST[provider], "lang": "en"}, cost_ctx())
+    assert (en["message"], en["sub"]) == ("No data", "As of 14:05")
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api", "xai-api"])
+def test_cost_network_and_shape_errors(ai, fake_http, caplog, provider):
+    import requests
+
+    for error, pages in ((requests.ConnectionError("refused"), []), (None, [{"odd": 1}])):
+        fake_http(pages, error=error)
+        data = ai.fetch(COST[provider], cost_ctx())
+        assert data["message"] == "Keine Daten"
+    assert COST[provider]["key"] not in caplog.text
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api"])
+def test_cost_pagination_is_capped(ai, fake_http, provider):
+    endless = (anthropic_page("1.0", "again") if provider == "anthropic-api"
+               else openai_page([[0.01]], "again"))
+    fake = fake_http([endless])
+    data = ai.fetch(COST[provider], cost_ctx())
+    assert len(fake.calls) == 20
+    assert data["message"] == "Keine Daten"
+
+
+@pytest.mark.parametrize("provider", ["anthropic-api", "openai-api", "xai-api"])
+def test_cached_for_300s(ai, fake_http, provider):
+    single = {"anthropic-api": [anthropic_page("1840.0", None)],
+              "openai-api": [openai_page([[18.4]], None)],
+              "xai-api": [xai_balance("-1840")]}[provider]
+    fake = fake_http(single)
+    first = ai.fetch(COST[provider], cost_ctx(NOW))
+    second = ai.fetch(COST[provider], cost_ctx(NOW + timedelta(seconds=299)))
+    assert len(fake.calls) == 1
+    assert second["big"] == first["big"]
+    ai.fetch(COST[provider], cost_ctx(NOW + timedelta(seconds=301)))
+    assert len(fake.calls) == 2
+    # Another key is another cache entry.
+    ai.fetch({**COST[provider], "key": "another"}, cost_ctx(NOW + timedelta(seconds=302)))
+    assert len(fake.calls) == 3
+
+
+def test_errors_are_not_cached(ai, fake_http):
+    import requests
+
+    fake_http([], error=requests.ConnectionError("down"))
+    assert ai.fetch(COST["openai-api"], cost_ctx())["message"] == "Keine Daten"
+    fake = fake_http([openai_page([[18.4]], None)])
+    data = ai.fetch(COST["openai-api"], cost_ctx(NOW + timedelta(seconds=1)))
+    assert len(fake.calls) == 1 and data["big"]["value"] == "18,40 $"
+
+
+def test_xai_cache_keyed_by_team(ai, fake_http):
+    fake = fake_http([xai_balance("-1840")])
+    ai.fetch(COST["xai-api"], cost_ctx())
+    ai.fetch({**COST["xai-api"], "team_id": "other-team"}, cost_ctx())
+    assert len(fake.calls) == 2

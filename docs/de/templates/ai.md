@@ -1,6 +1,7 @@
 # ai
 
 ![Vorschau der Seite ai mit Anbieter claude](../../img/templates/ai-claude.png)
+![Vorschau der Seite ai mit Anbieter openai-api und Budget](../../img/templates/ai-cost.png)
 
 ## Was sie zeigt
 
@@ -9,6 +10,9 @@ Wie viel von einem KI-Abo oder -Budget verbraucht ist. Jede Seite zeigt einen An
 | `provider` | Zeigt | Wie die Daten ankommen |
 | --- | --- | --- |
 | `claude` | Die Limits deines Claude-Abos: das 5-Stunden-Fenster und die Woche, jeweils in Prozent mit der Zeit des nächsten Resets | Claude Code auf deinem Rechner schickt sie an den Server (Push) |
+| `anthropic-api` | Kosten der Claude-API im laufenden Monat in USD, auf Wunsch gegen dein eigenes Budget | Der Server fragt die Usage and Cost Analytics API von Anthropic mit einem Admin-Key |
+| `openai-api` | Kosten der OpenAI-API im laufenden Monat in USD, auf Wunsch gegen dein eigenes Budget | Der Server fragt die Costs API von OpenAI mit einem Admin-Key |
+| `xai-api` | Prepaid-Guthaben deines xAI-Teams in USD | Der Server fragt die Management API von xAI mit einem Management-Key |
 
 Für jedes Limit gibt es eine Zeile mit dem Namen und rechts der Zeit des Resets, darunter einen breiten Balken mit dem Wert darin. Der Balken ist grün, ab 75 % orange und ab 90 % rot.
 
@@ -20,6 +24,14 @@ Für `claude`:
 - **Keine Limitdaten:** Werte kamen an, aber ohne brauchbare Limits, zum Beispiel nach dem `curl`-Test unter [Wenn etwas nicht stimmt](#wenn-etwas-nicht-stimmt). Die nächste Antwort von Claude Code bringt die echten Werte. Limits hat Claude Code nur mit einem Claude-Abo (Pro oder Max); mit einem API-Key schickt das Skript nichts, und die Seite bleibt bei `Noch keine Daten`.
 - Hat dein Abo kein Wochenlimit, erscheint nur der 5-Stunden-Balken.
 
+Für `anthropic-api`, `openai-api` und `xai-api`:
+
+- **Betrag:** groß in der Mitte, als `18,40 $` (`Diesen Monat`) oder, bei `xai-api`, `Guthaben`. Der Monat ist der Kalendermonat in UTC, so wie die Anbieter abrechnen.
+- **Budget:** mit `budget: 50` erscheint unter dem Betrag ein Balken `Budget` mit dem Anteil, der schon verbraucht ist, und dem Tag, an dem er neu beginnt (`1.12.`). Über 100 % bleibt der Balken voll, und der Text zeigt den echten Wert, zum Beispiel `120 %`.
+- **Alter:** unten zeigt `Stand 14:05`, wann der Server die Werte zuletzt bekommen hat. Bei `anthropic-api` ist es die Zeit des Datenexports von Anthropic, der etwa alle 4 Stunden aktualisiert wird.
+- **Nur alle 5 Minuten:** Kostendaten ändern sich langsam. Der Server fragt jeden Anbieter höchstens alle 5 Minuten, egal was bei `refresh` steht.
+- **Keine Daten:** ist der Anbieter nicht erreichbar oder lehnt er den Key ab, wird die Kopfzeile rot, und die Seite zeigt `Keine Daten` mit der Uhrzeit, nie einen alten Betrag.
+
 ## Was du brauchst
 
 Für `claude`:
@@ -27,6 +39,11 @@ Für `claude`:
 - Ein Claude-Abo (Pro oder Max) und [Claude Code](https://code.claude.com/docs) auf einem Rechner im selben Heimnetz wie der Glance-Box-Server.
 - `curl` auf diesem Rechner (macOS und Linux haben es). Unter Windows reicht PowerShell.
 - Das Skript `tools/statusline/glancebox-statusline.sh` (macOS, Linux) oder `tools/statusline/glancebox-statusline.ps1` (Windows) aus diesem Repository auf diesem Rechner.
+
+Für `anthropic-api`, `openai-api` und `xai-api`:
+
+- Eine Organisation (Anthropic, OpenAI) oder ein Team (xAI) mit API-Abrechnung und das Recht, dort einen Admin- oder Management-Key anzulegen.
+- Internetzugang für den Glance-Box-Server.
 
 Claude Code gibt seiner [Statuszeile](https://code.claude.com/docs/en/statusline) nach jeder Antwort einen kleinen JSON-Text. Darin stehen deine Limits (`rate_limits`). Das Skript reicht diesen Text im Hintergrund an den Server weiter und zeigt danach deine normale Statuszeile.
 
@@ -39,14 +56,27 @@ Claude Code gibt seiner [Statuszeile](https://code.claude.com/docs/en/statusline
   refresh: 30
 ```
 
+Für die API-Kosten, mit dem Key in `.env` (siehe [Einrichtung](#einrichtung)):
+
+```yaml
+- type: ai
+  provider: openai-api
+  key: ${OPENAI_ADMIN_KEY}
+  budget: 50
+  lang: de
+```
+
 ## Optionen
 
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
-| `provider` | | Woher die Werte kommen: `claude`. Pflicht. |
-| `title` | Name des Anbieters (`Claude`) | Text der Kopfzeile. |
+| `provider` | | Woher die Werte kommen: `claude`, `anthropic-api`, `openai-api` oder `xai-api`. Pflicht. |
+| `key` | | Nur `anthropic-api`, `openai-api`, `xai-api`, dort Pflicht: der Admin- oder Management-Key. Immer als `${NAME}` aus `.env`, nie direkt in `config.yaml`. |
+| `budget` | keins | Nur `anthropic-api` und `openai-api`: dein Monatsbudget in USD, eine positive Zahl wie `50`. Ergänzt den Balken `Budget`. |
+| `team_id` | | Nur `xai-api`, dort Pflicht: die ID deines xAI-Teams. |
+| `title` | Name des Anbieters (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`) | Text der Kopfzeile. |
 | `lang` | oberstes `lang` | `de` oder `en`. Legt alle Texte der Seite fest. |
-| `refresh` | Standard-`refresh` | Für `claude` empfehlen wir `30`. Die Seite liest nur, was angekommen ist, das kostet nichts. |
+| `refresh` | Standard-`refresh` | Für `claude` empfehlen wir `30`. Die Seite liest nur, was angekommen ist, das kostet nichts. Die API-Anbieter fragen ohnehin höchstens alle 5 Minuten. |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 
 ## Einrichtung
@@ -133,16 +163,86 @@ Hast du schon eine Statuszeile, gib ihren Befehl dem Skript als Argumente mit. D
 - Der Server hält die Werte nur im Arbeitsspeicher. Nach einem Neustart des Servers zeigt die Seite `Noch keine Daten`, bis Claude Code die nächste Antwort gibt.
 - Eine neue Claude-Code-Sitzung schickt ihre Limits erst nach ihrer ersten Antwort.
 
+### Anthropic API
+
+> **Warnung:** Ein Anthropic-Admin-Key hat volle Rechte über die ganze Organisation: Mitglieder, Workspaces, alle API-Keys und ihre Limits. Wer ihn hat, kann in der Organisation alles tun, nicht nur Kosten lesen. Nutze ihn nur für eine Organisation, in der sonst nichts liegt (eine eigene Organisation nur dafür), oder verzichte auf diesen Anbieter.
+
+1. Melde dich als Admin der Organisation in der Claude Console an, öffne die [Seite für Admin-Keys](https://platform.claude.com/settings/admin-keys), klicke **Create admin key** und gib einen Namen und ein Ablaufdatum an. Kopiere den Key (er beginnt mit `sk-ant-admin01-` und wird nur einmal gezeigt). Admin-Keys der Console haben keine wählbaren Rechte: Jeder Key hat vollen Zugriff.
+2. Trage ihn in `.env` neben `docker-compose.yml` ein:
+
+   ```
+   ANTHROPIC_ADMIN_KEY=sk-ant-admin...
+   ```
+
+3. Füge die Seite in `config.yaml` ein und führe `docker compose up -d` aus:
+
+   ```yaml
+   - type: ai
+     provider: anthropic-api
+     key: ${ANTHROPIC_ADMIN_KEY}
+     budget: 50   # optional
+   ```
+
+In einer Claude-Enterprise-Organisation kann der Primary Owner stattdessen einen Key nur mit dem Recht `read:analytics` anlegen (claude.ai → Organization settings → API). Er kann nur Berichte lesen und ist die deutlich sicherere Wahl; er kommt genauso in `ANTHROPIC_ADMIN_KEY`.
+
+Die Seite nutzt die [Usage and Cost Analytics API](https://platform.claude.com/docs/en/manage-claude/usage-cost-analytics-api) (`/v1/organizations/analytics/cost`), die die ältere Cost API ablöst. Admin-Keys gibt es nur für Organisationen in der Claude Console, nicht für Einzelkonten oder das claude.ai-Team-Abo.
+
+### OpenAI API
+
+1. Lege auf der [Seite für Admin-Keys](https://platform.openai.com/settings/organization/admin-keys) einen neuen Admin-Key an. Das können nur Owner der Organisation. Gib ihm die engsten Rechte, die die Seite anbietet: **Read only** oder, falls es die Wahl gibt, nur Lesezugriff auf Nutzung und Kosten. Wähle nie vollen Zugriff nur für dieses Display.
+2. Trage ihn in `.env` ein:
+
+   ```
+   OPENAI_ADMIN_KEY=sk-admin-...
+   ```
+
+3. Füge die Seite ein:
+
+   ```yaml
+   - type: ai
+     provider: openai-api
+     key: ${OPENAI_ADMIN_KEY}
+     budget: 50   # optional
+   ```
+
+Ein normaler Projekt-API-Key funktioniert nicht; die Costs API braucht einen Admin-Key.
+
+### xAI API
+
+1. Öffne in der [xAI Console](https://console.x.ai/) **Settings → Management Keys** und lege einen Key an. Dein Konto braucht dafür das Recht `Management Keys` (Lesen und Schreiben); sonst frag den Admin des Teams. Der Management-Key ist ein anderer als der API-Key, den du für Grok nutzt.
+2. Kopiere deine Team-ID von der Seite mit den Team-Einstellungen der Console (`console.x.ai/team/default/settings/team`).
+3. Trage beides in `.env` ein:
+
+   ```
+   XAI_MANAGEMENT_KEY=...
+   XAI_TEAM_ID=...
+   ```
+
+4. Füge die Seite ein:
+
+   ```yaml
+   - type: ai
+     provider: xai-api
+     key: ${XAI_MANAGEMENT_KEY}
+     team_id: ${XAI_TEAM_ID}
+   ```
+
+Ein Management-Key kann die API-Keys und die Abrechnung des Teams verwalten, behandle ihn also wie ein Passwort.
+
 ## Datenschutz & Sicherheit
 
 - **Nur `rate_limits` wird gespeichert.** Das JSON der Statuszeile enthält auch Dinge wie den Arbeitsordner und die Sitzungs-ID. Der Server verwirft sofort alles außer `rate_limits`, schreibt nichts auf die Platte und protokolliert den Inhalt nicht.
 - **Kein Anthropic-Token verlässt deinen Rechner.** Das Skript schickt nur den Text, den Claude Code der Statuszeile gibt, zusammen mit dem Glance-Box-Schlüssel. Der Server meldet sich nie bei Anthropic an.
 - **Der Push-Schlüssel** erlaubt nur, Werte an dein Display zu schicken. Bewahre ihn in `.env` auf dem Server und in `push.env` (`chmod 600`) auf deinem Rechner auf, nie in `config.yaml`.
 - Der Server und sein Daten-Eingang sind nur für dein Heimnetz gedacht. Mach sie nicht aus dem Internet erreichbar.
+- **API-Keys** (`anthropic-api`, `openai-api`, `xai-api`) sind mächtig: Sie können weit mehr als Kosten lesen. Bewahre sie nur in `.env` auf, schreib `${NAME}` in `config.yaml` und gib `.env` nie weiter. Der Server schickt sie nur an den Anbieter, im Kopf der Anfrage, und schreibt sie nie in sein Log. Die Beträge hält er 5 Minuten im Arbeitsspeicher und speichert nichts auf der Platte.
 
 ## Wenn etwas nicht stimmt
 
 - **`Noch keine Daten` bleibt:** Claude Code schickt Limits nur mit einem Claude-Abo (Pro oder Max) und in aktuellen Versionen. Mit einem API-Key statt eines Abos oder mit einem älteren Claude Code schickt das Skript nichts, und die Seite bleibt bei `Noch keine Daten`; sonst ist dann nichts falsch. Andernfalls prüfe, dass `push_key` gesetzt ist und du nach der Änderung an `.env` `docker compose up -d` ausgeführt hast. Teste dann den Weg von deinem Rechner zum Server: `curl -i -X POST -H "Authorization: Bearer <der Schlüssel>" -H "Content-Type: application/json" -d '{"rate_limits":{}}' http://<server>:8080/api/v1/push/claude`. `204` ist richtig (die Seite zeigt dann `Keine Limitdaten` bis zur nächsten Antwort von Claude Code), `401` heißt, der Schlüssel stimmt nicht, `404` heißt, der Server hat keinen `push_key`. Klappt `curl`, prüfe `push.env` (beide Zeilen, keine Leerzeichen um `=`) und den Pfad in `settings.json`.
 - **`Keine Limitdaten`:** ein Push kam an, aber ohne brauchbare Limitfenster, zum Beispiel der `curl`-Test oben mit `{"rate_limits":{}}`. Die nächste Antwort von Claude Code ersetzt ihn durch die echten Werte.
 - **Die Statuszeile ist leer:** das ist ohne eigene Statuszeile normal. Um eine zu zeigen, gib ihren Befehl als Argumente mit.
+- **`Keine Daten` mit roter Kopfzeile (API-Anbieter):** der Anbieter war nicht erreichbar oder hat die Anfrage abgelehnt. Im Log des Servers steht eine Zeile wie `ai openai-api: no data: HTTPError (HTTP 401)`. `401` oder `403` heißt, der Key ist falsch, abgelaufen oder hat nicht das nötige Recht; prüfe `.env` und führe nach einer Änderung `docker compose up -d` aus. Bei `xai-api` heißt `404` meist, dass `team_id` nicht stimmt. Die Seite versucht es beim nächsten Neuladen wieder.
+- **Der Anthropic-Betrag wirkt zu niedrig:** Anthropic aktualisiert die Kostendaten etwa alle 4 Stunden; `Stand` zeigt die Zeit der Daten.
+- **Der Server startet nicht und nennt `key`, `team_id` oder `budget`:** `key` (und bei `xai-api` `team_id`) muss gesetzt und nicht leer sein, etwa weil die Variable in `.env` fehlt; `budget` muss eine positive Zahl sein und geht nur mit `anthropic-api` und `openai-api`.
 - **Der Server startet nicht und nennt `provider`:** der Wert muss einer der Anbieter aus der Tabelle oben sein.
