@@ -26,6 +26,12 @@ Zustand einer Uptime-Kuma-Statusseite: alles grün, oder welche Dienste seit wan
 
 ## KI & Entwicklung
 
+### ai
+
+![Vorschau der Seite ai](../../img/templates/ai-claude.png)
+
+Wie viel von deinem KI-Abo verbraucht ist. Anbieter `claude`: das 5-Stunden- und das Wochenlimit deines Claude-Abos, geschickt von der Statuszeile von Claude Code. [Details](ai.md)
+
 ## Verkehr
 
 ### bahn

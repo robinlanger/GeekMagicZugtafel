@@ -26,6 +26,12 @@ State of an Uptime Kuma status page: all green, or which services are down and s
 
 ## AI & development
 
+### ai
+
+![Preview of the ai page](../../img/templates/ai-claude.png)
+
+How much of your AI plan you have used. Provider `claude`: the 5-hour and weekly limits of your Claude plan, sent by Claude Code's status line. [Details](ai.md)
+
 ## Transport
 
 ### bahn

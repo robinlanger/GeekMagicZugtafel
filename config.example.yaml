@@ -20,6 +20,9 @@ pages:
   #   url: http://192.168.1.20:3001   # your Uptime Kuma
   #   slug: home                    # slug of its status page
   #   refresh: 30
+  # - type: ai
+  #   provider: claude      # values from Claude Code's status line, needs push_key above
+  #   refresh: 30
   - type: url
     url: http://homeserver.lan/status-240
     duration: 15          # show this page for 15 s instead of the default interval

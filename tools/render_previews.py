@@ -48,6 +48,11 @@ SAMPLES: dict[str, tuple[str, dict, dict]] = {
         "down": [{"name": "Nextcloud", "since": "12 min"},
                  {"name": "Backup server with a very long host name", "since": "3 h"}],
         "more": 0, "message": None, "sub": None}),
+    "ai-claude": ("ai", {"provider": "claude", "lang": "en"}, {
+        "title": "Claude", "clock": "14:05", "big": None, "stand": "As of 13:58",
+        "message": None, "sub": None,
+        "rows": [{"label": "5 hours", "reset": "in 2:13", "percent": 42.0, "text": "42 %"},
+                 {"label": "Week", "reset": "Thu 09:00", "percent": 81.0, "text": "81 %"}]}),
     "bahn": ("bahn", {"station": "Musterstadt"}, {
         "title": "Musterstadt", "clock": "10:42", "message": None, "sub": None,
         "rows": [

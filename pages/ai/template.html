@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% block head %}
+<style>
+.body{position:absolute;left:0;top:34px;width:240px;padding:12px 8px 0;box-sizing:border-box;}
+.big{margin-bottom:12px;}
+.big .label{font-size:13px;color:var(--muted);line-height:16px;}
+.big .value{font-size:30px;font-weight:700;line-height:36px;white-space:nowrap;}
+.row{margin-bottom:14px;}
+.line{display:flex;align-items:baseline;height:22px;margin-bottom:4px;}
+.line .label{flex:1;min-width:0;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:8px;}
+.line .reset{flex:none;font-size:13px;color:var(--muted);white-space:nowrap;}
+.stand{position:absolute;left:0;width:240px;bottom:12px;text-align:center;font-size:12px;line-height:14px;color:var(--muted);}
+</style>
+{% endblock %}
+{% block body %}
+{{ ui.header(title, clock) }}
+{% if message %}
+{{ ui.notice(message, sub) }}
+{% else %}
+<div class="body">
+{%- if big %}
+  <div class="big"><div class="label">{{ big.label }}</div><div class="value">{{ big.value }}</div></div>
+{%- endif %}
+{%- for r in rows %}
+  <div class="row">
+    <div class="line"><span class="label">{{ r.label }}</span><span class="reset">{{ r.reset }}</span></div>
+    {{ ui.bar(r.percent, r.text) }}
+  </div>
+{%- endfor %}
+</div>
+{% endif %}
+{%- if stand %}
+<div class="stand">{{ stand }}</div>
+{%- endif %}
+{% endblock %}
