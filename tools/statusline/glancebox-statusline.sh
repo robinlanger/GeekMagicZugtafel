@@ -19,8 +19,10 @@ GLANCEBOX_URL=
 GLANCEBOX_PUSH_KEY=
 env_file="${XDG_CONFIG_HOME:-$HOME/.config}/glancebox/push.env"
 if [ -r "$env_file" ]; then
-  while IFS='=' read -r name value || [ -n "$name" ]; do
-    value=$(printf '%s' "$value" | tr -d '\r')
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Split at the first "=" only; base64 keys may end in "=" (IFS='=' would strip one).
+    name=${line%%=*}
+    value=$(printf '%s' "${line#*=}" | tr -d '\r')
     case "$name" in
       GLANCEBOX_URL) GLANCEBOX_URL=$value ;;
       GLANCEBOX_PUSH_KEY) GLANCEBOX_PUSH_KEY=$value ;;

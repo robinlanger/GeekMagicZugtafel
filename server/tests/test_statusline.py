@@ -73,6 +73,15 @@ def test_forwards_stdin_with_key(tmp_path, server):
                          "type": "application/json", "body": STDIN.encode()}]
 
 
+@pytest.mark.parametrize("key", ["abc0123456789xyz=", "abc0123456789xy==", "a=b=c0123456789x"])
+def test_key_with_equals_signs_kept(tmp_path, server, key):
+    # base64 keys end in "=" or "=="; read with IFS='=' would strip a single trailing "=".
+    url, received = server
+    run(write_env(tmp_path, url, key))
+    wait_for(received)
+    assert received[0]["auth"] == f"Bearer {key}"
+
+
 def test_runs_wrapped_command(tmp_path, server):
     url, received = server
     r = run(write_env(tmp_path, url), "sh", "-c", "cat; echo done")
