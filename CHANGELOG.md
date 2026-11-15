@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0]
+
 ### Added
 - Template library: the `weather` (Open-Meteo forecast), `kuma` (Uptime Kuma status page) and
   `ai` pages. `ai` selects its source with `provider:`: `claude` (5-hour and weekly limits,
