@@ -163,6 +163,12 @@ std::optional<std::string> normalizeServerUrl(std::string in, std::string* error
 
 bool validPassword(const std::string& pw) { return pw.size() >= 8; }
 
+uint8_t clampNightBrightness(int pct) {
+  if (pct < 0) return 0;
+  if (pct > 100) return 100;
+  return static_cast<uint8_t>(pct);
+}
+
 uint8_t clampBrightness(int pct) {
   if (pct < 5) return 5;
   if (pct > 100) return 100;
@@ -211,6 +217,12 @@ std::string encodeSettings(const Settings& s) {
   appendJsonString(out, s.updatePassword);
   out += ",\"brightness\":";
   out += std::to_string(s.brightness);
+  out += ",\"night_start\":";
+  out += std::to_string(s.nightStart);
+  out += ",\"night_end\":";
+  out += std::to_string(s.nightEnd);
+  out += ",\"night_brightness\":";
+  out += std::to_string(s.nightBrightness);
   out += "}\n";
   return out;
 }
@@ -236,6 +248,13 @@ bool parseSettings(const std::string& text, Settings* out) {
       } else if (key == "brightness") {
         if (!p.integer(&iv)) return false;
         r.brightness = clampBrightness(static_cast<int>(iv));
+      } else if (key == "night_start" || key == "night_end") {
+        if (!p.integer(&iv)) return false;
+        const uint16_t m = (iv >= 0 && iv < 1440) ? static_cast<uint16_t>(iv) : 0;
+        (key == "night_start" ? r.nightStart : r.nightEnd) = m;
+      } else if (key == "night_brightness") {
+        if (!p.integer(&iv)) return false;
+        r.nightBrightness = clampNightBrightness(static_cast<int>(iv));
       } else if (p.peek('"')) {
         if (!p.str(&sv)) return false;
       } else if (!p.integer(&iv)) {
