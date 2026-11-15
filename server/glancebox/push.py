@@ -20,8 +20,8 @@ class Pushed:
 
 
 class PushInbox:
-    """Latest push per channel. The endpoint runs in the threadpool and page ``fetch``
-    calls in worker threads, so access is guarded by a lock."""
+    """Latest push per channel. The push endpoint is async and runs on the event loop, while
+    page ``fetch`` calls read the inbox from worker threads, so access is guarded by a lock."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
