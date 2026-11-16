@@ -539,9 +539,11 @@ async def test_long_text_state_is_ellipsised(ha, serve):
                               duration=30, refresh=30)
             out = await render_page(page, ha, _cfg(), r, NOW.timestamp())
             frames[name] = Image.open(io.BytesIO(out)).convert("RGB")
-    # tiles: the value is shortened inside the tile's padding, no glyph cut at the tile edge
-    assert _has(frames["tiles4"], (0, 34, 112, 137), bright)
-    assert not _has(frames["tiles4"], (112, 34, 120, 137), bright)
+    # tiles: the value is shortened inside its tile. The content box ends at x 118 (120 px tile,
+    # 2 px right padding); where exactly the "…" ends depends on the font rasteriser, so only
+    # the padding, the divider and the neighbour tile's left padding (x 118-128) must stay dark.
+    assert _has(frames["tiles4"], (0, 34, 118, 137), bright)
+    assert not _has(frames["tiles4"], (118, 34, 128, 137), bright)
     # list: the label stays visible and nothing reaches the right edge
     assert _has(frames["list"], (8, 35, 60, 67), bright)
     assert not _has(frames["list"], (236, 35, 240, 67), bright)
