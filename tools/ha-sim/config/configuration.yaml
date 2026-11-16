@@ -1,0 +1,10 @@
+homeassistant:
+  name: Sim-Zuhause
+  unit_system: metric
+  time_zone: Europe/Berlin
+  country: DE
+  currency: EUR
+  packages: !include_dir_named packages
+
+# Onboarding, frontend, profile/tokens and the REST API.
+default_config:

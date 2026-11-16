@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `homeassistant` page: live values of up to six Home Assistant entities (REST API with a
+  long-lived access token from `.env`) as tiles (1–4) or a list (up to 6). Numbers are rounded,
+  W/Wh from 1000 become kW/kWh, on/off becomes words such as `open`/`closed` with colours,
+  unavailable entities show `n/a`, unknown ones `missing`. Own notices for no connection and a
+  rejected token. Texts in `de` and `en`.
+
 ## [0.3.0]
 
 ### Added

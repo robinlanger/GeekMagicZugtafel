@@ -53,7 +53,7 @@ pages:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `type` | required | Page type: `url`, `bahn`, `clock`, `weather`, `kuma`, `ai` or one of your own. The ready-made ones are described in the [template catalog](templates/README.md). |
+| `type` | required | Page type: `url`, `bahn`, `clock`, `weather`, `kuma`, `homeassistant`, `ai` or one of your own. The ready-made ones are described in the [template catalog](templates/README.md). |
 | `duration` | `interval` | How many seconds the page stays on the display. |
 | `refresh` | `duration` | A page is rendered again at most every `refresh` seconds. Use a larger value for data that changes slowly or for services that limit requests. |
 
@@ -139,6 +139,22 @@ The state of your server from an [Uptime Kuma](https://github.com/louislam/uptim
   url: http://homeserver.lan:3001
   slug: homelab
   refresh: 30
+```
+
+## Page type: homeassistant
+
+Live values of up to six [Home Assistant](https://www.home-assistant.io/) entities, as tiles (1 to 4) or a list (up to 6). Needs a long-lived access token; put it and the address in `.env`, see [Secrets and environment variables](#secrets-and-environment-variables). The token has all the rights of its user, so use a separate user. Full description: [homeassistant](templates/homeassistant.md).
+
+```yaml
+- type: homeassistant
+  url: ${HA_URL}
+  token: ${HA_TOKEN}
+  title: Solar
+  refresh: 30
+  entities:
+    - sensor.pv_power
+    - entity: sensor.grid_power
+      label: Grid
 ```
 
 ## Page type: ai

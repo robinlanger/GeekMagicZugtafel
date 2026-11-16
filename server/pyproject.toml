@@ -26,7 +26,10 @@ asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "ignore:Using `httpx` with `starlette.testclient` is deprecated",
 ]
-markers = ["browser: needs a Chromium install (excluded in one CI job)"]
+markers = [
+    "browser: needs a Chromium install (excluded in one CI job)",
+    "homeassistant_live: needs HA_URL and HA_TOKEN of a reachable (simulated) Home Assistant",
+]
 
 [tool.ruff]
 line-length = 100

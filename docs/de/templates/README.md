@@ -24,6 +24,12 @@ Aktuelles Wetter und die nächsten vier Stunden für einen Ort, vom kostenlosen 
 
 Zustand einer Uptime-Kuma-Statusseite: alles grün, oder welche Dienste seit wann gestört sind. [Details](kuma.md)
 
+### homeassistant
+
+![Vorschau der Seite homeassistant](../../img/templates/homeassistant-tiles.png)
+
+Live-Werte von bis zu sechs Home-Assistant-Entitäten als große Kacheln oder Liste: Solarleistung, Temperaturen, offene Fenster, Lichter. Braucht einen langlebigen Zugangstoken. [Details](homeassistant.md)
+
 ## KI & Entwicklung
 
 ### ai

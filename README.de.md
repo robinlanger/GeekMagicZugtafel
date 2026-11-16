@@ -8,7 +8,7 @@
 
 ![Glance Box auf dem GeekMagic SmallTV Ultra mit Live-Abfahrten, daneben ein Kopfhörer-Etui als Größenvergleich](docs/img/hero.jpg)
 
-**Glance Box macht aus dem GeekMagic SmallTV Ultra für ca. 15 € ein WLAN-Display mit 240x240 Pixeln für alles, was du als HTML schreiben kannst:** eine Open-Source-Firmware für das Display und ein kleiner Docker-Server, der deine Seiten rendert und als Bilder ans Display schickt. Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, eine Statusseite aus deinem Home Assistant, alles, was auf 240x240 Pixel passt.
+**Glance Box macht aus dem GeekMagic SmallTV Ultra für ca. 15 € ein WLAN-Display mit 240x240 Pixeln für alles, was du als HTML schreiben kannst:** eine Open-Source-Firmware für das Display und ein kleiner Docker-Server, der deine Seiten rendert und als Bilder ans Display schickt. Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, Live-Werte aus deinem Home Assistant, von der Solarleistung bis zum offenen Fenster, alles, was auf 240x240 Pixel passt.
 
 > [!TIP]
 > **Kein Löten nötig.** Du flashst Glance Box über das Menü **„Firmware update“** der Original-Firmware, im Browser. Kein Gehäuse öffnen, keine Kabel.
@@ -42,7 +42,12 @@ Alle eingebauten Seiten:
 | ![Seite mit Uptime Kuma](docs/img/templates/kuma-down.png) | ![Seite mit Claude-Limits](docs/img/templates/ai-claude.png) | ![Seite mit API-Kosten](docs/img/templates/ai-cost.png) |
 | Alles grün, oder welche Dienste seit wann ausgefallen sind. | 5-Stunden- und Wochenlimit deines Claude-Abos. | Monatskosten oder Guthaben der API von Anthropic, OpenAI oder xAI, oder deine GitHub-Copilot-Nutzung. |
 
-Die Bilder sind 240x240-Frames, die der Server mit Beispieldaten rendert, genau so, wie das Display sie bekommt. Alle Vorlagen mit allen Optionen stehen im [Vorlagenkatalog](docs/de/templates/README.md). Der Seitentyp `url` zeigt jede Webseite, auf die du ihn richtest, zum Beispiel eine Statusseite aus Home Assistant.
+| `homeassistant`: Kacheln | `homeassistant`: Liste | |
+| --- | --- | --- |
+| ![Home-Assistant-Seite mit vier Kacheln](docs/img/templates/homeassistant-tiles.png) | ![Home-Assistant-Seite mit Liste](docs/img/templates/homeassistant-list.png) | |
+| Bis zu vier große Werte, zum Beispiel Solarleistung und Akku. | Bis zu sechs Zeilen: Temperaturen, Türen, Fenster, Lichter. | |
+
+Die Bilder sind 240x240-Frames, die der Server mit Beispieldaten rendert, genau so, wie das Display sie bekommt. Alle Vorlagen mit allen Optionen stehen im [Vorlagenkatalog](docs/de/templates/README.md). Der Seitentyp `url` zeigt jede Webseite, auf die du ihn richtest. Willst du die Original-Firmware behalten, passt [geekmagic-hacs](https://github.com/adrienbrault/geekmagic-hacs) besser: eine Home-Assistant-Integration, die das Display mit seiner Original-Firmware ansteuert.
 
 ## So funktioniert es
 

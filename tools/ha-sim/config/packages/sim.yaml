@@ -1,0 +1,155 @@
+# Simulated entities. All values come from now(), so the states change by
+# themselves (templates using now() re-render once per minute).
+# The entity ID derives from `name`, e.g. "Haustür" -> binary_sensor.haustur.
+template:
+  - sensor:
+      - name: Temperatur Wohnzimmer
+        unique_id: sim_temperatur_wohnzimmer
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {{ (21.25 + 1.25 * sin(pi * (h - 9) / 12)) | round(1) }}
+
+      - name: Luftfeuchte Wohnzimmer
+        unique_id: sim_luftfeuchte_wohnzimmer
+        device_class: humidity
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {{ (52.5 + 7.5 * cos(pi * h / 12)) | round(0) | int }}
+
+      - name: Temperatur außen
+        unique_id: sim_temperatur_aussen
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {{ (8 + 6 * sin(pi * (h - 9) / 12)) | round(1) }}
+
+      - name: Luftfeuchte außen
+        unique_id: sim_luftfeuchte_aussen
+        device_class: humidity
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {{ (77.5 - 17.5 * sin(pi * (h - 9) / 12)) | round(0) | int }}
+
+      # Changes every minute; values below and above 1000 W so W and kW both show.
+      - name: Hausverbrauch
+        unique_id: sim_hausverbrauch
+        device_class: power
+        state_class: measurement
+        unit_of_measurement: "W"
+        state: >
+          {% set table = [250, 420, 380, 1250, 610, 3200, 480, 890, 1850, 330, 2400, 560] %}
+          {{ table[now().minute % (table | length)] }}
+
+      - name: PV-Leistung
+        unique_id: sim_pv_leistung
+        device_class: power
+        state_class: measurement
+        unit_of_measurement: "W"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {% if 6 <= h <= 20 %}
+            {{ [0, 4800 * sin(pi * (h - 6) / 14)] | max | round(0) | int }}
+          {% else %}
+            0
+          {% endif %}
+
+      # Hausverbrauch - PV, negative while feeding in.
+      - name: Netz
+        unique_id: sim_netz
+        device_class: power
+        state_class: measurement
+        unit_of_measurement: "W"
+        availability: >
+          {{ has_value('sensor.hausverbrauch') and has_value('sensor.pv_leistung') }}
+        state: >
+          {{ (states('sensor.hausverbrauch') | float(0)
+              - states('sensor.pv_leistung') | float(0)) | round(0) | int }}
+
+      - name: Energie heute
+        unique_id: sim_energie_heute
+        device_class: energy
+        state_class: total_increasing
+        unit_of_measurement: "kWh"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {{ (0.6 * h + 6 * (h / 24) ** 2) | round(2) }}
+
+      # Fills from 10 % (08:00) to 100 % (16:00), drains back to 10 % by 08:00.
+      - name: Speicher
+        unique_id: sim_speicher
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {% if 8 <= h < 16 %}
+            {{ (10 + 90 * (h - 8) / 8) | round(0) | int }}
+          {% elif h >= 16 %}
+            {{ (100 - 90 * (h - 16) / 16) | round(0) | int }}
+          {% else %}
+            {{ (100 - 90 * (h + 8) / 16) | round(0) | int }}
+          {% endif %}
+
+      - name: Akku Rauchmelder
+        unique_id: sim_akku_rauchmelder
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: "12"
+
+      # Unavailable every sixth minute, so that case shows up live.
+      - name: Kellersensor
+        unique_id: sim_kellersensor
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        availability: "{{ now().minute % 6 != 0 }}"
+        state: >
+          {% set h = now().hour + now().minute / 60 %}
+          {{ (11.5 + 0.5 * sin(pi * (h - 9) / 12)) | round(1) }}
+
+  - binary_sensor:
+      - name: Fenster Bad
+        unique_id: sim_fenster_bad
+        device_class: window
+        state: "{{ now().minute % 10 < 3 }}"
+
+      - name: Haustür
+        unique_id: sim_haustur
+        device_class: door
+        state: "{{ now().minute % 15 == 0 }}"
+
+      - name: Bewegung Flur
+        unique_id: sim_bewegung_flur
+        device_class: motion
+        state: "{{ now().minute % 4 == 0 }}"
+
+  # Lights and switch only follow a time pattern; switching is not simulated.
+  - light:
+      - name: Licht Küche
+        unique_id: sim_licht_kuche
+        state: "{{ now().minute % 6 < 3 }}"
+        turn_on: []
+        turn_off: []
+
+      - name: Licht Flur
+        unique_id: sim_licht_flur
+        state: "{{ now().hour >= 17 or now().hour < 1 }}"
+        turn_on: []
+        turn_off: []
+
+  - switch:
+      - name: Kaffeemaschine
+        unique_id: sim_kaffeemaschine
+        state: "{{ now().minute % 20 < 5 }}"
+        turn_on: []
+        turn_off: []

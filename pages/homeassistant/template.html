@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "ui.html" as ui %}
+{% block head %}
+<style>
+.grid{position:absolute;left:0;top:34px;width:240px;height:206px;display:grid;}
+.n1{grid-template:1fr/1fr}.n2{grid-template:1fr 1fr/1fr}.n3{grid-template:1fr 1fr/1fr 1fr}.n4{grid-template:1fr 1fr/1fr 1fr}
+.n3 .t:first-child{grid-column:span 2}
+.t{display:flex;flex-direction:column;justify-content:center;padding:0 2px 0 8px;border-top:1px solid var(--divider);min-width:0;overflow:hidden;}
+.n3 .t:nth-child(3),.n4 .t:nth-child(2n){border-left:1px solid var(--divider);}
+.lbl{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.val{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.val.l{font-size:30px;line-height:36px}.val.m{font-size:24px;line-height:30px}.val.s{font-size:18px;line-height:24px}
+.n3 .val.m,.n4 .val.m{font-size:22px;line-height:28px}
+.n3 .val.s,.n4 .val.s{font-size:14px;line-height:20px}
+.n3 .val.s .unit,.n4 .val.s .unit{font-size:12px;margin-left:2px}
+.n1 .val.l,.n2 .val.l{font-size:44px;line-height:50px}
+.unit{font-size:15px;font-weight:700;color:var(--muted);margin-left:3px}
+.warn,.open{color:var(--orange)} .on{color:var(--yellow)}
+.rows{position:absolute;left:0;top:34px;width:240px;}
+.row{height:34px;box-sizing:border-box;padding:0 8px;display:flex;align-items:center;border-top:1px solid var(--divider);}
+.row .lbl{flex:1 1 0;min-width:40px;font-size:15px;color:var(--fg);margin-right:8px}
+.row .v{flex:0 1 auto;max-width:60%;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:17px;font-weight:700;white-space:nowrap}
+.row .v.s{font-size:14px}
+.row .v .unit{font-size:13px}
+</style>
+{% endblock %}
+{% block body %}
+{% if state == "ok" %}
+{{ ui.header(title, clock) }}
+{% if layout == "tiles" %}
+<div class="grid n{{ items|length }}">
+{%- for i in items %}
+  <div class="t"><span class="lbl">{{ i.label }}</span><span class="val {{ i.size }} {{ i.tone }}">{{ i.value }}{% if i.unit %}<span class="unit">{{ i.unit }}</span>{% endif %}</span></div>
+{%- endfor %}
+</div>
+{% else %}
+<div class="rows">
+{%- for i in items %}
+  <div class="row"><span class="lbl">{{ i.label }}</span><span class="v {{ i.size }} {{ i.tone }}">{{ i.value }}{% if i.unit %}<span class="unit">{{ i.unit }}</span>{% endif %}</span></div>
+{%- endfor %}
+</div>
+{% endif %}
+{% else %}
+{{ ui.header(title, clock) }}
+{{ ui.notice(message, sub, "warn") }}
+{% endif %}
+{% endblock %}

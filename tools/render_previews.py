@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 
 from glancebox.frames import _jinja_env
+from glancebox.pages import load_page_types
 from glancebox.render import Renderer
 
 OUT = ROOT / "docs" / "img" / "templates"
@@ -48,6 +49,27 @@ SAMPLES: dict[str, tuple[str, dict, dict]] = {
         "down": [{"name": "Nextcloud", "since": "12 min"},
                  {"name": "Backup server with a very long host name", "since": "3 h"}],
         "more": 0, "message": None, "sub": None}),
+    "homeassistant-tiles": ("homeassistant", {"url": "http://homeassistant.lan:8123",
+                                              "token": "${HA_TOKEN}", "lang": "en"}, {
+        "title": "Solar", "clock": "14:32", "lang": "en", "layout": "tiles", "state": "ok",
+        "message": None, "sub": None,
+        "items": [{"label": "PV", "value": "3.2", "unit": "kW", "tone": "", "size": "l"},
+                  {"label": "Grid", "value": "−1.1", "unit": "kW", "tone": "", "size": "l"},
+                  {"label": "House", "value": "2.1", "unit": "kW", "tone": "", "size": "l"},
+                  {"label": "Battery", "value": "78", "unit": "%", "tone": "", "size": "l"}]}),
+    "homeassistant-list": ("homeassistant", {"url": "http://homeassistant.lan:8123",
+                                             "token": "${HA_TOKEN}", "lang": "en"}, {
+        "title": "Home", "clock": "14:32", "lang": "en", "layout": "list", "state": "ok",
+        "message": None, "sub": None,
+        "items": [{"label": "Living room", "value": "21.4", "unit": "°C", "tone": "", "size": "m"},
+                  {"label": "Outside", "value": "8.1", "unit": "°C", "tone": "", "size": "m"},
+                  {"label": "Humidity", "value": "54", "unit": "%", "tone": "", "size": "m"},
+                  {"label": "Front door", "value": "closed", "unit": None, "tone": "",
+                   "size": "m"},
+                  {"label": "Bathroom window", "value": "open", "unit": None, "tone": "open",
+                   "size": "m"},
+                  {"label": "Kitchen light", "value": "on", "unit": None, "tone": "on",
+                   "size": "m"}]}),
     "ai-claude": ("ai", {"provider": "claude", "lang": "en"}, {
         "title": "Claude", "clock": "14:05", "big": None, "stand": "As of 13:58",
         "message": None, "sub": None,
@@ -81,11 +103,22 @@ SAMPLES: dict[str, tuple[str, dict, dict]] = {
 }
 
 
+def _homeassistant_sizes(data: dict) -> None:
+    """Set each item's size class with the page's own size_class, so previews match real output."""
+    load_page_types([PAGES])
+    size_class = sys.modules["glancebox_pages.homeassistant"].size_class
+    items = data["items"]
+    for item in items:
+        item["size"] = size_class(item["value"], item["unit"], data["layout"], len(items))
+
+
 async def render_all(names: list[str]) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     async with Renderer() as renderer:
         for name in names:
             ptype, _options, data = SAMPLES[name]
+            if ptype == "homeassistant":
+                _homeassistant_sizes(data)
             page_dir = PAGES / ptype
             html = _jinja_env([page_dir]).get_template("template.html").render(**data)
             jpeg = await renderer.render_html(html)

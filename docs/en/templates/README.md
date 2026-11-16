@@ -24,6 +24,12 @@ Current weather and the next four hours for one place, from the free Open-Meteo 
 
 State of an Uptime Kuma status page: all green, or which services are down and since when. [Details](kuma.md)
 
+### homeassistant
+
+![Preview of the homeassistant page](../../img/templates/homeassistant-tiles.png)
+
+Live values of up to six Home Assistant entities as large tiles or a list: solar power, temperatures, open windows, lights. Needs a long-lived access token. [Details](homeassistant.md)
+
 ## AI & development
 
 ### ai

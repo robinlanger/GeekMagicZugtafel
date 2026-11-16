@@ -8,7 +8,7 @@
 
 ![Glance Box on the GeekMagic SmallTV Ultra, showing live departures, next to an earbuds case for size](docs/img/hero.jpg)
 
-**Glance Box turns the ~15 € GeekMagic SmallTV Ultra into a 240x240 Wi-Fi display for anything you can write as HTML:** open-source firmware for the display, plus a small Docker server that renders your pages and sends them over as images. Departures, a clock, the weather, the state of your home server, how much of your AI plan is left, a status page from your Home Assistant, whatever fits on 240x240 pixels.
+**Glance Box turns the ~15 € GeekMagic SmallTV Ultra into a 240x240 Wi-Fi display for anything you can write as HTML:** open-source firmware for the display, plus a small Docker server that renders your pages and sends them over as images. Departures, a clock, the weather, the state of your home server, how much of your AI plan is left, live values from your Home Assistant, from solar power to open windows, whatever fits on 240x240 pixels.
 
 > [!TIP]
 > **No soldering needed.** You flash Glance Box through the **"Firmware update"** menu of the stock firmware, in your browser. No case to open, no wires.
@@ -42,7 +42,12 @@ All built-in pages:
 | ![Uptime Kuma page](docs/img/templates/kuma-down.png) | ![Claude limits page](docs/img/templates/ai-claude.png) | ![API cost page](docs/img/templates/ai-cost.png) |
 | All green, or which services are down and since when. | 5-hour and weekly limits of your Claude plan. | Monthly cost or balance of the Anthropic, OpenAI or xAI API, or your GitHub Copilot usage. |
 
-The pictures are 240x240 frames rendered by the server with sample data, exactly as the display gets them. Every template, with all options, is in the [template catalog](docs/en/templates/README.md). The `url` page type shows any web page you point it at, for example a status page from Home Assistant. Write your own pages with [docs/en/writing-pages.md](docs/en/writing-pages.md).
+| `homeassistant`: tiles | `homeassistant`: list | |
+| --- | --- | --- |
+| ![Home Assistant page with four tiles](docs/img/templates/homeassistant-tiles.png) | ![Home Assistant page with a list](docs/img/templates/homeassistant-list.png) | |
+| Up to four large values, for example solar power and battery. | Up to six rows: temperatures, doors, windows, lights. | |
+
+The pictures are 240x240 frames rendered by the server with sample data, exactly as the display gets them. Every template, with all options, is in the [template catalog](docs/en/templates/README.md). The `url` page type shows any web page you point it at. If you want to keep the stock firmware, [geekmagic-hacs](https://github.com/adrienbrault/geekmagic-hacs) is the better fit: a Home Assistant integration that drives the display with its original firmware. Write your own pages with [docs/en/writing-pages.md](docs/en/writing-pages.md).
 
 ## How it works
 

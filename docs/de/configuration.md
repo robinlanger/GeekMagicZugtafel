@@ -53,7 +53,7 @@ pages:
 
 | Schlüssel | Standard | Bedeutung |
 | --- | --- | --- |
-| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock`, `weather`, `kuma`, `ai` oder ein eigener. Die fertigen Seiten stehen im [Vorlagen-Katalog](templates/README.md). |
+| `type` | Pflicht | Seitentyp: `url`, `bahn`, `clock`, `weather`, `kuma`, `homeassistant`, `ai` oder ein eigener. Die fertigen Seiten stehen im [Vorlagen-Katalog](templates/README.md). |
 | `duration` | `interval` | Wie viele Sekunden die Seite auf dem Display bleibt. |
 | `refresh` | `duration` | Eine Seite wird höchstens alle `refresh` Sekunden neu gerendert. Nimm einen größeren Wert für Daten, die sich langsam ändern, oder für Dienste, die Anfragen begrenzen. |
 
@@ -139,6 +139,22 @@ Der Zustand deines Servers aus einer Statusseite von [Uptime Kuma](https://githu
   url: http://homeserver.lan:3001
   slug: homelab
   refresh: 30
+```
+
+## Seitentyp: homeassistant
+
+Live-Werte von bis zu sechs Entitäten aus [Home Assistant](https://www.home-assistant.io/), als Kacheln (1 bis 4) oder Liste (bis 6). Braucht einen langlebigen Zugangstoken; ihn und die Adresse trägst du in die `.env` ein, siehe [Geheimnisse und Umgebungsvariablen](#geheimnisse-und-umgebungsvariablen). Der Token hat alle Rechte seines Benutzers, nimm also einen eigenen Benutzer. Ausführlich: [homeassistant](templates/homeassistant.md).
+
+```yaml
+- type: homeassistant
+  url: ${HA_URL}
+  token: ${HA_TOKEN}
+  title: Solar
+  refresh: 30
+  entities:
+    - sensor.pv_power
+    - entity: sensor.grid_power
+      label: Netz
 ```
 
 ## Seitentyp: ai

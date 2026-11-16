@@ -20,6 +20,15 @@ pages:
   #   url: http://192.168.1.20:3001   # your Uptime Kuma
   #   slug: home                    # slug of its status page
   #   refresh: 30
+  # - type: homeassistant
+  #   url: ${HA_URL}                  # e.g. HA_URL=http://homeassistant.lan:8123 in .env
+  #   token: ${HA_TOKEN}              # long-lived access token, only in .env
+  #   title: Solar
+  #   refresh: 30
+  #   entities:                       # 1-4 as tiles, up to 6 as a list
+  #     - sensor.pv_power
+  #     - entity: sensor.grid_power
+  #       label: Grid
   # - type: ai
   #   provider: claude      # values from Claude Code's status line, needs push_key above
   #   refresh: 30

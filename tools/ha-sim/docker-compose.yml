@@ -1,0 +1,19 @@
+# Simulated Home Assistant for developing the Glance Box `homeassistant` page.
+# DNS is set locally in docker-compose.override.yml (not in git), see README.md.
+services:
+  homeassistant-sim:
+    container_name: homeassistant-sim
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    ports: ["8123:8123"]
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      # HA state (account, tokens, database) lives in the named volume, never in git.
+      - ha-data:/config
+      # Only the repo files are mounted, read-only.
+      - ./config/configuration.yaml:/config/configuration.yaml:ro
+      - ./config/packages:/config/packages:ro
+
+volumes:
+  ha-data:
