@@ -6,8 +6,7 @@
 [![CI](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/robinlanger/glancebox)](LICENSE)
 
-<!-- HERO: replace docs/img/hero.png with a photo (or GIF) of the real display. -->
-![Glance Box on the GeekMagic SmallTV Ultra](docs/img/hero.png)
+![Glance Box on the GeekMagic SmallTV Ultra, showing live departures, next to an earbuds case for size](docs/img/hero.jpg)
 
 **Glance Box turns the ~15 € GeekMagic SmallTV Ultra into a 240x240 Wi-Fi display for anything you can write as HTML:** open-source firmware for the display, plus a small Docker server that renders your pages and sends them over as images. Departures, a clock, the weather, the state of your home server, how much of your AI plan is left, a status page from your Home Assistant, whatever fits on 240x240 pixels.
 
@@ -23,9 +22,15 @@
 - **Runs in Docker** on a PC, NAS or home server. The display only shows pictures; all the work happens on the server.
 - **MIT licensed**, no cloud, no account. The display only talks to your own server.
 
-Tested on a real SmallTV Ultra: first flash through the stock "Firmware update" menu, OTA updates with MD5 check, safe mode after a broken update, night mode, and the departure board and clock pages.
+Tested on a real SmallTV Ultra: first flash through the stock "Firmware update" menu, OTA updates with MD5 check, safe mode after a broken update, night mode, and the pages for departures, clock, weather, Uptime Kuma and Claude limits.
 
 ## Gallery
+
+On the real display: departures, Uptime Kuma, weather and Claude limits.
+
+![Four photos of the display showing the bahn, kuma, weather and ai pages](docs/img/on-device.jpg)
+
+All built-in pages:
 
 | `bahn`: live departures | `clock`: clock and date | `weather`: forecast |
 | --- | --- | --- |

@@ -6,8 +6,7 @@
 [![CI](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml)
 [![Lizenz: MIT](https://img.shields.io/github/license/robinlanger/glancebox)](LICENSE)
 
-<!-- HERO: docs/img/hero.png durch ein Foto (oder GIF) des echten Displays ersetzen. -->
-![Glance Box auf dem GeekMagic SmallTV Ultra](docs/img/hero.png)
+![Glance Box auf dem GeekMagic SmallTV Ultra mit Live-Abfahrten, daneben ein Kopfhörer-Etui als Größenvergleich](docs/img/hero.jpg)
 
 **Glance Box macht aus dem GeekMagic SmallTV Ultra für ca. 15 € ein WLAN-Display mit 240x240 Pixeln für alles, was du als HTML schreiben kannst:** eine Open-Source-Firmware für das Display und ein kleiner Docker-Server, der deine Seiten rendert und als Bilder ans Display schickt. Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, eine Statusseite aus deinem Home Assistant, alles, was auf 240x240 Pixel passt.
 
@@ -23,9 +22,15 @@
 - **Läuft in Docker** auf einem PC, NAS oder Homeserver. Das Display zeigt nur Bilder an; die ganze Arbeit macht der Server.
 - **MIT-Lizenz**, keine Cloud, kein Konto. Das Display spricht nur mit deinem eigenen Server.
 
-Am echten SmallTV Ultra getestet: erstes Flashen über das Menü „Firmware update“ der Original-Firmware, OTA-Updates mit MD5-Prüfung, Safe Mode nach einem kaputten Update, Nachtmodus sowie die Seiten Abfahrtstafel und Uhr.
+Am echten SmallTV Ultra getestet: erstes Flashen über das Menü „Firmware update“ der Original-Firmware, OTA-Updates mit MD5-Prüfung, Safe Mode nach einem kaputten Update, Nachtmodus sowie die Seiten für Abfahrten, Uhr, Wetter, Uptime Kuma und Claude-Limits.
 
 ## Galerie
+
+Auf dem echten Display: Abfahrten, Uptime Kuma, Wetter und Claude-Limits.
+
+![Vier Fotos des Displays mit den Seiten bahn, kuma, weather und ai](docs/img/on-device.jpg)
+
+Alle eingebauten Seiten:
 
 | `bahn`: Live-Abfahrten | `clock`: Uhr und Datum | `weather`: Vorhersage |
 | --- | --- | --- |
