@@ -16,7 +16,7 @@
 ## Highlights
 
 - **Pages are just HTML.** Write a page as a template, or point the server at any web page. The server renders it with headless Chromium, the same engine as in Chrome.
-- **Ready-made templates** for the weather, Uptime Kuma, AI usage (Claude, OpenAI, xAI, GitHub Copilot), departures and a clock. You only add them to `config.yaml`.
+- **Ready-made templates** for the weather, Uptime Kuma, Home Assistant, AI usage (Claude, OpenAI, xAI, GitHub Copilot), departures and a clock. You only add them to `config.yaml`.
 - **Open firmware for the ESP8266**: Wi-Fi setup portal, a small settings page, night mode with its own brightness (or backlight off).
 - **Safe updates over Wi-Fi**: password-protected, every image is checked against its MD5. A wrong file is rejected and the old firmware keeps running. After a broken update the device starts in safe mode instead of a boot loop.
 - **Runs in Docker** on a PC, NAS or home server. The display only shows pictures; all the work happens on the server.

@@ -6,12 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0]
+
 ### Added
 - `homeassistant` page: live values of up to six Home Assistant entities (REST API with a
   long-lived access token from `.env`) as tiles (1–4) or a list (up to 6). Numbers are rounded,
   W/Wh from 1000 become kW/kWh, on/off becomes words such as `open`/`closed` with colours,
   unavailable entities show `n/a`, unknown ones `missing`. Own notices for no connection and a
   rejected token. Texts in `de` and `en`.
+- `tools/ha-sim/`: a simulated Home Assistant (Docker Compose, template entities that change
+  over the day) to develop and test the `homeassistant` page without a real smart home.
+
+### Notes
+- The firmware code is unchanged from 0.3.0; only its version number changes. This release is
+  about the server and its pages.
 
 ## [0.3.0]
 

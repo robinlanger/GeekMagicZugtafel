@@ -16,7 +16,7 @@
 ## Highlights
 
 - **Seiten sind einfach HTML.** Schreib eine Seite als Vorlage oder richte den Server auf irgendeine Webseite. Der Server rendert sie mit Headless-Chromium, derselben Engine wie in Chrome.
-- **Fertige Vorlagen** für Wetter, Uptime Kuma, KI-Nutzung (Claude, OpenAI, xAI, GitHub Copilot), Abfahrten und eine Uhr. Du trägst sie nur in die `config.yaml` ein.
+- **Fertige Vorlagen** für Wetter, Uptime Kuma, Home Assistant, KI-Nutzung (Claude, OpenAI, xAI, GitHub Copilot), Abfahrten und eine Uhr. Du trägst sie nur in die `config.yaml` ein.
 - **Offene Firmware für den ESP8266**: WLAN-Einrichtungsportal, eine kleine Einstellungsseite, Nachtmodus mit eigener Helligkeit (oder Hintergrundbeleuchtung aus).
 - **Sichere Updates über WLAN**: passwortgeschützt, jedes Abbild wird gegen seine MD5 geprüft. Eine falsche Datei wird abgelehnt, und die alte Firmware läuft weiter. Nach einem kaputten Update startet das Gerät im Safe Mode statt in einer Boot-Schleife.
 - **Läuft in Docker** auf einem PC, NAS oder Homeserver. Das Display zeigt nur Bilder an; die ganze Arbeit macht der Server.
