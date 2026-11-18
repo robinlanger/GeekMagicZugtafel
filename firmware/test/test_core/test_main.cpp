@@ -670,6 +670,192 @@ void test_effective_brightness() {
   TEST_ASSERT_EQUAL_UINT8(60, effectiveBrightness(off, true, 23 * 3600));
 }
 
+void test_backlight_duty_is_perceptual() {
+  TEST_ASSERT_EQUAL_UINT16(0, backlightDuty(0));  // 0 % stays fully off
+  TEST_ASSERT_EQUAL_UINT16(kBacklightPwmRange, backlightDuty(100));
+  TEST_ASSERT_EQUAL_UINT16(kBacklightPwmRange, backlightDuty(250));  // clamped
+  TEST_ASSERT_EQUAL_UINT16(1, backlightDuty(1));  // never off unless 0 %
+  // Quadratic curve: low settings are clearly darker than a linear duty would be.
+  TEST_ASSERT_EQUAL_UINT16(3, backlightDuty(5));
+  TEST_ASSERT_EQUAL_UINT16(40, backlightDuty(20));
+  TEST_ASSERT_EQUAL_UINT16(250, backlightDuty(50));
+  for (int p = 1; p <= 100; p++) {
+    TEST_ASSERT_TRUE(backlightDuty(static_cast<uint8_t>(p)) >=
+                     backlightDuty(static_cast<uint8_t>(p - 1)));
+  }
+}
+
+void test_preview_inactive_by_default() {
+  BacklightPreview p;
+  TEST_ASSERT_FALSE(p.active(0));
+  TEST_ASSERT_FALSE(p.active(123456));
+}
+
+void test_preview_holds_3s_then_expires() {
+  BacklightPreview p;
+  p.set(40, 1000);
+  TEST_ASSERT_TRUE(p.active(1000));
+  TEST_ASSERT_TRUE(p.active(3999));
+  TEST_ASSERT_FALSE(p.active(4000));
+  TEST_ASSERT_EQUAL_UINT8(40, p.pct());
+}
+
+void test_preview_refresh_extends() {
+  BacklightPreview p;
+  p.set(10, 0);
+  p.set(20, 2500);
+  TEST_ASSERT_TRUE(p.active(5499));
+  TEST_ASSERT_FALSE(p.active(5500));
+  TEST_ASSERT_EQUAL_UINT8(20, p.pct());
+}
+
+void test_preview_millis_wraparound() {
+  BacklightPreview p;
+  p.set(50, 0xFFFFFC00u);  // 1024 ms before the wrap
+  TEST_ASSERT_TRUE(p.active(0x00000100u));
+  TEST_ASSERT_FALSE(p.active(0xFFFFFC00u + kPreviewHoldMs));
+}
+
+void test_preview_expires_and_saved_value_applies() {
+  BacklightPreview p;
+  p.set(30, 100);
+  p.clear();
+  TEST_ASSERT_FALSE(p.active(101));
+}
+
+void test_preview_clamps() {
+  BacklightPreview p;
+  p.set(250, 0);
+  TEST_ASSERT_EQUAL_UINT8(100, p.pct());
+}
+
+static Settings patchBase() {
+  Settings s;
+  std::string err;
+  applyServerUrl(s, "http://10.0.0.2:8090", &err);
+  applyPassword(s, "oldpassword", &err);
+  s.brightness = 80;
+  s.nightStart = 1320;
+  s.nightEnd = 420;
+  s.nightBrightness = 0;
+  return s;
+}
+
+void test_settings_patch_single_field() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.brightness = "30";
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT8(30, s.brightness);
+  TEST_ASSERT_EQUAL_STRING("http://10.0.0.2:8090", s.serverUrl);
+  TEST_ASSERT_EQUAL_UINT16(1320, s.nightStart);
+  TEST_ASSERT_EQUAL_STRING("oldpassword", s.updatePassword);
+}
+
+void test_settings_patch_night_start_only() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.nightStart = "21:30";
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT16(1290, s.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(420, s.nightEnd);
+  TEST_ASSERT_EQUAL_UINT8(0, s.nightBrightness);
+}
+
+void test_settings_patch_night_off() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.nightStart = "00:00";
+  p.nightEnd = "00:00";
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT16(0, s.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(0, s.nightEnd);
+}
+
+void test_settings_patch_atomic_on_error() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.brightness = "40";
+  p.serverUrl = "https://x";
+  std::string field, err;
+  TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("server_url", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("https_unsupported", err.c_str());
+  TEST_ASSERT_EQUAL_UINT8(80, s.brightness);
+}
+
+void test_settings_patch_bad_brightness() {
+  for (const char* bad : {"4", "101", "5a", ""}) {
+    Settings s = patchBase();
+    SettingsPatch p;
+    p.brightness = bad;
+    std::string field, err;
+    TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+    TEST_ASSERT_EQUAL_STRING("brightness", field.c_str());
+    TEST_ASSERT_EQUAL_STRING("bad_brightness", err.c_str());
+    TEST_ASSERT_EQUAL_UINT8(80, s.brightness);
+  }
+}
+
+void test_settings_patch_night_errors_name_field() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.nightBrightness = "101";
+  std::string field, err;
+  TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("night_brightness", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("bad_night_brightness", err.c_str());
+  SettingsPatch q;
+  q.nightEnd = "25:00";
+  TEST_ASSERT_FALSE(applySettingsPatch(s, q, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("night_end", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("bad_time", err.c_str());
+}
+
+void test_settings_patch_password() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.password = "short";
+  std::string field, err;
+  TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("password", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("too_short", err.c_str());
+  p.password = "longenough1";
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("longenough1", s.updatePassword);
+}
+
+void test_settings_patch_empty() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT8(80, s.brightness);
+}
+
+void test_wifi_quality() {
+  TEST_ASSERT_TRUE(wifiQuality(-50) == WifiQuality::Excellent);
+  TEST_ASSERT_TRUE(wifiQuality(-60) == WifiQuality::Excellent);
+  TEST_ASSERT_TRUE(wifiQuality(-61) == WifiQuality::Good);
+  TEST_ASSERT_TRUE(wifiQuality(-70) == WifiQuality::Good);
+  TEST_ASSERT_TRUE(wifiQuality(-71) == WifiQuality::Fair);
+  TEST_ASSERT_TRUE(wifiQuality(-80) == WifiQuality::Fair);
+  TEST_ASSERT_TRUE(wifiQuality(-81) == WifiQuality::Weak);
+}
+
+void test_format_duration() {
+  TEST_ASSERT_EQUAL_STRING("0 s", formatDuration(0, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("59 s", formatDuration(59, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("1 min", formatDuration(60, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("59 min", formatDuration(3599, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("1 h 0 min", formatDuration(3600, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("23 h 59 min", formatDuration(86399, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("1 T 21 h", formatDuration(163787, "T").c_str());
+}
+
 void test_apply_night() {
   Settings s;
   std::string err;
@@ -774,6 +960,23 @@ int main() {
   RUN_TEST(test_night_window);
   RUN_TEST(test_local_clock);
   RUN_TEST(test_effective_brightness);
+  RUN_TEST(test_backlight_duty_is_perceptual);
+  RUN_TEST(test_preview_inactive_by_default);
+  RUN_TEST(test_preview_holds_3s_then_expires);
+  RUN_TEST(test_preview_refresh_extends);
+  RUN_TEST(test_preview_millis_wraparound);
+  RUN_TEST(test_preview_expires_and_saved_value_applies);
+  RUN_TEST(test_preview_clamps);
+  RUN_TEST(test_settings_patch_single_field);
+  RUN_TEST(test_settings_patch_night_start_only);
+  RUN_TEST(test_settings_patch_night_off);
+  RUN_TEST(test_settings_patch_atomic_on_error);
+  RUN_TEST(test_settings_patch_bad_brightness);
+  RUN_TEST(test_settings_patch_night_errors_name_field);
+  RUN_TEST(test_settings_patch_password);
+  RUN_TEST(test_settings_patch_empty);
+  RUN_TEST(test_wifi_quality);
+  RUN_TEST(test_format_duration);
   RUN_TEST(test_apply_night);
   RUN_TEST(test_settings_night_roundtrip_and_old_file);
   return UNITY_END();

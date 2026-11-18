@@ -28,11 +28,15 @@ Nach dem ersten Flashen (oder nach einem Zurücksetzen) öffnet das Display ein 
 
 ## Die Geräteseite
 
-Öffne `http://<display-ip>/` (die IP steht beim Start auf dem Display und in deinem Router). Sie zeigt Version, Laufzeit, Signalstärke, die Anzahl empfangener Bilder, Fehlstarts und ob der Safe Mode aktiv ist. Darunter kannst du:
+Öffne `http://<display-ip>/` (die IP steht beim Start auf dem Display und in deinem Router). Sie folgt dem hellen oder dunklen Modus deines Handys oder Computers. Oben zeigen vier Kacheln die Verbindung zum Server, wann das letzte Bild kam, das WLAN-Signal und wie lange das Gerät schon läuft. Sie aktualisieren sich alle paar Sekunden. Darunter kannst du:
 
-- die Server-URL, die Helligkeit und den [Nachtmodus](#nachtmodus) ändern und ein neues Update-Passwort setzen (diese Änderungen brauchen das Update-Passwort, Benutzer `admin`),
+- die **Helligkeit** und den [Nachtmodus](#nachtmodus) mit Reglern und einem Schalter einstellen. Während du einen Regler ziehst, ändert sich das Display sofort; gespeichert wird beim Loslassen,
+- die **Server-Adresse** ändern. Sie wird gespeichert, sobald du das Feld verlässt; ein paar Sekunden lang holt **Rückgängig** die alte Adresse zurück,
+- das **Passwort ändern** (eigener Knopf, damit du dich beim Tippen nicht aussperrst),
 - ein Firmware-Update hochladen (siehe [Aktualisieren](updating.md)),
 - das Gerät neu starten oder **Einstellungen und WLAN zurücksetzen** (zurück ins Einrichtungsportal).
+
+Einen Speichern-Knopf gibt es nicht: Jede Änderung wird von selbst gespeichert, ein Haken bestätigt sie, und eine rote Meldung erklärt einen Wert, den das Gerät abgelehnt hat (dann bleibt der alte Wert). Bei der ersten Änderung fragt der Browser nach dem Update-Passwort (Benutzer `admin`). **Details** ganz unten zeigt die Anzahl der Bilder, das Signal in dBm, die Uhrzeit, den Nachtmodus, Fehlstarts und den Safe Mode. Ohne JavaScript zeigt die Seite stattdessen ein einfaches Formular mit Speichern-Knopf.
 
 `http://<display-ip>/status` liefert dieselben Angaben als JSON, ohne Passwort. Praktisch für Skripte und für Home Assistant.
 
@@ -40,10 +44,11 @@ Nach dem ersten Flashen (oder nach einem Zurücksetzen) öffnet das Display ein 
 
 Steht das Display im Schlafzimmer, kann es nachts dunkler werden oder ganz ausgehen. Stell dafür auf der Geräteseite ein:
 
-- **Nacht von** und **Nacht bis**, zum Beispiel 22:00 und 07:00. Der Zeitraum darf über Mitternacht gehen.
-- **Helligkeit nachts** von 0 bis 100 %. **0 % heißt ganz dunkel**, die Hintergrundbeleuchtung ist dann aus.
+- den Schalter **Nachtmodus**,
+- **Von** und **Bis**, zum Beispiel 22:00 und 07:00. Der Zeitraum darf über Mitternacht gehen.
+- **Helligkeit nachts** von 0 bis 100 %. **0 % heißt ganz dunkel**, die Hintergrundbeleuchtung ist dann aus. Während du den Regler ziehst, zeigt das Display diese Helligkeit kurz an, auch tagsüber.
 
-Sind beide Zeiten gleich (Standard: 00:00 und 00:00), ist der Nachtmodus aus. Das Display holt nachts weiter Bilder, morgens steht also sofort das aktuelle Bild da.
+Schaltest du den Nachtmodus aus, speichert das Gerät zwei gleiche Zeiten (so merkt es sich „aus“; Standard: 00:00 und 00:00). Schaltest du ihn wieder ein, kommen die letzten Zeiten zurück, sonst 22:00 bis 07:00. Das Display holt nachts weiter Bilder, morgens steht also sofort das aktuelle Bild da.
 
 Die Uhrzeit bekommt das Display vom Glance-Box-Server, in der Zeitzone aus `timezone` in deiner `config.yaml` (Sommerzeit inklusive). **Dafür muss auch der Server mindestens Version 0.2.0 haben.** Mit einem älteren Server zeigt die Geräteseite bei „Uhrzeit“ nur „-“, und der Nachtmodus greift nicht. Fällt der Server aus, zählt das Display die Zeit selbst weiter. Startet es aber nachts neu und erreicht den Server nicht, kennt es die Uhrzeit noch nicht und bleibt hell, bis der Server antwortet. Im Safe Mode gibt es keinen Nachtmodus.
 

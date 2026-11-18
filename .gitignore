@@ -14,5 +14,8 @@ config.yaml
 docker-compose.override.yml
 pages-custom/
 
+# macOS Finder metadata
+.DS_Store
+
 # Brainstorming mockups
 .superpowers/

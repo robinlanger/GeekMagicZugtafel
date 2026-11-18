@@ -75,6 +75,19 @@ uint8_t effectiveBrightness(const Settings& s, bool timeKnown, uint32_t secondOf
   return s.brightness;
 }
 
+uint16_t backlightDuty(uint8_t pct) {
+  if (pct == 0) return 0;
+  if (pct > 100) pct = 100;
+  const uint32_t duty = (static_cast<uint32_t>(pct) * pct * kBacklightPwmRange + 5000) / 10000;
+  return duty == 0 ? 1 : static_cast<uint16_t>(duty);
+}
+
+void BacklightPreview::set(uint8_t pct, uint32_t nowMs) {
+  pct_ = pct > 100 ? 100 : pct;
+  lastMs_ = nowMs;
+  set_ = true;
+}
+
 bool applyNight(Settings& s, const std::string& start, const std::string& end,
                 const std::string& brightness, std::string* error) {
   const int a = parseHhMm(start.c_str());

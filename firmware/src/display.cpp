@@ -1,12 +1,12 @@
 #include "display.h"
 
+#include "night.h"
 #include "poll_timing.h"
 #include "settings.h"
 #include "tjpgd.h"
 
 namespace {
 constexpr uint8_t kBacklightPin = 5;
-constexpr int kPwmRange = 100;
 constexpr int kHeight = 240;
 
 TFT_eSPI tft;
@@ -61,14 +61,14 @@ int jpegOutput(JDEC*, void* bitmap, JRECT* rect) {
 TFT_eSPI& displayTft() { return tft; }
 
 void displaySetBacklight(uint8_t pct) {
-  // Backlight is active-low: duty = max - percentage.
-  analogWrite(kBacklightPin, kPwmRange - (pct > 100 ? 100 : pct));
+  // Backlight is active-low: write the off-time of the perceptual on-time.
+  analogWrite(kBacklightPin, gb::kBacklightPwmRange - gb::backlightDuty(pct));
 }
 
 void displaySetBrightness(uint8_t pct) { displaySetBacklight(gb::clampBrightness(pct)); }
 
 void displayBegin(uint8_t brightnessPct) {
-  analogWriteRange(kPwmRange);
+  analogWriteRange(gb::kBacklightPwmRange);
   displaySetBacklight(0);  // keep dark until the controller is initialised
   tft.init();
   tft.invertDisplay(true);
