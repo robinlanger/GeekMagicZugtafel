@@ -670,6 +670,21 @@ void test_effective_brightness() {
   TEST_ASSERT_EQUAL_UINT8(60, effectiveBrightness(off, true, 23 * 3600));
 }
 
+void test_backlight_duty_is_perceptual() {
+  TEST_ASSERT_EQUAL_UINT16(0, backlightDuty(0));  // 0 % stays fully off
+  TEST_ASSERT_EQUAL_UINT16(kBacklightPwmRange, backlightDuty(100));
+  TEST_ASSERT_EQUAL_UINT16(kBacklightPwmRange, backlightDuty(250));  // clamped
+  TEST_ASSERT_EQUAL_UINT16(1, backlightDuty(1));  // never off unless 0 %
+  // Quadratic curve: low settings are clearly darker than a linear duty would be.
+  TEST_ASSERT_EQUAL_UINT16(3, backlightDuty(5));
+  TEST_ASSERT_EQUAL_UINT16(40, backlightDuty(20));
+  TEST_ASSERT_EQUAL_UINT16(250, backlightDuty(50));
+  for (int p = 1; p <= 100; p++) {
+    TEST_ASSERT_TRUE(backlightDuty(static_cast<uint8_t>(p)) >=
+                     backlightDuty(static_cast<uint8_t>(p - 1)));
+  }
+}
+
 void test_apply_night() {
   Settings s;
   std::string err;
@@ -774,6 +789,7 @@ int main() {
   RUN_TEST(test_night_window);
   RUN_TEST(test_local_clock);
   RUN_TEST(test_effective_brightness);
+  RUN_TEST(test_backlight_duty_is_perceptual);
   RUN_TEST(test_apply_night);
   RUN_TEST(test_settings_night_roundtrip_and_old_file);
   return UNITY_END();

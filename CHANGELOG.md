@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Brightness settings now visibly dim the display. The backlight used a linear duty, so
+  20 % looked about half as bright as 100 % and 5 % was only slightly darker. It now follows
+  a quadratic curve with a finer PWM range (0 % is still off).
+
 ## [0.4.0]
 
 ### Added

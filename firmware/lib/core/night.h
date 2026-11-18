@@ -35,6 +35,13 @@ bool nightActive(uint16_t start, uint16_t end, uint16_t minuteOfDay);
 // Backlight percentage to apply now: night brightness inside the window (time known), else day.
 uint8_t effectiveBrightness(const Settings& s, bool timeKnown, uint32_t secondOfDay);
 
+// PWM range used for the backlight (analogWriteRange): fine enough for the dark end.
+constexpr uint16_t kBacklightPwmRange = 1000;
+// Backlight percentage -> PWM on-time out of kBacklightPwmRange. Quadratic, because the eye
+// sees a linear duty as barely dimming (20 % duty looks about half as bright). 0 stays off,
+// any other value is at least 1 so the backlight never goes out by rounding.
+uint16_t backlightDuty(uint8_t pct);
+
 // Validate the web form values ("HH:MM", "HH:MM", "0".."100") into s. On failure *error is
 // "bad_time" or "bad_night_brightness" and s is unchanged.
 bool applyNight(Settings& s, const std::string& start, const std::string& end,
