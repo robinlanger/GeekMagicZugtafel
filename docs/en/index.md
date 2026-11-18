@@ -9,11 +9,11 @@ kicker: Open source · no soldering
 title_line1: Your display.
 title_line2: Your pages.
 lead: Glance Box turns the ~15 € SmallTV Ultra into a Wi-Fi display for anything you can write as HTML. Departures, weather, your home server, your AI limits.
-cta_primary: Get started in 15 minutes
+cta_primary: Get started
 cta_secondary: View on GitHub
 hero_alt: Glance Box on the GeekMagic SmallTV Ultra showing live departures, next to an earbuds case for size
-steps_title: Three steps to your first picture.
-steps_sub: No cable, no soldering, no cloud.
+steps_title: From the box to your first picture.
+steps_sub: No soldering, no serial adapter, no cloud. About half an hour.
 steps:
   - title: Get the device
     text: A GeekMagic SmallTV Ultra, about 15 €.

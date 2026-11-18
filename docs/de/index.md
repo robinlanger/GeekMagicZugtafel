@@ -9,11 +9,11 @@ kicker: Open Source · ohne Löten
 title_line1: Dein Display.
 title_line2: Deine Seiten.
 lead: Glance Box macht aus dem SmallTV Ultra für etwa 15 € ein WLAN-Display für alles, was sich als HTML schreiben lässt. Abfahrten, Wetter, dein Homeserver, deine KI-Limits.
-cta_primary: In 15 Minuten loslegen
+cta_primary: Jetzt loslegen
 cta_secondary: Auf GitHub ansehen
 hero_alt: Glance Box auf dem GeekMagic SmallTV Ultra mit Live-Abfahrten, daneben ein Kopfhörer-Etui zum Größenvergleich
-steps_title: In drei Schritten zum ersten Bild.
-steps_sub: Kein Kabel, kein Löten, keine Cloud.
+steps_title: Vom Karton zum ersten Bild.
+steps_sub: Kein Löten, kein Seriell-Adapter, keine Cloud. Etwa eine halbe Stunde.
 steps:
   - title: Gerät besorgen
     text: Ein GeekMagic SmallTV Ultra, etwa 15 €.

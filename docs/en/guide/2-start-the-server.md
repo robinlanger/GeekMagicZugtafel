@@ -16,7 +16,17 @@ The server renders your pages and sends them to the display as pictures. It runs
     mkdir pages-custom
     ```
 
-2. Open `config.yaml` in an editor. The example shows departures for a station. Change `station:` to yours, or delete the `bahn` block and uncomment another page, for example the `clock` or the `weather`. You can change this any time later.
+2. Open `config.yaml` in an editor and adjust the pages under `pages:`:
+
+    - The `bahn` page shows departures for an example station. Change `station:` to yours, or delete the block.
+    - The `url` page at the end points to an example address. Delete it or change `url:` to a page of your own.
+    - For a first test, a clock is the simplest page. Add it under `pages:`:
+
+        ```yaml
+          - type: clock
+        ```
+
+    You can change all of this later. More pages: the [template catalog](../templates/README.md).
 
 ## Start it
 

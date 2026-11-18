@@ -3,7 +3,7 @@
 
 Checks README.md <-> README.de.md and docs/en/** <-> docs/de/** (recursively, by relative path): both sides must exist and have
 the same heading level sequence (headings inside fenced code blocks are ignored) and the same
-top-level front-matter keys.
+front-matter shape (keys and list items, values ignored).
 """
 import re
 import sys
@@ -31,16 +31,23 @@ def levels(path: Path) -> list[int]:
 
 
 def front_matter_keys(path: Path) -> list[str]:
-    """Top-level keys of a leading YAML front matter block (between --- lines), in order."""
+    """Shape of a leading YAML front matter block (between --- lines): every key and list item
+    with its indent, values left out. Two languages must have the same shape, so a missing list
+    entry or a renamed nested key is caught, while translated values may differ."""
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0].strip() != "---":
         return []
-    keys: list[str] = []
+    shape: list[str] = []
     for line in lines[1:]:
         if line.strip() == "---":
-            return keys
-        if m := FM_KEY.match(line):
-            keys.append(m.group(1))
+            return shape
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+        item = stripped.startswith("- ") or stripped == "-"
+        rest = stripped[2:] if item else stripped
+        m = FM_KEY.match(rest)
+        if item or m:
+            shape.append(f"{indent}:{'- ' if item else ''}{m.group(1) if m else ''}")
     return []  # unterminated: not front matter
 
 

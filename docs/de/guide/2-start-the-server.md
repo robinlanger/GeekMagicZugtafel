@@ -16,7 +16,17 @@ Der Server rendert deine Seiten und schickt sie als Bilder an das Display. Er l�
     mkdir pages-custom
     ```
 
-2. Öffne `config.yaml` in einem Editor. Das Beispiel zeigt Abfahrten an einem Bahnhof. Trag bei `station:` deinen ein, oder lösch den Block `bahn` und nimm eine andere Seite hinein, zum Beispiel `clock` oder `weather`. Das kannst du jederzeit ändern.
+2. Öffne `config.yaml` in einem Editor und pass die Seiten unter `pages:` an:
+
+    - Die Seite `bahn` zeigt Abfahrten an einem Beispiel-Bahnhof. Trag bei `station:` deinen ein, oder lösch den Block.
+    - Die Seite `url` am Ende zeigt auf eine Beispiel-Adresse. Lösch sie oder trag bei `url:` eine eigene Seite ein.
+    - Für einen ersten Test ist eine Uhr die einfachste Seite. Füg sie unter `pages:` hinzu:
+
+        ```yaml
+          - type: clock
+        ```
+
+    Das kannst du alles später ändern. Weitere Seiten: der [Vorlagen-Katalog](../templates/README.md).
 
 ## Starten
 

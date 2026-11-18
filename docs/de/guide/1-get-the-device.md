@@ -16,7 +16,7 @@ Glance Box l채uft auf genau einem Display. Pr체f diese drei Dinge, bevor du anf�
 
 ## Was du sonst brauchst
 
-1. **Einen Rechner, der immer in deinem Heimnetz l채uft**, f체r den Server: Homeserver, NAS, Raspberry Pi 4/5 oder PC. Darauf brauchst du [Docker](https://docs.docker.com/get-docker/) mit Docker Compose.
+1. **Einen Rechner, der immer in deinem Heimnetz l채uft**, f체r den Server: Homeserver, NAS oder PC (ein Raspberry Pi 4/5 sollte auch gehen, ist aber noch nicht getestet). Darauf brauchst du [Docker](https://docs.docker.com/get-docker/) mit Docker Compose.
 2. **Ein WLAN mit 2,4 GHz.** 5 GHz kann das Display nicht.
 3. **Einen Browser** auf Handy oder Rechner im selben Netz.
 

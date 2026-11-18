@@ -16,7 +16,7 @@ Glance Box runs on one specific display. Check these three things before you sta
 
 ## What else you need
 
-1. **A computer that is always on in your home network** for the server: a home server, a NAS, a Raspberry Pi 4/5 or a PC. It needs [Docker](https://docs.docker.com/get-docker/) with Docker Compose.
+1. **A computer that is always on in your home network** for the server: a home server, a NAS or a PC (a Raspberry Pi 4/5 should work too, but is not tested yet). It needs [Docker](https://docs.docker.com/get-docker/) with Docker Compose.
 2. **A 2.4 GHz Wi-Fi network.** The display cannot use 5 GHz.
 3. **A browser** on a phone or computer in the same network.
 

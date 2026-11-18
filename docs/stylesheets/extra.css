@@ -95,7 +95,7 @@ body { -webkit-font-smoothing: antialiased; }
 .gb-title { font-size: 3.6rem; line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; margin: 0.4rem 0 0.8rem; color: var(--gb-text); }
 .gb-lead { color: var(--gb-muted); font-size: 1.15rem; line-height: 1.4; max-width: 34rem; margin: 0 auto 1.4rem !important; }
 .gb-cta { display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 2.4rem; }
-.gb-btn { background: var(--gb-accent); color: #fff !important; border-radius: 980px; padding: 0.55rem 1.2rem; font-weight: 500; font-size: 0.85rem; transition: filter 0.2s; }
+.gb-btn { background: #0071e3; /* fixed: white text keeps >= 4.5:1 in dark mode too */ color: #fff !important; border-radius: 980px; padding: 0.55rem 1.2rem; font-weight: 500; font-size: 0.85rem; transition: filter 0.2s; }
 .gb-btn:hover { filter: brightness(1.1); }
 .gb-link { font-size: 0.85rem; }
 .gb-hero-img { display: block; width: 100%; max-width: 880px; height: auto; margin: 0 auto; border-radius: 24px; }

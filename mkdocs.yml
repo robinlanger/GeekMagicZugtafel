@@ -51,6 +51,7 @@ extra_css:
 
 hooks:
   - overrides/hooks/version.py
+  - overrides/hooks/alerts.py
 
 markdown_extensions:
   - admonition
