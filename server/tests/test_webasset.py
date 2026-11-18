@@ -3,7 +3,11 @@ import importlib.util
 import re
 from pathlib import Path
 
+import pytest
+
 _PATH = Path(__file__).resolve().parents[2] / "tools" / "webasset.py"
+if not _PATH.exists():  # the server Docker image ships tests but not tools/
+    pytest.skip("tools/webasset.py not in this tree", allow_module_level=True)
 _spec = importlib.util.spec_from_file_location("webasset", _PATH)
 webasset = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(webasset)
