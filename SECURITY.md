@@ -19,6 +19,6 @@ Glance Box is built for a home network. These are design decisions, not vulnerab
 - The **server has no login**. Its preview page and frame API are open to everyone who can reach the port. Keep it inside your home network and do not forward the port to the internet.
 - The **display talks plain HTTP**. Firmware updates and settings changes are protected by the update password (HTTP Basic auth, user `admin`), but the password is not encrypted on the network. `/status` is readable without a password.
 - The setup portal (`GlanceBox-XXXX`) is an open Wi-Fi network while it runs. It only opens when no Wi-Fi is configured or the saved network is unreachable, and changing an existing setup there needs the current update password.
-- Tokens for pages (Home Assistant, Uptime Kuma, AI providers) belong in `.env`, not in `config.yaml`.
+- Tokens for pages (Home Assistant, AI providers) belong in `.env`, not in `config.yaml`.
 
 Reports that show a way around these protections, for example installing firmware without the update password, reading tokens from the server, or code execution through a page or a pushed value, are very welcome.
