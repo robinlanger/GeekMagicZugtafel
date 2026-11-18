@@ -42,4 +42,11 @@ bool originAllowed(const std::string& origin, const std::string& host) {
   return true;
 }
 
+WifiQuality wifiQuality(int rssiDbm) {
+  if (rssiDbm >= -60) return WifiQuality::Excellent;
+  if (rssiDbm >= -70) return WifiQuality::Good;
+  if (rssiDbm >= -80) return WifiQuality::Fair;
+  return WifiQuality::Weak;
+}
+
 }  // namespace gb

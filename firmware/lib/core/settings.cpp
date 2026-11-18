@@ -1,5 +1,7 @@
 #include "settings.h"
 
+#include "night.h"
+
 #include <cctype>
 #include <cstdio>
 #include <cstring>
@@ -203,6 +205,56 @@ bool applyPassword(Settings& s, const std::string& pw, std::string* error) {
     }
   }
   copyField(s.updatePassword, pw);
+  return true;
+}
+
+namespace {
+bool fail(std::string* field, const char* name, std::string* error, const std::string& code) {
+  if (field) *field = name;
+  if (error) *error = code;
+  return false;
+}
+
+// "5".."100", digits only.
+bool parseDayBrightness(const std::string& v, uint8_t* out) {
+  if (v.empty() || v.size() > 3) return false;
+  int pct = 0;
+  for (char c : v) {
+    if (c < '0' || c > '9') return false;
+    pct = pct * 10 + (c - '0');
+  }
+  if (pct < 5 || pct > 100) return false;
+  *out = static_cast<uint8_t>(pct);
+  return true;
+}
+}  // namespace
+
+bool applySettingsPatch(Settings& s, const SettingsPatch& p, std::string* field,
+                        std::string* error) {
+  Settings next = s;
+  std::string code;
+  if (p.serverUrl && !applyServerUrl(next, *p.serverUrl, &code)) {
+    return fail(field, "server_url", error, code);
+  }
+  if (p.password && !applyPassword(next, *p.password, &code)) {
+    return fail(field, "password", error, code);
+  }
+  if (p.brightness && !parseDayBrightness(*p.brightness, &next.brightness)) {
+    return fail(field, "brightness", error, "bad_brightness");
+  }
+  if (p.nightStart || p.nightEnd || p.nightBrightness) {
+    const std::string start = p.nightStart ? *p.nightStart : formatHhMm(next.nightStart);
+    const std::string end = p.nightEnd ? *p.nightEnd : formatHhMm(next.nightEnd);
+    const std::string br =
+        p.nightBrightness ? *p.nightBrightness : std::to_string(next.nightBrightness);
+    if (!applyNight(next, start, end, br, &code)) {
+      const char* name = code == "bad_night_brightness" ? "night_brightness"
+                         : parseHhMm(start.c_str()) < 0 ? "night_start"
+                                                        : "night_end";
+      return fail(field, name, error, code);
+    }
+  }
+  s = next;
   return true;
 }
 

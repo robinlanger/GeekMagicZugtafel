@@ -11,4 +11,8 @@ std::string htmlEscape(const std::string& in);
 // allowed; otherwise it must be exactly "http://<Host>" (case-insensitive).
 bool originAllowed(const std::string& origin, const std::string& host);
 
+// Wi-Fi signal in words: >= -60 dBm excellent, >= -70 good, >= -80 fair, else weak.
+enum class WifiQuality : unsigned char { Excellent, Good, Fair, Weak };
+WifiQuality wifiQuality(int rssiDbm);
+
 }  // namespace gb

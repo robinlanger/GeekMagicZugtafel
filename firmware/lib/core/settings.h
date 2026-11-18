@@ -32,6 +32,16 @@ bool applyServerUrl(Settings& s, const std::string& raw, std::string* error);
 // Store the update password (8..32 printable ASCII chars). On failure *error is one of
 // "too_short", "too_long", "invalid_chars" and s is unchanged.
 bool applyPassword(Settings& s, const std::string& pw, std::string* error);
+// Partial update from the web page: an absent field leaves the setting unchanged.
+struct SettingsPatch {
+  std::optional<std::string> serverUrl, password, brightness, nightStart, nightEnd, nightBrightness;
+};
+// Applies all present fields to a copy; on any error s is unchanged, *field is the form name
+// ("server_url", "password", "brightness", "night_start", "night_end", "night_brightness") and
+// *error the code ("https_unsupported", "too_short", "bad_brightness", "bad_time",
+// "bad_night_brightness", ...). Brightness: digits only, 5..100.
+bool applySettingsPatch(Settings& s, const SettingsPatch& p, std::string* field, std::string* error);
+
 // True when the device can run: valid server URL and update password.
 bool settingsComplete(const Settings& s);
 

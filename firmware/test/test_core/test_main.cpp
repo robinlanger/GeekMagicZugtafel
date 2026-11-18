@@ -729,6 +729,123 @@ void test_preview_clamps() {
   TEST_ASSERT_EQUAL_UINT8(100, p.pct());
 }
 
+static Settings patchBase() {
+  Settings s;
+  std::string err;
+  applyServerUrl(s, "http://10.0.0.2:8090", &err);
+  applyPassword(s, "oldpassword", &err);
+  s.brightness = 80;
+  s.nightStart = 1320;
+  s.nightEnd = 420;
+  s.nightBrightness = 0;
+  return s;
+}
+
+void test_settings_patch_single_field() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.brightness = "30";
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT8(30, s.brightness);
+  TEST_ASSERT_EQUAL_STRING("http://10.0.0.2:8090", s.serverUrl);
+  TEST_ASSERT_EQUAL_UINT16(1320, s.nightStart);
+  TEST_ASSERT_EQUAL_STRING("oldpassword", s.updatePassword);
+}
+
+void test_settings_patch_night_start_only() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.nightStart = "21:30";
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT16(1290, s.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(420, s.nightEnd);
+  TEST_ASSERT_EQUAL_UINT8(0, s.nightBrightness);
+}
+
+void test_settings_patch_night_off() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.nightStart = "00:00";
+  p.nightEnd = "00:00";
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT16(0, s.nightStart);
+  TEST_ASSERT_EQUAL_UINT16(0, s.nightEnd);
+}
+
+void test_settings_patch_atomic_on_error() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.brightness = "40";
+  p.serverUrl = "https://x";
+  std::string field, err;
+  TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("server_url", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("https_unsupported", err.c_str());
+  TEST_ASSERT_EQUAL_UINT8(80, s.brightness);
+}
+
+void test_settings_patch_bad_brightness() {
+  for (const char* bad : {"4", "101", "5a", ""}) {
+    Settings s = patchBase();
+    SettingsPatch p;
+    p.brightness = bad;
+    std::string field, err;
+    TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+    TEST_ASSERT_EQUAL_STRING("brightness", field.c_str());
+    TEST_ASSERT_EQUAL_STRING("bad_brightness", err.c_str());
+    TEST_ASSERT_EQUAL_UINT8(80, s.brightness);
+  }
+}
+
+void test_settings_patch_night_errors_name_field() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.nightBrightness = "101";
+  std::string field, err;
+  TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("night_brightness", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("bad_night_brightness", err.c_str());
+  SettingsPatch q;
+  q.nightEnd = "25:00";
+  TEST_ASSERT_FALSE(applySettingsPatch(s, q, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("night_end", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("bad_time", err.c_str());
+}
+
+void test_settings_patch_password() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  p.password = "short";
+  std::string field, err;
+  TEST_ASSERT_FALSE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("password", field.c_str());
+  TEST_ASSERT_EQUAL_STRING("too_short", err.c_str());
+  p.password = "longenough1";
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_STRING("longenough1", s.updatePassword);
+}
+
+void test_settings_patch_empty() {
+  Settings s = patchBase();
+  SettingsPatch p;
+  std::string field, err;
+  TEST_ASSERT_TRUE(applySettingsPatch(s, p, &field, &err));
+  TEST_ASSERT_EQUAL_UINT8(80, s.brightness);
+}
+
+void test_wifi_quality() {
+  TEST_ASSERT_TRUE(wifiQuality(-50) == WifiQuality::Excellent);
+  TEST_ASSERT_TRUE(wifiQuality(-60) == WifiQuality::Excellent);
+  TEST_ASSERT_TRUE(wifiQuality(-61) == WifiQuality::Good);
+  TEST_ASSERT_TRUE(wifiQuality(-70) == WifiQuality::Good);
+  TEST_ASSERT_TRUE(wifiQuality(-71) == WifiQuality::Fair);
+  TEST_ASSERT_TRUE(wifiQuality(-80) == WifiQuality::Fair);
+  TEST_ASSERT_TRUE(wifiQuality(-81) == WifiQuality::Weak);
+}
+
 void test_apply_night() {
   Settings s;
   std::string err;
@@ -840,6 +957,15 @@ int main() {
   RUN_TEST(test_preview_millis_wraparound);
   RUN_TEST(test_preview_expires_and_saved_value_applies);
   RUN_TEST(test_preview_clamps);
+  RUN_TEST(test_settings_patch_single_field);
+  RUN_TEST(test_settings_patch_night_start_only);
+  RUN_TEST(test_settings_patch_night_off);
+  RUN_TEST(test_settings_patch_atomic_on_error);
+  RUN_TEST(test_settings_patch_bad_brightness);
+  RUN_TEST(test_settings_patch_night_errors_name_field);
+  RUN_TEST(test_settings_patch_password);
+  RUN_TEST(test_settings_patch_empty);
+  RUN_TEST(test_wifi_quality);
   RUN_TEST(test_apply_night);
   RUN_TEST(test_settings_night_roundtrip_and_old_file);
   return UNITY_END();
