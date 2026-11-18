@@ -286,13 +286,15 @@ void addTile(String& p, const __FlashStringHelper* label, const char* id, const 
 // Shared by normal mode and safe mode: one form, one OTA code path (POST /update).
 // md5 must precede the file input: fields are sent in document order.
 void appendUpdateForm(String& b, Lang l) {
+  // The file label is shown first via CSS (.file{order:-1}); in the DOM md5 stays first.
   b += F("<form id=update-form class=stack method=post action=/update "
          "enctype=multipart/form-data><label>");
-  b += tr(l, Msg::FirmwareFile);
-  b += F("<input type=file name=firmware accept='.bin' required></label><label>");
   b += tr(l, Msg::Md5Label);
   b += F("<input name=md5 required pattern='[0-9a-fA-F]{32}' autocomplete=off spellcheck=false>"
-         "</label><progress id=up-progress max=100 value=0 hidden></progress><span class=msg>"
+         "</label><label class=file>");
+  b += tr(l, Msg::FirmwareFile);
+  b += F("<input type=file name=firmware accept='.bin' required></label>"
+         "<progress id=up-progress max=100 value=0 hidden></progress><span class=msg>"
          "</span><button class=btn>");
   b += tr(l, Msg::Upload);
   b += F("</button></form>");
