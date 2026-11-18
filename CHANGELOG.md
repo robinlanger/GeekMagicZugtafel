@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Project website at https://robinlanger.github.io/glancebox/ (English) and `/de/` (German):
+  a landing page and a guided five-step setup, built from `docs/` with MkDocs Material and
+  published by `.github/workflows/pages.yml`. It loads nothing from other hosts.
+- The docs parity check also compares front-matter keys between English and German.
+
 ## [0.5.0]
 
 Firmware update for the display; the server is unchanged (no need to update the Docker image).

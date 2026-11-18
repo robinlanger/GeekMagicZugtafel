@@ -84,3 +84,49 @@ def test_nested_heading_mismatch_fails(tmp_path):
         d.mkdir()
         (d / "x.md").write_text(text)
     assert run(tmp_path).returncode == 1
+
+
+FM_EN = "---\ntemplate: home.html\nhero_title: Your display\nlead: x\n---\n# A\n"
+
+
+def test_front_matter_keys_must_match(tmp_path):
+    de = "---\ntemplate: home.html\nhero_title: Dein Display\n---\n# A\n"
+    make(tmp_path, {"index.md": FM_EN}, {"index.md": de})
+    r = run(tmp_path)
+    assert r.returncode == 1
+    assert "front matter keys differ" in r.stdout + r.stderr
+
+
+def test_front_matter_same_keys_pass(tmp_path):
+    de = "---\ntemplate: home.html\nhero_title: Dein Display\nlead: y\n---\n# A\n"
+    make(tmp_path, {"index.md": FM_EN}, {"index.md": de})
+    assert run(tmp_path).returncode == 0
+
+
+def test_front_matter_keys_ignores_body(tmp_path):
+    de = "---\ntemplate: home.html\nhero_title: Dein Display\nlead: y\n---\n# A\nextra: not a key\n"
+    make(tmp_path, {"index.md": FM_EN}, {"index.md": de})
+    assert run(tmp_path).returncode == 0
+
+
+FM_LIST = "---\nsteps:\n  - title: A\n    href: a/\n  - title: B\n    href: b/\n---\n# A\n"
+
+
+def test_front_matter_extra_list_entry_fails(tmp_path):
+    de = "---\nsteps:\n  - title: A\n    href: a/\n---\n# A\n"
+    make(tmp_path, {"index.md": FM_LIST}, {"index.md": de})
+    r = run(tmp_path)
+    assert r.returncode == 1
+    assert "front matter keys differ" in r.stdout + r.stderr
+
+
+def test_front_matter_renamed_nested_key_fails(tmp_path):
+    de = FM_LIST.replace("    href: b/", "    link: b/")
+    make(tmp_path, {"index.md": FM_LIST}, {"index.md": de})
+    assert run(tmp_path).returncode == 1
+
+
+def test_front_matter_nested_values_may_differ(tmp_path):
+    de = FM_LIST.replace("title: A", "title: Ä").replace("title: B", "title: Ö")
+    make(tmp_path, {"index.md": FM_LIST}, {"index.md": de})
+    assert run(tmp_path).returncode == 0

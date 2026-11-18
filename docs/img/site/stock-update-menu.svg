@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 250" role="img" aria-label="Sketch: firmware update section with a file chooser and an upload button">
+  <style>
+    text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;fill:#1d1d1f}
+    .m{fill:#6e6e73}
+  </style>
+  <rect x="1" y="1" width="518" height="248" rx="16" fill="#fff" stroke="#d2d2d7" stroke-width="1.5"/>
+  <rect x="1" y="1" width="518" height="36" rx="16" fill="#f5f5f7"/>
+  <rect x="1" y="21" width="518" height="16" fill="#f5f5f7"/>
+  <line x1="1" y1="37" x2="519" y2="37" stroke="#d2d2d7" stroke-width="1.5"/>
+  <circle cx="22" cy="19" r="5" fill="#d2d2d7"/><circle cx="38" cy="19" r="5" fill="#d2d2d7"/><circle cx="54" cy="19" r="5" fill="#d2d2d7"/>
+  <rect x="90" y="10" width="340" height="18" rx="9" fill="#fff" stroke="#e5e5ea"/>
+  <text x="260" y="23" text-anchor="middle" font-size="11" class="m">http://&lt;display-ip&gt;/</text>
+  <text x="32" y="74" font-size="13" class="m">6. …</text>
+  <text x="32" y="108" font-size="17" font-weight="600">7. Firmware update</text>
+  <rect x="32" y="126" width="300" height="38" rx="10" fill="#f5f5f7" stroke="#d2d2d7"/>
+  <rect x="40" y="133" width="96" height="24" rx="7" fill="#fff" stroke="#d2d2d7"/>
+  <text x="88" y="149" text-anchor="middle" font-size="12">Choose file</text>
+  <text x="148" y="149" font-size="12" class="m">glancebox-ultra-….bin</text>
+  <rect x="348" y="126" width="120" height="38" rx="19" fill="#0071e3"/>
+  <text x="408" y="150" text-anchor="middle" font-size="14" font-weight="600" fill="#fff" style="fill:#fff">UPLOAD</text>
+  <text x="32" y="204" font-size="13" class="m">8. …</text>
+  <path d="M408 182 v-12" stroke="#0071e3" stroke-width="2" fill="none"/>
+  <path d="M403 175 l5 -6 l5 6" stroke="#0071e3" stroke-width="2" fill="none"/>
+  <text x="408" y="200" text-anchor="middle" font-size="12" fill="#0071e3" style="fill:#0071e3">then wait ~1 min</text>
+</svg>

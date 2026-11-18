@@ -6,6 +6,8 @@
 [![CI](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/robinlanger/glancebox/actions/workflows/ci.yml)
 [![Lizenz: MIT](https://img.shields.io/github/license/robinlanger/glancebox)](LICENSE)
 
+**Website mit Schritt-für-Schritt-Anleitung: [robinlanger.github.io/glancebox/de](https://robinlanger.github.io/glancebox/de/)**
+
 ![Glance Box auf dem GeekMagic SmallTV Ultra mit Live-Abfahrten, daneben ein Kopfhörer-Etui als Größenvergleich](docs/img/hero.jpg)
 
 **Glance Box macht aus dem GeekMagic SmallTV Ultra für ca. 15 € ein WLAN-Display mit 240x240 Pixeln für alles, was du als HTML schreiben kannst:** eine Open-Source-Firmware für das Display und ein kleiner Docker-Server, der deine Seiten rendert und als Bilder ans Display schickt. Abfahrten, eine Uhr, das Wetter, den Zustand deines Heimservers, wie viel von deinem KI-Abo noch übrig ist, Live-Werte aus deinem Home Assistant, von der Solarleistung bis zum offenen Fenster, alles, was auf 240x240 Pixel passt.

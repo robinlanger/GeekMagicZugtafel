@@ -1,0 +1,9 @@
+{#- Plain GitHub link. Material's default source widget fetches stars and version from
+    api.github.com in the visitor's browser; the site must not call other hosts. -#}
+<a href="{{ config.repo_url }}" title="GitHub" class="md-source gb-source" rel="noopener">
+  <div class="md-source__icon md-icon">
+    {% set icon = config.theme.icon.repo or "fontawesome/brands/git-alt" %}
+    {% include ".icons/" ~ icon ~ ".svg" %}
+  </div>
+  <div class="md-source__repository">GitHub</div>
+</a>

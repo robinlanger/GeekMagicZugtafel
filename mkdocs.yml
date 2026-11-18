@@ -1,0 +1,127 @@
+# Project site, published to GitHub Pages by .github/workflows/pages.yml.
+# Local preview: pip install -r requirements-docs.txt && mkdocs serve
+site_name: Glance Box
+site_url: https://robinlanger.github.io/glancebox/
+site_description: Open-source firmware and server that turn the GeekMagic SmallTV Ultra into a Wi-Fi display for any HTML page.
+repo_url: https://github.com/robinlanger/glancebox
+edit_uri: ""
+docs_dir: docs
+copyright: MIT License
+
+validation:
+  anchors: warn          # a broken #anchor fails `mkdocs build --strict`
+
+exclude_docs: |
+  superpowers/
+  RELEASING.md
+  vorschau.png
+
+theme:
+  name: material
+  custom_dir: overrides
+  font: false            # no Google Fonts: the site loads nothing from other hosts
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.tabs
+    - navigation.footer
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - search.highlight
+
+extra_css:
+  - stylesheets/extra.css
+
+hooks:
+  - overrides/hooks/version.py
+  - overrides/hooks/alerts.py
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      # GitHub-style anchors (umlauts kept, "&" -> "--"), so links work on GitHub and here.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: de
+          name: Deutsch
+          build: true
+          nav_translations:
+            Home: Start
+            Guide: Anleitung
+            "1 · Get the device": "1 · Gerät besorgen"
+            "2 · Start the server": "2 · Server starten"
+            "3 · Flash the firmware": "3 · Firmware flashen"
+            "4 · Set up Wi-Fi": "4 · WLAN einrichten"
+            "5 · Choose your pages": "5 · Seiten auswählen"
+            After setup: Danach
+            Device page & night mode: Geräteseite & Nachtmodus
+            Updating: Updates
+            Configuration: Konfiguration
+            Templates: Vorlagen
+            Overview: Übersicht
+            Your own pages: Eigene Seiten
+            Help: Hilfe
+            Recovery: Notfall & Wiederherstellung
+            Flashing details & backup: Flash-Details & Backup
+
+nav:
+  - Home: index.md
+  - Guide:
+      - "1 · Get the device": guide/1-get-the-device.md
+      - "2 · Start the server": guide/2-start-the-server.md
+      - "3 · Flash the firmware": guide/3-flash-the-firmware.md
+      - "4 · Set up Wi-Fi": guide/4-set-up-wifi.md
+      - "5 · Choose your pages": guide/5-choose-pages.md
+      - After setup:
+          - Device page & night mode: setup.md
+          - Updating: updating.md
+          - Configuration: configuration.md
+  - Templates:
+      - Overview: templates/README.md
+      - bahn: templates/bahn.md
+      - clock: templates/clock.md
+      - weather: templates/weather.md
+      - kuma: templates/kuma.md
+      - homeassistant: templates/homeassistant.md
+      - ai: templates/ai.md
+  - Your own pages: writing-pages.md
+  - Help:
+      - Recovery: recovery.md
+      - Flashing details & backup: flashing.md

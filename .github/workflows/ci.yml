@@ -85,7 +85,7 @@ jobs:
 
   docs:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: actions/setup-python@v5.6.0
@@ -93,3 +93,7 @@ jobs:
           python-version: "3.12"
       - name: EN/DE parity
         run: python3 tools/check_docs_parity.py
+      - name: Project site builds (strict)
+        run: |
+          pip install -r requirements-docs.txt
+          NO_MKDOCS_2_WARNING=1 mkdocs build --strict
