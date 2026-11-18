@@ -223,7 +223,7 @@ timezone: Europe/Berlin
 pages:
   - type: bahn
     station: "Frankfurt(Main)Hbf"
-    via: [Darmstadt]
+    via: [Wiesbaden, Mainz]
     platforms: ["1", "2"]
     limit: 4
     title: Heimweg

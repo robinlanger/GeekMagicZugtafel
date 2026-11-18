@@ -8,7 +8,7 @@ custom_pages_dir: /config/pages   # your own pages (<type>/page.py + template.ht
 pages:
   - type: bahn
     station: "Frankfurt(Main)Hbf"
-    via: [Darmstadt]
+    via: [Wiesbaden, Mainz]
     platforms: ["1", "2"]
     limit: 4
     title: Heimweg
