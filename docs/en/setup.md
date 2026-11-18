@@ -4,7 +4,7 @@ After the first flash (or after a factory reset) the display opens a Wi-Fi setup
 
 ## What you need first
 
-- The Glance Box server running and reachable from your home network, see the [README](../../README.md#quickstart). Note its address, for example `http://192.168.1.20:8080`. If port 8080 is already taken (for example by Pi-hole), create a `.env` file next to `docker-compose.yml` containing `GLANCEBOX_PORT=8090` and restart. The address is then `…:8090`. Give the server a fixed IP address (or a fixed name) in your router, otherwise the display loses it after a router restart.
+- The Glance Box server running and reachable from your home network, see [Start the server](guide/4-start-the-server.md). Note its address, for example `http://192.168.1.20:8080`. If port 8080 is already taken (for example by Pi-hole), create a `.env` file next to `docker-compose.yml` containing `GLANCEBOX_PORT=8090` and restart. The address is then `…:8090`. Give the server a fixed IP address (or a fixed name) in your router, otherwise the display loses it after a router restart.
 - Your 2.4 GHz Wi-Fi name and password.
 - A password you choose for updates (at least 8 characters, 32 at most, printable ASCII only, no umlauts).
 
