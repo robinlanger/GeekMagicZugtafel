@@ -576,6 +576,67 @@ void handleSettings() {
   server.send(303);
 }
 
+// ---- JSON API for the live controls (normal mode only) ----
+
+void sendJson(int code, const String& body) {
+  server.sendHeader(F("Cache-Control"), F("no-store"));
+  server.send(code, F("application/json"), body);
+}
+
+void handlePreview() {
+  if (!webUiAuthorize()) return;
+  const String v = server.arg(F("pct"));
+  char* end = nullptr;
+  const long pct = strtol(v.c_str(), &end, 10);
+  if (v.length() == 0 || v.length() > 3 || *end != '\0' || pct < 0 || pct > 100) {
+    return sendJson(400, F("{\"ok\":false,\"error\":\"bad pct\"}"));
+  }
+  if (status.previewBrightness) status.previewBrightness(static_cast<uint8_t>(pct));
+  sendJson(200, F("{\"ok\":true}"));
+}
+
+Msg msgForPatchError(const std::string& field, const std::string& code) {
+  if (code == "bad_brightness") return Msg::ErrBrightness;
+  if (code == "bad_time") return Msg::ErrNightTime;
+  if (code == "bad_night_brightness") return Msg::ErrNightBrightness;
+  return msgForError(code, field == "password");
+}
+
+void patchArg(std::optional<std::string>& slot, const __FlashStringHelper* name) {
+  if (server.hasArg(name)) slot = std::string(server.arg(name).c_str());
+}
+
+void handleApiSettings() {
+  if (!webUiAuthorize()) return;
+  const Lang l = requestLang();
+  gb::SettingsPatch p;
+  patchArg(p.serverUrl, F("server_url"));
+  patchArg(p.password, F("password"));
+  patchArg(p.brightness, F("brightness"));
+  patchArg(p.nightStart, F("night_start"));
+  patchArg(p.nightEnd, F("night_end"));
+  patchArg(p.nightBrightness, F("night_brightness"));
+  gb::Settings next = *settings;
+  std::string field, err;
+  if (!gb::applySettingsPatch(next, p, &field, &err)) {
+    String j = F("{\"ok\":false,\"field\":\"");
+    j += field.c_str();
+    j += F("\",\"error\":\"");
+    j += tr(l, msgForPatchError(field, err));  // own constants: no quotes or backslashes
+    j += F("\"}");
+    return sendJson(400, j);
+  }
+  if (!settingsSave(next)) {
+    String j = F("{\"ok\":false,\"error\":\"");
+    j += tr(l, Msg::ErrSaveFailed);
+    j += F("\"}");
+    return sendJson(500, j);
+  }
+  *settings = next;
+  if (status.settingsChanged) status.settingsChanged();
+  sendJson(200, F("{\"ok\":true}"));
+}
+
 void handleReset() {
   if (!webUiAuthorize()) return;
   const Lang l = requestLang();
@@ -625,6 +686,8 @@ void webUiBegin(gb::Settings& s, const StatusProvider& st) {
   });
   server.on("/settings", HTTP_POST, handleSettings);
   server.on("/reset", HTTP_POST, handleReset);
+  server.on("/api/brightness-preview", HTTP_POST, handlePreview);
+  server.on("/api/settings", HTTP_POST, handleApiSettings);
   start();
 }
 

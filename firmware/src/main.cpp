@@ -32,6 +32,7 @@ uint32_t nextPollMs = 0;
 gb::LocalClock localClock;      // synced from X-Local-Time, carried on with millis()
 int lastBacklight = -1;         // last applied backlight %, -1 = not yet applied by the loop
 uint32_t lastBacklightCheckMs = 0;
+gb::BacklightPreview preview;   // live slider value from the web page, never saved
 
 void formatIp(char* buf, size_t cap) {
   const IPAddress ip = WiFi.localIP();
@@ -83,11 +84,15 @@ void pollFrame() {
 }
 
 // Night mode: apply the effective backlight at most once per second, only on change.
+// A live preview from the web page wins (checked every loop) until it expires.
 void updateBacklight(uint32_t now) {
-  if (lastBacklight >= 0 && now - lastBacklightCheckMs < 1000) return;
+  const bool previewing = preview.active(now);
+  if (!previewing && lastBacklight >= 0 && now - lastBacklightCheckMs < 1000) return;
   lastBacklightCheckMs = now;
-  const uint8_t pct = gb::effectiveBrightness(settings, localClock.known(),
-                                              localClock.known() ? localClock.secondOfDay(now) : 0);
+  const uint8_t pct =
+      previewing ? preview.pct()
+                 : gb::effectiveBrightness(settings, localClock.known(),
+                                           localClock.known() ? localClock.secondOfDay(now) : 0);
   if (pct == lastBacklight) return;
   displaySetBacklight(pct);
   lastBacklight = pct;
@@ -129,6 +134,11 @@ void setup() {
     return localClock.known() &&
            gb::nightActive(settings.nightStart, settings.nightEnd,
                            static_cast<uint16_t>(localClock.secondOfDay(millis()) / 60));
+  };
+  st.previewBrightness = [](uint8_t pct) { preview.set(pct, millis()); };
+  st.settingsChanged = []() {
+    preview.clear();
+    lastBacklight = -1;  // re-apply the saved brightness on the next loop
   };
   webUiBegin(settings, st);
 

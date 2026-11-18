@@ -18,9 +18,15 @@ struct StatusProvider {
   uint8_t (*bootFailed)() = nullptr;
   int32_t (*localMinute)() = nullptr;  // < 0 or unset: time unknown (reported as null)
   bool (*night)() = nullptr;           // unset: false (safe mode)
+  // Normal mode hooks for the live controls (POST /api/...):
+  void (*previewBrightness)(uint8_t pct) = nullptr;  // show pct now, do not save
+  void (*settingsChanged)() = nullptr;               // settings were saved: re-apply backlight
 };
 
-// Normal mode: GET /, GET /update (redirect to the form), POST /settings, /restart, /reset, GET /status, POST /update.
+// Normal mode: GET /, GET /update (redirect to the form), POST /settings, /restart, /reset,
+// GET /status, POST /update, POST /api/brightness-preview (pct) and POST /api/settings (any
+// subset of server_url, password, brightness, night_start, night_end, night_brightness; JSON
+// answer {"ok":true} or {"ok":false,"field":...,"error":...}). GET /app.css, /app.js in both modes.
 void webUiBegin(gb::Settings& settings, const StatusProvider& status);
 // Safe mode: GET / and /update (minimal page with the update form), GET /status,
 // POST /update, POST /restart (same OTA code path).
