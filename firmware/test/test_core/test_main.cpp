@@ -685,6 +685,50 @@ void test_backlight_duty_is_perceptual() {
   }
 }
 
+void test_preview_inactive_by_default() {
+  BacklightPreview p;
+  TEST_ASSERT_FALSE(p.active(0));
+  TEST_ASSERT_FALSE(p.active(123456));
+}
+
+void test_preview_holds_3s_then_expires() {
+  BacklightPreview p;
+  p.set(40, 1000);
+  TEST_ASSERT_TRUE(p.active(1000));
+  TEST_ASSERT_TRUE(p.active(3999));
+  TEST_ASSERT_FALSE(p.active(4000));
+  TEST_ASSERT_EQUAL_UINT8(40, p.pct());
+}
+
+void test_preview_refresh_extends() {
+  BacklightPreview p;
+  p.set(10, 0);
+  p.set(20, 2500);
+  TEST_ASSERT_TRUE(p.active(5499));
+  TEST_ASSERT_FALSE(p.active(5500));
+  TEST_ASSERT_EQUAL_UINT8(20, p.pct());
+}
+
+void test_preview_millis_wraparound() {
+  BacklightPreview p;
+  p.set(50, 0xFFFFFC00u);  // 1024 ms before the wrap
+  TEST_ASSERT_TRUE(p.active(0x00000100u));
+  TEST_ASSERT_FALSE(p.active(0xFFFFFC00u + kPreviewHoldMs));
+}
+
+void test_preview_expires_and_saved_value_applies() {
+  BacklightPreview p;
+  p.set(30, 100);
+  p.clear();
+  TEST_ASSERT_FALSE(p.active(101));
+}
+
+void test_preview_clamps() {
+  BacklightPreview p;
+  p.set(250, 0);
+  TEST_ASSERT_EQUAL_UINT8(100, p.pct());
+}
+
 void test_apply_night() {
   Settings s;
   std::string err;
@@ -790,6 +834,12 @@ int main() {
   RUN_TEST(test_local_clock);
   RUN_TEST(test_effective_brightness);
   RUN_TEST(test_backlight_duty_is_perceptual);
+  RUN_TEST(test_preview_inactive_by_default);
+  RUN_TEST(test_preview_holds_3s_then_expires);
+  RUN_TEST(test_preview_refresh_extends);
+  RUN_TEST(test_preview_millis_wraparound);
+  RUN_TEST(test_preview_expires_and_saved_value_applies);
+  RUN_TEST(test_preview_clamps);
   RUN_TEST(test_apply_night);
   RUN_TEST(test_settings_night_roundtrip_and_old_file);
   return UNITY_END();

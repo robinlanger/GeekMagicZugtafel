@@ -82,6 +82,12 @@ uint16_t backlightDuty(uint8_t pct) {
   return duty == 0 ? 1 : static_cast<uint16_t>(duty);
 }
 
+void BacklightPreview::set(uint8_t pct, uint32_t nowMs) {
+  pct_ = pct > 100 ? 100 : pct;
+  lastMs_ = nowMs;
+  set_ = true;
+}
+
 bool applyNight(Settings& s, const std::string& start, const std::string& end,
                 const std::string& brightness, std::string* error) {
   const int a = parseHhMm(start.c_str());

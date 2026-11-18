@@ -42,6 +42,22 @@ constexpr uint16_t kBacklightPwmRange = 1000;
 // any other value is at least 1 so the backlight never goes out by rounding.
 uint16_t backlightDuty(uint8_t pct);
 
+// Live preview from the web page's sliders: overrides the backlight until no new preview
+// arrived for kPreviewHoldMs. Never saved. Unsigned arithmetic survives the millis() wrap.
+constexpr uint32_t kPreviewHoldMs = 3000;
+class BacklightPreview {
+ public:
+  void set(uint8_t pct, uint32_t nowMs);  // pct clamped to 0..100
+  void clear() { set_ = false; }
+  bool active(uint32_t nowMs) const { return set_ && nowMs - lastMs_ < kPreviewHoldMs; }
+  uint8_t pct() const { return pct_; }
+
+ private:
+  bool set_ = false;
+  uint8_t pct_ = 0;
+  uint32_t lastMs_ = 0;
+};
+
 // Validate the web form values ("HH:MM", "HH:MM", "0".."100") into s. On failure *error is
 // "bad_time" or "bad_night_brightness" and s is unchanged.
 bool applyNight(Settings& s, const std::string& start, const std::string& end,
