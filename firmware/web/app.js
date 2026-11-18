@@ -39,12 +39,51 @@ function md5(buffer) {
   return hex;
 }
 
+// ---- Live preview while dragging: one request at a time, at most one per minGapMs,
+// the latest value always wins. flush() drops what is pending and waits for the open one. ----
+function createPreviewPump(send, minGapMs) {
+  let inFlight = null, queued = null, timer = null, lastSent = -Infinity;
+  const pump = () => {
+    if (inFlight || timer || queued === null) return;
+    const wait = lastSent + minGapMs - Date.now();
+    if (wait > 0) {
+      timer = setTimeout(() => {
+        timer = null;
+        pump();
+      }, wait);
+      return;
+    }
+    const v = queued;
+    queued = null;
+    lastSent = Date.now();
+    inFlight = Promise.resolve()
+      .then(() => send(v))
+      .catch(() => {})
+      .finally(() => {
+        inFlight = null;
+        pump();
+      });
+  };
+  return {
+    push(v) {
+      queued = v;
+      pump();
+    },
+    async flush() {
+      queued = null;
+      clearTimeout(timer);
+      timer = null;
+      while (inFlight) await inFlight;
+    },
+  };
+}
+
 if (typeof document !== "undefined") init();
 
 function init() {
   const $ = (id) => document.getElementById(id);
   const T = JSON.parse(document.body.dataset.i18n || "{}");
-  const CHECK = "✓";
+  const CHECK = "\u2713";
 
   // POST form fields, expect {"ok":true}. Throws Error(message for the user).
   async function post(url, fields) {
@@ -97,28 +136,14 @@ function init() {
   for (const input of document.querySelectorAll("input[type=range]")) {
     const row = rowOf(input);
     let saved = input.value;
-    let inFlight = null; // at most one preview request at a time
-    let queued = null; // latest value not sent yet
-    const pump = () => {
-      if (inFlight || queued === null) return;
-      const v = queued;
-      queued = null;
-      inFlight = post("/api/brightness-preview", { pct: v })
-        .catch(() => {})
-        .finally(() => {
-          inFlight = null;
-          pump();
-        });
-    };
+    const preview = createPreviewPump((v) => post("/api/brightness-preview", { pct: v }), 100);
     paint(input);
     input.addEventListener("input", () => {
       paint(input);
-      queued = input.value;
-      pump();
+      preview.push(input.value);
     });
     input.addEventListener("change", async () => {
-      queued = null; // the save below re-applies the saved value on the device
-      while (inFlight) await inFlight;
+      await preview.flush(); // the save below re-applies the saved value on the device
       const v = input.value;
       if (await save(row, { [input.name]: v })) {
         saved = v;
@@ -214,8 +239,11 @@ function init() {
   const up = $("update-form");
   if (up) {
     const file = up.elements.firmware, sum = up.elements.md5;
-    const bar = $("up-progress"), m = up.querySelector(".msg");
+    const bar = $("up-progress"), m = up.querySelector(".msg"), button = up.querySelector("button");
+    let busy = false; // one upload at a time: a second one would overwrite the first's result
     const fail = (text) => {
+      busy = false;
+      button.disabled = false;
       bar.hidden = true;
       m.className = "msg err";
       m.textContent = text;
@@ -226,6 +254,9 @@ function init() {
     });
     up.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (busy) return;
+      busy = true;
+      button.disabled = true;
       const data = new FormData();
       data.append("md5", sum.value.trim()); // must precede the file part
       data.append("firmware", file.files[0]);
