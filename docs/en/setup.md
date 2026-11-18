@@ -28,11 +28,15 @@ After the first flash (or after a factory reset) the display opens a Wi-Fi setup
 
 ## The device web page
 
-Open `http://<display-ip>/` (the IP is shown on the display at boot and in your router). It shows version, uptime, signal strength, the number of frames received, failed boots and whether safe mode is active. Below that you can:
+Open `http://<display-ip>/` (the IP is shown on the display at boot and in your router). It follows your phone or computer's light or dark mode. At the top, four tiles show the connection to the server, when the last image arrived, the Wi-Fi signal and how long the device has been running. They refresh every few seconds. Below that you can:
 
-- change the server URL, the brightness and the [night mode](#night-mode) and set a new update password (these changes need the update password, user `admin`),
+- set the **brightness** and the [night mode](#night-mode) with sliders and a switch. While you drag a slider the display changes right away; the value is saved when you let go,
+- change the **server address**. It is saved when you leave the field; for a few seconds an **Undo** link brings the old address back,
+- **change the password** (its own button, so you are not locked out while typing),
 - upload a firmware update (see [Updating](updating.md)),
 - restart the device, or **reset settings and Wi-Fi** (back to the setup portal).
+
+There is no Save button: every change is saved on its own, a check mark confirms it, and a red message explains a value the device refused (the old value then stays). The first change asks for the update password (user `admin`). **Details** at the bottom lists the number of images, the signal in dBm, the local time, night mode, failed boots and safe mode. Without JavaScript the page shows a plain form with a Save button instead.
 
 `http://<display-ip>/status` returns the same facts as JSON, without a password. Handy for scripts and for Home Assistant.
 
@@ -40,10 +44,11 @@ Open `http://<display-ip>/` (the IP is shown on the display at boot and in your 
 
 If the display is in a bedroom, it can dim or go completely dark at night. Set on the device web page:
 
-- **Night from** and **Night until**, for example 22:00 and 07:00. The window may span midnight.
-- **Night brightness** from 0 to 100 %. **0 % means completely dark**, the backlight is off.
+- the **Night mode** switch,
+- **From** and **Until**, for example 22:00 and 07:00. The window may span midnight.
+- **Brightness at night** from 0 to 100 %. **0 % means completely dark**, the backlight is off. While you drag the slider the display shows that brightness for a moment, even during the day.
 
-If both times are equal (default: 00:00 and 00:00), night mode is off. The display keeps fetching frames at night, so the current picture is there right away in the morning.
+Switching night mode off stores equal times (that is how the device keeps "off"; default: 00:00 and 00:00). Switching it on again brings back the last times, or 22:00 to 07:00. The display keeps fetching frames at night, so the current picture is there right away in the morning.
 
 The display gets the time from the Glance Box server, in the time zone set as `timezone` in your `config.yaml` (daylight saving time included). **The server must be version 0.2.0 or newer as well.** With an older server the device page shows "-" for "Local time" and night mode never kicks in. If the server goes down, the display keeps counting on its own. If it restarts at night and cannot reach the server, it does not know the time yet and stays bright until the server answers. Safe mode has no night mode.
 

@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- New device web page in an Apple-like look: status tiles (connection, last image, Wi-Fi in
+  words, uptime) that refresh every 5 s, grouped settings, light and dark mode, one column on
+  phones and two on wide screens. Nothing is loaded from the internet.
+- Brightness and night brightness are sliders: the display follows while you drag
+  (`POST /api/brightness-preview`, never saved), and the value is saved when you let go.
+- Every setting is saved on its own (`POST /api/settings` with any subset of the fields), with a
+  check mark or an error message per row; the server address offers Undo. Night mode has a
+  switch. The password has its own Change button.
+- Firmware upload in the browser computes the MD5 itself and shows a progress bar.
+
+### Changed
+- The safe-mode page and the message pages use the same look (still no JavaScript in safe mode).
+- CSS and JavaScript live in `firmware/web/` and are minified, gzipped and embedded at build time
+  (`firmware/scripts/embed_web.py`, `tools/webasset.py`).
+
 ### Fixed
 - Brightness settings now visibly dim the display. The backlight used a linear duty, so
   20 % looked about half as bright as 100 % and 5 % was only slightly darker. It now follows

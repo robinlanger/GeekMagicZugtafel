@@ -19,8 +19,8 @@ Die MD5 ist **Pflicht**. Ohne sie lehnt das Gerät das Update ab. Sie schützt v
 ## Update im Browser
 
 1. Öffne `http://<display-ip>/`.
-2. Trage im Abschnitt **Firmware-Update** die 32-stellige MD5 ein und wähle die `.bin`-Datei.
-3. Drücke **Hochladen**. Der Browser fragt nach dem Benutzernamen `admin` und dem Update-Passwort.
+2. Öffne unter **Gerät** den Punkt **Firmware-Update** und wähle die `.bin`-Datei. Die Seite rechnet die MD5 selbst aus und trägt sie ein; vergleiche sie gern mit der `.md5`-Datei. (Im Safe Mode und ohne JavaScript trägst du die 32-stellige MD5 selbst ein.)
+3. Drücke **Hochladen**. Ein Balken zeigt den Fortschritt. Der Browser fragt nach dem Benutzernamen `admin` und dem Update-Passwort.
 4. Das Display zeigt „Firmware update“, während es die Datei empfängt, danach „Update OK, restarting“. Es startet innerhalb von ein oder zwei Sekunden neu. Zieh es nicht ab.
 5. Nach dem Neustart zeigt die Geräteseite die neue Version. In der ersten Minute steht der Zähler für Fehlstarts auf 1. Er geht zurück auf 0, wenn die Firmware 60 Sekunden lang gesund lief, mit funktionierendem WLAN und Webserver.
 

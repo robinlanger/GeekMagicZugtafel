@@ -19,8 +19,8 @@ The MD5 is **required**. Without it the device refuses the update. It protects a
 ## Update in the browser
 
 1. Open `http://<display-ip>/`.
-2. In the **Firmware update** section enter the 32-character MD5 and choose the `.bin` file.
-3. Press **Upload**. The browser asks for the user name `admin` and the update password.
+2. Under **Device**, open **Firmware update** and choose the `.bin` file. The page computes the MD5 itself and fills it in; compare it with the `.md5` file if you like. (In safe mode, and without JavaScript, enter the 32-character MD5 yourself.)
+3. Press **Upload**. A bar shows the progress. The browser asks for the user name `admin` and the update password.
 4. The display shows "Firmware update" while it receives the file, then "Update OK, restarting". It restarts within a second or two. Do not unplug it.
 5. After the restart, the device page shows the new version. For the first minute the failed-boot counter shows 1. It goes back to 0 when the firmware has run healthily for 60 seconds with Wi-Fi and web server working.
 
