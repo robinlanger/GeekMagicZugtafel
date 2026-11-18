@@ -215,85 +215,178 @@ void handleRestart() {
 }
 
 // ---- HTML pages ----
+// Look and behaviour: firmware/web/app.css + app.js (embedded by scripts/embed_web.py).
+// Element ids/classes used by app.js are listed in docs/superpowers/plans/2026-11-18-web-oberflaeche.md (Task 4).
 
-const char kHead[] PROGMEM =
-    "<!doctype html><meta charset=utf-8><meta name=viewport "
-    "content='width=device-width,initial-scale=1'><title>Glance Box</title><style>"
-    "body{font-family:sans-serif;max-width:34em;margin:1em auto;padding:0 1em}"
-    "input{display:block;width:100%;box-sizing:border-box;margin:.2em 0 .8em}"
-    "td{padding:.1em 1em .1em 0}button{padding:.4em 1em;margin:.2em 0}"
-    ".ok{color:#070}.err{color:#b00}</style><h1>Glance Box</h1>";
-
-void addRow(String& p, const __FlashStringHelper* label, const String& value) {
-  p += F("<tr><td>");
-  p += label;
-  p += F("<td>");
-  p += value;
+// Open tags up to <body>; the caller appends data-i18n (normal page) and ">".
+void appendHead(String& p, Lang l, bool script) {
+  p += F("<!doctype html><html lang=");
+  p += l == Lang::De ? F("de") : F("en");
+  p += F("><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+         "<meta name=color-scheme content='light dark'><title>Glance Box</title>"
+         "<link rel=stylesheet href='/app.css?v=");
+  p += kWebHash;
+  p += F("'>");
+  if (script) {
+    // Set before first paint so .js-only controls never flash hidden/visible.
+    p += F("<script>document.documentElement.className='js'</script><script defer src='/app.js?v=");
+    p += kWebHash;
+    p += F("'></script>");
+  }
 }
 
-void sendPage(int code, const String& body) {
-  String p;
-  p.reserve(body.length() + sizeof(kHead));
-  p += FPSTR(kHead);
-  p += body;
+void sendHtml(int code, const String& page) {
   server.sendHeader(F("Cache-Control"), F("no-store"));
-  server.send(code, F("text/html; charset=utf-8"), p);
+  server.send(code, F("text/html; charset=utf-8"), page);
+}
+
+// Simple page: head, title block, body, no script (messages, safe mode).
+void sendPage(int code, Lang l, const String& body) {
+  String p;
+  p.reserve(body.length() + 420);
+  appendHead(p, l, false);
+  p += F("<body><main><header class=top><h1>Glance Box</h1></header>");
+  p += body;
+  p += F("</main>");
+  sendHtml(code, p);
 }
 
 void sendMessage(int code, Lang lang, const __FlashStringHelper* msg, bool error) {
-  String b = error ? F("<p class=err>") : F("<p class=ok>");
+  String b = error ? F("<div class='grp card err'><p>") : F("<div class='grp card ok'><p>");
   b += msg;
-  b += F("<p><a href='/'>");
+  b += F("</p><a class=btn href='/'>");
   b += tr(lang, Msg::Back);
-  b += F("</a>");
-  sendPage(code, b);
+  b += F("</a></div>");
+  sendPage(code, lang, b);
+}
+
+void addRow(String& p, const __FlashStringHelper* label, const String& value) {
+  p += F("<div class=row><span>");
+  p += label;
+  p += F("</span><span class=v>");
+  p += value;
+  p += F("</span></div>");
+}
+
+void addTile(String& p, const __FlashStringHelper* label, const char* id, const String& value,
+             const char* state) {
+  p += F("<div class=tile><span class=k>");
+  p += label;
+  p += F("</span><b class=n id=");
+  p += id;
+  if (state != nullptr) {
+    p += F(" data-state=");
+    p += state;
+  }
+  p += '>';
+  p += value;
+  p += F("</b></div>");
 }
 
 // Shared by normal mode and safe mode: one form, one OTA code path (POST /update).
+// md5 must precede the file input: fields are sent in document order.
 void appendUpdateForm(String& b, Lang l) {
-  b += F("<h2 id=update>");
-  b += tr(l, Msg::FirmwareUpdate);
-  // md5 must precede the file input: fields are sent in document order.
-  b += F("</h2><form method=post action=/update enctype=multipart/form-data><label>");
+  b += F("<form id=update-form class=stack method=post action=/update "
+         "enctype=multipart/form-data><label>");
+  b += tr(l, Msg::FirmwareFile);
+  b += F("<input type=file name=firmware accept='.bin' required></label><label>");
   b += tr(l, Msg::Md5Label);
-  b += F("<input name=md5 required pattern='[0-9a-fA-F]{32}'></label>"
-         "<input type=file name=firmware accept='.bin' required><button>");
+  b += F("<input name=md5 required pattern='[0-9a-fA-F]{32}' autocomplete=off spellcheck=false>"
+         "</label><progress id=up-progress max=100 value=0 hidden></progress><span class=msg>"
+         "</span><button class=btn>");
   b += tr(l, Msg::Upload);
   b += F("</button></form>");
 }
 
-void handleRoot() {
-  const Lang l = requestLang();
-  const bool wifi = WiFi.status() == WL_CONNECTED;
-  const int32_t age = status.lastFrameAgeS ? status.lastFrameAgeS() : -1;
-  String b;
-  b.reserve(2600);
-  if (server.hasArg(F("saved"))) {
-    b += F("<p class=ok>");
-    b += tr(l, Msg::Saved);
-    b += F("</p>");
+void addI18n(String& j, const char* key, const __FlashStringHelper* text, bool first = false) {
+  if (!first) j += ',';
+  j += '"';
+  j += key;
+  j += F("\":\"");
+  j += text;  // own constants: no quotes or backslashes
+  j += '"';
+}
+
+String i18nJson(Lang l) {
+  String j = F("{");
+  addI18n(j, "online", tr(l, Msg::Online), true);
+  addI18n(j, "offline", tr(l, Msg::Offline));
+  addI18n(j, "ago", tr(l, Msg::AgoFmt));
+  addI18n(j, "day", tr(l, Msg::DayUnit));
+  addI18n(j, "wifi0", tr(l, Msg::WifiExcellent));
+  addI18n(j, "wifi1", tr(l, Msg::WifiGood));
+  addI18n(j, "wifi2", tr(l, Msg::WifiFair));
+  addI18n(j, "wifi3", tr(l, Msg::WifiWeak));
+  addI18n(j, "off", tr(l, Msg::Off));
+  addI18n(j, "undo", tr(l, Msg::Undo));
+  addI18n(j, "auth", tr(l, Msg::AuthCancelled));
+  addI18n(j, "pw_changed", tr(l, Msg::PwChanged));
+  addI18n(j, "upload_ok", tr(l, Msg::UploadOk));
+  addI18n(j, "uploading", tr(l, Msg::Uploading));
+  addI18n(j, "error", tr(l, Msg::ErrSaveFailed));
+  addI18n(j, "reset_confirm", tr(l, Msg::ResetConfirm));
+  addI18n(j, "restarting", tr(l, Msg::Restarting));
+  j += '}';
+  return j;
+}
+
+const __FlashStringHelper* wifiWord(Lang l, int rssi) {
+  switch (gb::wifiQuality(rssi)) {
+    case gb::WifiQuality::Excellent: return tr(l, Msg::WifiExcellent);
+    case gb::WifiQuality::Good: return tr(l, Msg::WifiGood);
+    case gb::WifiQuality::Fair: return tr(l, Msg::WifiFair);
+    default: return tr(l, Msg::WifiWeak);
   }
-  b += F("<h2>");
-  b += tr(l, Msg::Status);
-  b += F("</h2><table>");
-  addRow(b, F("Version"), F(GB_VERSION));
-  addRow(b, F("IP"), WiFi.localIP().toString());
-  addRow(b, tr(l, Msg::Uptime), String(uptimeS()) + F(" s"));
-  addRow(b, tr(l, Msg::Signal), wifi ? String(WiFi.RSSI()) + F(" dBm") : String('-'));
-  addRow(b, tr(l, Msg::Frames), String(status.framesOk ? status.framesOk() : 0));
-  addRow(b, tr(l, Msg::LastFrame), age >= 0 ? String(age) + F(" s") : String('-'));
-  addRow(b, tr(l, Msg::BootFailures), String(status.bootFailed ? status.bootFailed() : 0));
-  const int32_t minute = status.localMinute ? status.localMinute() : -1;
-  addRow(b, tr(l, Msg::LocalTime),
-         minute >= 0 ? String(gb::formatHhMm(static_cast<uint16_t>(minute)).c_str()) : String('-'));
-  addRow(b, tr(l, Msg::Night), (status.night && status.night()) ? F("on") : F("off"));
-  addRow(b, tr(l, Msg::SafeMode),
-         (status.safeMode ? status.safeMode() : safeModeUi) ? F("on") : F("off"));
-  b += F("</table><h2>");
-  b += tr(l, Msg::Settings);
-  b += F("</h2><p><small>");
-  b += tr(l, Msg::AuthHint);
-  b += F("</small><form method=post action=/settings><label>");
+}
+
+String agoText(Lang l, int32_t ageS) {
+  if (ageS < 0) return String('-');
+  String fmt = tr(l, Msg::AgoFmt);
+  fmt.replace(F("{}"), gb::formatDuration(static_cast<uint32_t>(ageS), l == Lang::De ? "T" : "d").c_str());
+  return fmt;
+}
+
+// Slider row: label + value output on top, Control-Center bar below.
+void addSlider(String& b, const char* id, const __FlashStringHelper* label, int min, int value,
+               bool night) {
+  b += night ? F("<div class='row slider night' data-field=") : F("<div class='row slider' data-field=");
+  b += id;
+  b += F("><label for=");
+  b += id;
+  b += '>';
+  b += label;
+  b += F("</label><output for=");
+  b += id;
+  b += F("></output><span class=msg></span><input type=range id=");
+  b += id;
+  b += F(" name=");
+  b += id;
+  b += F(" min=");
+  b += min;
+  b += F(" max=100 value=");
+  b += value;
+  b += F("></div>");
+}
+
+void addTimeRow(String& b, const char* id, const __FlashStringHelper* label, uint16_t minutes) {
+  b += F("<div class='row night' data-field=");
+  b += id;
+  b += F("><label for=");
+  b += id;
+  b += '>';
+  b += label;
+  b += F("</label><span class=msg></span><input type=time id=");
+  b += id;
+  b += F(" name=");
+  b += id;
+  b += F(" required value=");
+  b += gb::formatHhMm(minutes).c_str();
+  b += F("></div>");
+}
+
+// No-JS fallback: the classic form posting everything to /settings.
+void appendNoscriptForm(String& b, Lang l) {
+  b += F("<noscript><form class='grp stack' method=post action=/settings><label>");
   b += tr(l, Msg::ServerUrl);
   b += F("<input name=server_url maxlength=95 required value='");
   b += gb::htmlEscape(settings->serverUrl).c_str();
@@ -313,51 +406,139 @@ void handleRoot() {
   b += tr(l, Msg::NightBrightness);
   b += F("<input name=night_brightness type=number min=0 max=100 required value=");
   b += settings->nightBrightness;
-  b += F("></label><p><small>");
+  b += F("></label><small>");
   b += tr(l, Msg::NightHint);
   b += F("</small><label>");
   b += tr(l, Msg::NewPassword);
-  b += F("<input name=password type=password maxlength=32 autocomplete=new-password>"
-         "</label><button>");
+  b += F("<input name=password type=password maxlength=32 autocomplete=new-password></label>"
+         "<button class=btn>");
   b += tr(l, Msg::Save);
-  b += F("</button></form><h2>");
-  appendUpdateForm(b, l);
-  b += F("<h2>");
-  b += tr(l, Msg::Device);
-  b += F("</h2><form method=post action=/restart><button>");
-  b += tr(l, Msg::Restart);
-  b += F("</button></form><form method=post action=/reset onsubmit=\"return confirm('");
-  b += tr(l, Msg::ResetConfirm);
-  b += F("')\"><button>");
-  b += tr(l, Msg::Reset);
-  b += F("</button></form>");
-  sendPage(200, b);
+  b += F("</button></form></noscript>");
 }
 
-// Safe mode: GET / and GET /update. No secrets shown; posting needs auth as usual.
+void handleRoot() {
+  const Lang l = requestLang();
+  const bool wifi = WiFi.status() == WL_CONNECTED;
+  const int32_t age = status.lastFrameAgeS ? status.lastFrameAgeS() : -1;
+  const bool online = age >= 0 && age < 120;
+  const bool nightOn = settings->nightStart != settings->nightEnd;
+  String b;
+  b.reserve(7000);
+  appendHead(b, l, true);
+  b += F("<body data-i18n=\"");
+  b += gb::htmlEscape(i18nJson(l).c_str()).c_str();
+  b += F("\"><main><header class=top><h1>Glance Box</h1><p class=sub>");
+  b += WiFi.localIP().toString();
+  b += F(" &middot; Version " GB_VERSION "</p></header>");
+  if (server.hasArg(F("saved"))) {
+    b += F("<p class='banner ok'>");
+    b += tr(l, Msg::Saved);
+    b += F("</p>");
+  }
+
+  b += F("<section class=tiles>");
+  addTile(b, tr(l, Msg::Connection), "t-conn", online ? tr(l, Msg::Online) : tr(l, Msg::Offline),
+          online ? "ok" : "bad");
+  addTile(b, tr(l, Msg::LastFrame2), "t-age", agoText(l, age), nullptr);
+  addTile(b, tr(l, Msg::Wifi), "t-wifi", wifi ? String(wifiWord(l, WiFi.RSSI())) : String('-'),
+          nullptr);
+  addTile(b, tr(l, Msg::UpFor), "t-up",
+          gb::formatDuration(uptimeS(), l == Lang::De ? "T" : "d").c_str(), nullptr);
+  b += F("</section><div class=cols><div class=col>");
+
+  // Display
+  b += F("<h2 class=hd>");
+  b += tr(l, Msg::Display);
+  b += F("</h2><div class='grp js-only' id=display");
+  if (!nightOn) b += F(" data-night=off");
+  b += '>';
+  addSlider(b, "brightness", tr(l, Msg::Brightness2), 5, settings->brightness, false);
+  b += F("<div class=row data-field=night_on><label for=night_on>");
+  b += tr(l, Msg::NightMode);
+  b += F("</label><span class=msg></span><input type=checkbox id=night_on role=switch");
+  if (nightOn) b += F(" checked");
+  b += F("></div>");
+  addTimeRow(b, "night_start", tr(l, Msg::From), settings->nightStart);
+  addTimeRow(b, "night_end", tr(l, Msg::Until), settings->nightEnd);
+  addSlider(b, "night_brightness", tr(l, Msg::NightBrightness2), 0, settings->nightBrightness, true);
+  b += F("</div>");
+  appendNoscriptForm(b, l);
+
+  // Server
+  b += F("<div class=js-only><h2 class=hd>");
+  b += tr(l, Msg::Server);
+  b += F("</h2><div class=grp><div class='row field' data-field=server_url><label for=server_url>");
+  b += tr(l, Msg::Address);
+  b += F("</label><span class=msg></span><input id=server_url name=server_url maxlength=95 "
+         "inputmode=url autocomplete=off spellcheck=false value='");
+  b += gb::htmlEscape(settings->serverUrl).c_str();
+  b += F("'></div></div></div></div><div class=col>");
+
+  // Device
+  b += F("<h2 class=hd>");
+  b += tr(l, Msg::Device);
+  b += F("</h2><div class=grp><details class=row id=update><summary>");
+  b += tr(l, Msg::FirmwareUpdate);
+  b += F("</summary>");
+  appendUpdateForm(b, l);
+  b += F("</details><details class='row js-only'><summary>");
+  b += tr(l, Msg::ChangePassword);
+  b += F("</summary><form id=pw-form class=stack><input type=password name=password minlength=8 "
+         "maxlength=32 required autocomplete=new-password><span class=msg></span><button class=btn>");
+  b += tr(l, Msg::Change);
+  b += F("</button></form></details><form class=row method=post action=/restart><button class=lnk>");
+  b += tr(l, Msg::Restart);
+  b += F("</button></form><form class=row id=reset-form method=post action=/reset><button "
+         "class='lnk danger'>");
+  b += tr(l, Msg::Reset);
+  b += F("</button></form></div>");
+
+  // Details
+  b += F("<h2 class=hd>");
+  b += tr(l, Msg::Details);
+  b += F("</h2><div class=grp>");
+  addRow(b, tr(l, Msg::Frames2), String(status.framesOk ? status.framesOk() : 0));
+  addRow(b, tr(l, Msg::Signal), wifi ? String(WiFi.RSSI()) + F(" dBm") : String('-'));
+  const int32_t minute = status.localMinute ? status.localMinute() : -1;
+  addRow(b, tr(l, Msg::LocalTime),
+         minute >= 0 ? String(gb::formatHhMm(static_cast<uint16_t>(minute)).c_str()) : String('-'));
+  addRow(b, tr(l, Msg::Night), (status.night && status.night()) ? F("on") : F("off"));
+  addRow(b, tr(l, Msg::BootFailures), String(status.bootFailed ? status.bootFailed() : 0));
+  addRow(b, tr(l, Msg::SafeMode),
+         (status.safeMode ? status.safeMode() : safeModeUi) ? F("on") : F("off"));
+  b += F("</div><p class=foot>");
+  b += tr(l, Msg::AuthHint);
+  b += F("</p></div></div></main>");
+  sendHtml(200, b);
+}
+
+// Safe mode: GET / and GET /update. No secrets shown; posting needs auth as usual. CSS only,
+// no script: the recovery path stays a plain form.
 void handleSafePage() {
   const Lang l = requestLang();
   String b;
-  b.reserve(1800);
-  b += F("<h2>");
+  b.reserve(2600);
+  b += F("<div class='grp card warn'><h2>");
   b += tr(l, Msg::SafeTitle);
   b += F("</h2><p>");
   b += tr(l, Msg::SafeExplain);
-  b += F("<table>");
+  b += F("</p></div><div class=grp>");
   addRow(b, F("Version"), F(GB_VERSION));
   addRow(b, tr(l, Msg::BootFailures), String(status.bootFailed ? status.bootFailed() : 0));
-  b += F("</table><p><small>");
-  b += tr(l, Msg::AuthHint);
-  b += F("</small>");
+  b += F("</div><h2 class=hd id=update>");
+  b += tr(l, Msg::FirmwareUpdate);
+  b += F("</h2><div class='grp pad'>");
   appendUpdateForm(b, l);
-  b += F("<h2>");
+  b += F("</div><h2 class=hd>");
   b += tr(l, Msg::Device);
-  b += F("</h2><form method=post action=/boot-normal><button>");
+  b += F("</h2><div class=grp><form class=row method=post action=/boot-normal><button class=lnk>");
   b += tr(l, Msg::BootNormal);
-  b += F("</button></form><form method=post action=/restart><button>");
+  b += F("</button></form><form class=row method=post action=/restart><button class=lnk>");
   b += tr(l, Msg::Restart);
-  b += F("</button></form>");
-  sendPage(200, b);
+  b += F("</button></form></div><p class=foot>");
+  b += tr(l, Msg::AuthHint);
+  b += F("</p>");
+  sendPage(200, l, b);
 }
 
 void handleSettings() {

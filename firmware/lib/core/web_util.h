@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 
 namespace gb {
@@ -14,5 +15,7 @@ bool originAllowed(const std::string& origin, const std::string& host);
 // Wi-Fi signal in words: >= -60 dBm excellent, >= -70 good, >= -80 fair, else weak.
 enum class WifiQuality : unsigned char { Excellent, Good, Fair, Weak };
 WifiQuality wifiQuality(int rssiDbm);
+// Compact duration for the status tiles: "59 s", "5 min", "3 h 7 min", "1 <dayUnit> 21 h".
+std::string formatDuration(uint32_t seconds, const char* dayUnit);
 
 }  // namespace gb

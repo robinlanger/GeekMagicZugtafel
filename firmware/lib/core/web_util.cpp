@@ -42,6 +42,16 @@ bool originAllowed(const std::string& origin, const std::string& host) {
   return true;
 }
 
+std::string formatDuration(uint32_t seconds, const char* dayUnit) {
+  const std::string s = std::to_string(seconds) + " s";
+  if (seconds < 60) return s;
+  const uint32_t min = seconds / 60;
+  if (min < 60) return std::to_string(min) + " min";
+  const uint32_t h = min / 60;
+  if (h < 24) return std::to_string(h) + " h " + std::to_string(min % 60) + " min";
+  return std::to_string(h / 24) + " " + dayUnit + " " + std::to_string(h % 24) + " h";
+}
+
 WifiQuality wifiQuality(int rssiDbm) {
   if (rssiDbm >= -60) return WifiQuality::Excellent;
   if (rssiDbm >= -70) return WifiQuality::Good;

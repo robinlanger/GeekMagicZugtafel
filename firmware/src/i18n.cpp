@@ -54,6 +54,37 @@ GB_STR(en42, "Local time")
 GB_STR(en43, "Night")
 GB_STR(en44, "Night times must be HH:MM")
 GB_STR(en45, "Night brightness must be a number from 0 to 100")
+GB_STR(en46, "Display")
+GB_STR(en47, "Server")
+GB_STR(en48, "Details")
+GB_STR(en49, "Night mode")
+GB_STR(en50, "From")
+GB_STR(en51, "Until")
+GB_STR(en52, "Change password")
+GB_STR(en53, "Change")
+GB_STR(en54, "Off")
+GB_STR(en55, "Online")
+GB_STR(en56, "Offline")
+GB_STR(en57, "Excellent")
+GB_STR(en58, "Good")
+GB_STR(en59, "Fair")
+GB_STR(en60, "Weak")
+GB_STR(en61, "Up for")
+GB_STR(en62, "Connection")
+GB_STR(en63, "Wi-Fi")
+GB_STR(en64, "Undo")
+GB_STR(en65, "Not saved: the update password is needed (user admin).")
+GB_STR(en66, "Password changed. Your browser will ask for the new one.")
+GB_STR(en67, "Update installed. The device restarts.")
+GB_STR(en68, "Uploading...")
+GB_STR(en69, "Address")
+GB_STR(en70, "{} ago")
+GB_STR(en71, "d")
+GB_STR(en72, "Firmware file (.bin)")
+GB_STR(en73, "Brightness")
+GB_STR(en74, "Brightness at night")
+GB_STR(en75, "Last image")
+GB_STR(en76, "Images shown")
 
 // German
 GB_STR(de0, "Status")
@@ -102,17 +133,42 @@ GB_STR(de42, "Uhrzeit")
 GB_STR(de43, "Nacht")
 GB_STR(de44, "Nachtzeiten müssen im Format HH:MM sein")
 GB_STR(de45, "Helligkeit nachts muss eine Zahl von 0 bis 100 sein")
+GB_STR(de46, "Anzeige")
+GB_STR(de47, "Server")
+GB_STR(de48, "Details")
+GB_STR(de49, "Nachtmodus")
+GB_STR(de50, "Von")
+GB_STR(de51, "Bis")
+GB_STR(de52, "Passwort ändern")
+GB_STR(de53, "Ändern")
+GB_STR(de54, "Aus")
+GB_STR(de55, "Online")
+GB_STR(de56, "Offline")
+GB_STR(de57, "Sehr gut")
+GB_STR(de58, "Gut")
+GB_STR(de59, "Mäßig")
+GB_STR(de60, "Schwach")
+GB_STR(de61, "Läuft seit")
+GB_STR(de62, "Verbindung")
+GB_STR(de63, "WLAN")
+GB_STR(de64, "Rückgängig")
+GB_STR(de65, "Nicht gespeichert: Das Update-Passwort wird gebraucht (Benutzer admin).")
+GB_STR(de66, "Passwort geändert. Der Browser fragt gleich nach dem neuen.")
+GB_STR(de67, "Update installiert. Das Gerät startet neu.")
+GB_STR(de68, "Wird hochgeladen ...")
+GB_STR(de69, "Adresse")
+GB_STR(de70, "vor {}")
+GB_STR(de71, "T")
+GB_STR(de72, "Firmware-Datei (.bin)")
+GB_STR(de73, "Helligkeit")
+GB_STR(de74, "Helligkeit nachts")
+GB_STR(de75, "Letztes Bild")
+GB_STR(de76, "Bilder gezeigt")
 
 #undef GB_STR
 
-const char* const kEn[] PROGMEM = {en0,  en1,  en2,  en3,  en4,  en5,  en6,  en7,  en8,
-                                   en9,  en10, en11, en12, en13, en14, en15, en16, en17,
-                                   en18, en19, en20, en21, en22, en23, en24, en25, en26,
-                                   en27, en28, en29, en30, en31, en32, en33, en34, en35, en36, en37, en38, en39, en40, en41, en42, en43, en44, en45};
-const char* const kDe[] PROGMEM = {de0,  de1,  de2,  de3,  de4,  de5,  de6,  de7,  de8,
-                                   de9,  de10, de11, de12, de13, de14, de15, de16, de17,
-                                   de18, de19, de20, de21, de22, de23, de24, de25, de26,
-                                   de27, de28, de29, de30, de31, de32, de33, de34, de35, de36, de37, de38, de39, de40, de41, de42, de43, de44, de45};
+const char* const kEn[] PROGMEM = {en0, en1, en2, en3, en4, en5, en6, en7, en8, en9, en10, en11, en12, en13, en14, en15, en16, en17, en18, en19, en20, en21, en22, en23, en24, en25, en26, en27, en28, en29, en30, en31, en32, en33, en34, en35, en36, en37, en38, en39, en40, en41, en42, en43, en44, en45, en46, en47, en48, en49, en50, en51, en52, en53, en54, en55, en56, en57, en58, en59, en60, en61, en62, en63, en64, en65, en66, en67, en68, en69, en70, en71, en72, en73, en74, en75, en76};
+const char* const kDe[] PROGMEM = {de0, de1, de2, de3, de4, de5, de6, de7, de8, de9, de10, de11, de12, de13, de14, de15, de16, de17, de18, de19, de20, de21, de22, de23, de24, de25, de26, de27, de28, de29, de30, de31, de32, de33, de34, de35, de36, de37, de38, de39, de40, de41, de42, de43, de44, de45, de46, de47, de48, de49, de50, de51, de52, de53, de54, de55, de56, de57, de58, de59, de60, de61, de62, de63, de64, de65, de66, de67, de68, de69, de70, de71, de72, de73, de74, de75, de76};
 static_assert(sizeof(kEn) / sizeof(kEn[0]) == static_cast<size_t>(Msg::Count), "kEn size");
 static_assert(sizeof(kDe) / sizeof(kDe[0]) == static_cast<size_t>(Msg::Count), "kDe size");
 }  // namespace

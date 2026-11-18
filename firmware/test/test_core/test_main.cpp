@@ -846,6 +846,16 @@ void test_wifi_quality() {
   TEST_ASSERT_TRUE(wifiQuality(-81) == WifiQuality::Weak);
 }
 
+void test_format_duration() {
+  TEST_ASSERT_EQUAL_STRING("0 s", formatDuration(0, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("59 s", formatDuration(59, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("1 min", formatDuration(60, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("59 min", formatDuration(3599, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("1 h 0 min", formatDuration(3600, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("23 h 59 min", formatDuration(86399, "d").c_str());
+  TEST_ASSERT_EQUAL_STRING("1 T 21 h", formatDuration(163787, "T").c_str());
+}
+
 void test_apply_night() {
   Settings s;
   std::string err;
@@ -966,6 +976,7 @@ int main() {
   RUN_TEST(test_settings_patch_password);
   RUN_TEST(test_settings_patch_empty);
   RUN_TEST(test_wifi_quality);
+  RUN_TEST(test_format_duration);
   RUN_TEST(test_apply_night);
   RUN_TEST(test_settings_night_roundtrip_and_old_file);
   return UNITY_END();
