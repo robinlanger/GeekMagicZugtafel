@@ -17,6 +17,12 @@ All notable changes to this project are documented here. The format follows
   switch. The password has its own Change button.
 - Firmware upload in the browser computes the MD5 itself and shows a progress bar.
 
+### Security
+- Device pages can no longer be framed by other sites (`X-Frame-Options: DENY`,
+  `frame-ancestors 'none'`), so the auto-saving controls cannot be clickjacked.
+- The embedded CSS/JS are revalidated on every load (`no-cache` + `ETag`) instead of being cached
+  for a year, so a script injected once over plain HTTP cannot persist.
+
 ### Changed
 - The safe-mode page and the message pages use the same look (still no JavaScript in safe mode).
 - CSS and JavaScript live in `firmware/web/` and are minified, gzipped and embedded at build time

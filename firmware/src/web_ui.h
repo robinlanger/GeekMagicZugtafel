@@ -26,7 +26,7 @@ struct StatusProvider {
 // Normal mode: GET /, GET /update (redirect to the form), POST /settings, /restart, /reset,
 // GET /status, POST /update, POST /api/brightness-preview (pct) and POST /api/settings (any
 // subset of server_url, password, brightness, night_start, night_end, night_brightness; JSON
-// answer {"ok":true} or {"ok":false,"field":...,"error":...}). GET /app.css, /app.js in both modes.
+// answer {"ok":true} or {"ok":false,"field":...,"error":...}). GET /app.css, /app.js in both modes (ETag + no-cache).
 void webUiBegin(gb::Settings& settings, const StatusProvider& status);
 // Safe mode: GET / and /update (minimal page with the update form), GET /status,
 // POST /update, POST /restart (same OTA code path).

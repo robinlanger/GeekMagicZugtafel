@@ -124,8 +124,11 @@ Beide mit `webUiAuthorize()` (Origin + Basic Auth), Antwort JSON.
   Main-Loop die Helligkeit an (wie heute); im Notfallmodus gibt es die Route nicht.
   Die Teilmengen-Logik (Felder anwenden, Fehler pro Feld) in `lib/core`, nativ getestet.
 - `GET /app.css` und `GET /app.js`: eingebettete gzip-Daten, `Content-Encoding: gzip`,
-  `Cache-Control: public, max-age=31536000, immutable`. Die Seite referenziert sie mit einem
-  Inhalts-Hash (`/app.css?v=<hash>`), damit ein Update den Cache bricht.
+  `Cache-Control: no-cache` mit `ETag` = Inhalts-Hash (304, wenn unverändert). Die Seite
+  referenziert sie zusätzlich mit `?v=<hash>`. *(Nach dem Security-Check vom 2026-11-18 geändert:
+  Ein ein Jahr gültiger Cache würde über reines HTTP ein einmal untergeschobenes Skript
+  dauerhaft machen.)* Alle HTML-Seiten senden `X-Frame-Options: DENY` und
+  `Content-Security-Policy: frame-ancestors 'none'` (kein Einbetten in fremde Seiten).
 
 `POST /settings` (heutiges Formular) bleibt für Clients ohne JavaScript und Skripte bestehen.
 Ohne JavaScript zeigt die Seite die Felder in einem normalen Formular mit „Sichern“-Knopf

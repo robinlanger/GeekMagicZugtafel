@@ -3,14 +3,16 @@
 The header goes to $BUILD_DIR/generated/ (added to CPPPATH) and is rewritten only when its
 content changes, so unchanged assets do not trigger a rebuild.
 """
-import sys
+import importlib.util
 from pathlib import Path
 
 Import("env")  # noqa: F821  (provided by PlatformIO/SCons)
 
 project = Path(env["PROJECT_DIR"])  # noqa: F821
-sys.path.insert(0, str(project.parent / "tools"))
-import webasset  # noqa: E402
+# Load by file path: putting tools/ on sys.path could shadow standard-library modules.
+_spec = importlib.util.spec_from_file_location("webasset", project.parent / "tools" / "webasset.py")
+webasset = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(webasset)
 
 web = project / "web"
 assets = {

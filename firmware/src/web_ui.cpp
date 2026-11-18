@@ -44,7 +44,7 @@ Lang requestLang() { return langFromHeader(server.header(F("Accept-Language")));
 
 // Every request header the UI reads, collected in this one place (beginCommon()).
 // collectHeaders() REPLACES the list, so nothing else may call it on this server.
-const char* kCollectedHeaders[] = {"Accept-Language", "Origin"};
+const char* kCollectedHeaders[] = {"Accept-Language", "Origin", "If-None-Match"};
 
 bool originCollected() {
   for (int i = 0; i < server.headers(); ++i) {
@@ -237,6 +237,9 @@ void appendHead(String& p, Lang l, bool script) {
 
 void sendHtml(int code, const String& page) {
   server.sendHeader(F("Cache-Control"), F("no-store"));
+  // No framing: the auto-saving controls would otherwise be one click away for a hidden frame.
+  server.sendHeader(F("X-Frame-Options"), F("DENY"));
+  server.sendHeader(F("Content-Security-Policy"), F("frame-ancestors 'none'"));
   server.send(code, F("text/html; charset=utf-8"), page);
 }
 
@@ -650,10 +653,19 @@ void handleReset() {
   webUiScheduleRestart();
 }
 
-// Embedded, pre-gzipped asset; URLs carry ?v=<kWebHash>, so it may be cached forever.
+// Embedded, pre-gzipped asset. Revalidated on every use (ETag = kWebHash, 304 when unchanged)
+// instead of cached for a year: over plain HTTP a once-injected script must not persist.
 void sendAsset(const char* type, const uint8_t* data, size_t len) {
+  String etag = F("\"");
+  etag += kWebHash;
+  etag += '"';
+  server.sendHeader(F("Cache-Control"), F("no-cache"));
+  server.sendHeader(F("ETag"), etag);
+  if (server.header(F("If-None-Match")) == etag) {
+    server.send(304);
+    return;
+  }
   server.sendHeader(F("Content-Encoding"), F("gzip"));
-  server.sendHeader(F("Cache-Control"), F("public, max-age=31536000, immutable"));
   server.send_P(200, type, reinterpret_cast<PGM_P>(data), len);
 }
 
