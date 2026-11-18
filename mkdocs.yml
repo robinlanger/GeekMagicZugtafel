@@ -75,6 +75,7 @@ plugins:
           name: Deutsch
           build: true
           nav_translations:
+            Home: Start
             Guide: Anleitung
             "1 · Get the device": "1 · Gerät besorgen"
             "2 · Flash the firmware": "2 · Firmware flashen"

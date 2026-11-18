@@ -1,0 +1,71 @@
+{#- Landing page. Texts come from the page's front matter (docs/<lang>/index.md); links are
+    relative to the language root, images come from the shared docs/img via base_url. -#}
+{% extends "main.html" %}
+{% set m = page.meta %}
+{% set img_root = base_url ~ "/" %}
+
+{#- Material renders the hero block above the tabs; on this page the tabs go first. -#}
+{% block tabs %}{% endblock %}
+{% block hero %}
+{% if "navigation.tabs" in features %}{% include "partials/tabs.html" %}{% endif %}
+<div class="gb-home">
+  <section class="gb-hero">
+    <p class="gb-kicker">{{ m.kicker }}</p>
+    <h1 class="gb-title">{{ m.title_line1 }}<br>{{ m.title_line2 }}</h1>
+    <p class="gb-lead">{{ m.lead }}</p>
+    <div class="gb-cta">
+      <a class="gb-btn" href="{{ m.steps[0].href }}">{{ m.cta_primary }}</a>
+      <a class="gb-link" href="{{ config.repo_url }}" rel="noopener">{{ m.cta_secondary }} ›</a>
+    </div>
+    <img class="gb-hero-img" src="{{ img_root }}img/hero.jpg" alt="{{ m.hero_alt }}" width="1600" height="1200">
+  </section>
+
+  <section class="gb-band gb-grey">
+    <div class="gb-inner">
+      <h2>{{ m.steps_title }}</h2>
+      <p class="gb-sub">{{ m.steps_sub }}</p>
+      <ol class="gb-steps">
+        {% for s in m.steps %}
+        <li class="gb-step">
+          <span class="gb-n">{{ loop.index }}</span>
+          <h3>{{ s.title }}</h3>
+          <p>{{ s.text }}</p>
+          <a href="{{ s.href }}">{{ s.link_text }} ›</a>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+
+  <section class="gb-band">
+    <div class="gb-inner">
+      <h2>{{ m.gallery_title }}</h2>
+      <p class="gb-sub">{{ m.gallery_sub }}</p>
+      <div class="gb-gallery">
+        {% for g in m.gallery %}
+        <a class="gb-tile" href="{{ g.href }}">
+          <img src="{{ img_root }}{{ g.img }}" alt="{{ g.caption }}" width="240" height="240" loading="lazy">
+          <span>{{ g.caption }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      <figure class="gb-photo">
+        <img src="{{ img_root }}img/on-device.jpg" alt="{{ m.photo_alt }}" loading="lazy">
+        <figcaption>{{ m.photo_caption }}</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="gb-band gb-grey">
+    <div class="gb-inner gb-features">
+      {% for f in m.features %}
+      <div><h3>{{ f.title }}</h3><p>{{ f.text }}</p></div>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block site_nav %}{% endblock %}
+{% block container %}{% endblock %}
