@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0]
+
+Firmware update for the display; the server is unchanged (no need to update the Docker image).
+Update the display over the air as described in docs/en/updating.md.
+
 ### Added
 - New device web page in an Apple-like look: status tiles (connection, last image, Wi-Fi in
   words, uptime) that refresh every 5 s, grouped settings, light and dark mode, one column on
