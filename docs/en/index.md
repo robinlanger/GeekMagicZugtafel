@@ -19,14 +19,14 @@ steps:
     text: A GeekMagic SmallTV Ultra, about 15 €.
     link_text: What to look for
     href: guide/1-get-the-device/
-  - title: Flash it in your browser
-    text: Through the "Firmware update" menu of the stock firmware.
-    link_text: Flashing guide
-    href: guide/2-flash-the-firmware/
   - title: Start the server
     text: One Docker command, then list your pages in config.yaml.
     link_text: Set up the server
-    href: guide/4-start-the-server/
+    href: guide/2-start-the-server/
+  - title: Flash it in your browser
+    text: Through the "Firmware update" menu of the stock firmware.
+    link_text: Flashing guide
+    href: guide/3-flash-the-firmware/
 gallery_title: Ready-made templates.
 gallery_sub: Add a few lines to config.yaml. Or write your own pages in HTML.
 gallery:
