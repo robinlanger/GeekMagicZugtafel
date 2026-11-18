@@ -2,7 +2,8 @@
 """Usage: check_docs_parity.py [repo-root]. Exit 1 if the EN and DE docs drift apart.
 
 Checks README.md <-> README.de.md and docs/en/** <-> docs/de/** (recursively, by relative path): both sides must exist and have
-the same heading level sequence (headings inside fenced code blocks are ignored).
+the same heading level sequence (headings inside fenced code blocks are ignored) and the same
+top-level front-matter keys.
 """
 import re
 import sys
@@ -10,6 +11,7 @@ from pathlib import Path
 
 HEADING = re.compile(r"^(#{1,6})\s")
 FENCE = re.compile(r"^\s*(```|~~~)")
+FM_KEY = re.compile(r"^([A-Za-z_][\w-]*):")
 
 
 def levels(path: Path) -> list[int]:
@@ -26,6 +28,20 @@ def levels(path: Path) -> list[int]:
         if fence is None and (h := HEADING.match(line)):
             out.append(len(h.group(1)))
     return out
+
+
+def front_matter_keys(path: Path) -> list[str]:
+    """Top-level keys of a leading YAML front matter block (between --- lines), in order."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return []
+    keys: list[str] = []
+    for line in lines[1:]:
+        if line.strip() == "---":
+            return keys
+        if m := FM_KEY.match(line):
+            keys.append(m.group(1))
+    return []  # unterminated: not front matter
 
 
 def pairs(root: Path) -> tuple[list[tuple[Path, Path]], list[str]]:
@@ -57,6 +73,8 @@ def main(argv: list[str]) -> int:
         la, lb = levels(a), levels(b)
         if la != lb:
             errors.append(f"heading levels differ: {a.relative_to(root)} {la} vs {b.relative_to(root)} {lb}")
+        if a.suffix == ".md" and front_matter_keys(a) != front_matter_keys(b):
+            errors.append(f"front matter keys differ: {a.relative_to(root)} vs {b.relative_to(root)}")
     for e in errors:
         print(f"FAIL: {e}", file=sys.stderr)
     if not errors:
