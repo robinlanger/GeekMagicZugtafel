@@ -10,6 +10,7 @@
 {%- if percent >= 90 %}ui-bad{% elif percent >= 75 %}ui-warn{% else %}ui-ok{% endif -%}
 {%- endmacro %}
 
-{% macro bar(percent, text, height=30) -%}
-<div class="ui-bar" style="height:{{ height }}px;line-height:{{ height }}px"><div class="ui-fill {{ level(percent) }}" style="width:{{ [[percent,0]|max,100]|min }}%"></div><span class="ui-bar-text">{{ text }}</span></div>
+{# used: the share used, for the color when the bar shows something else (what is left) #}
+{% macro bar(percent, text, height=30, used=None) -%}
+<div class="ui-bar" style="height:{{ height }}px;line-height:{{ height }}px"><div class="ui-fill {{ level(used if used is defined and used is not none else percent) }}" style="width:{{ [[percent,0]|max,100]|min }}%"></div><span class="ui-bar-text">{{ text }}</span></div>
 {%- endmacro %}

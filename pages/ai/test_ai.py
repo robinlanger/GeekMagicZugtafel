@@ -56,6 +56,41 @@ def test_validate_unknown_provider(ai):
     ai.validate({"provider": "claude", "lang": "en", "title": "Claude Max"})
 
 
+def test_validate_show(ai):
+    ai.validate({"provider": "claude", "show": "remaining"})
+    ai.validate({"provider": "claude", "show": "used"})
+    with pytest.raises(ValueError, match="show"):
+        ai.validate({"provider": "claude", "show": "left"})
+
+
+def test_claude_remaining(ai):
+    data = ai.fetch({**OPTIONS, "show": "remaining"}, ctx(limits()))
+    assert data["rows"] == [
+        {"label": "5 Stunden", "reset": "in 2:13", "percent": 58.0, "text": "58 %", "used": 42.0},
+        {"label": "Woche", "reset": "Do 09:00", "percent": 19.0, "text": "19 %", "used": 81.0},
+    ]
+
+
+def test_claude_remaining_after_reset_is_full(ai):
+    past = (NOW - timedelta(minutes=1)).timestamp()
+    row = ai.fetch({**OPTIONS, "show": "remaining"}, ctx(limits(five=(97.0, past))))["rows"][0]
+    assert (row["percent"], row["text"], row["used"]) == (100.0, "100 %", 0.0)
+
+
+def test_bar_level_uses_used_value():
+    from glancebox.frames import _jinja_env
+
+    tpl = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html")
+    base = {"title": "Claude", "clock": "14:05", "message": None, "sub": None,
+            "alert": False, "stand": None, "big": None, "theme": None}
+    low = tpl.render(**base, rows=[{"label": "Woche", "reset": "", "percent": 5.0,
+                                    "text": "5 %", "used": 95.0}])
+    assert "ui-fill ui-bad" in low and "width:5.0%" in low
+    full = tpl.render(**base, rows=[{"label": "Woche", "reset": "", "percent": 100.0,
+                                     "text": "100 %", "used": 0.0}])
+    assert "ui-fill ui-ok" in full
+
+
 def test_claude_no_data_yet(ai):
     data = ai.fetch(OPTIONS, ctx(None))
     assert data["title"] == "Claude" and data["clock"] == "14:05"
@@ -328,6 +363,12 @@ def test_xai_balance(ai, fake_http):
     assert owed["big"]["value"] == "-2,50 $"
 
 
+def test_xai_remaining_has_no_rows(ai, fake_http):
+    fake_http(TWO_PAGES["xai-api"])
+    data = ai.fetch({**COST["xai-api"], "show": "remaining"}, cost_ctx())
+    assert data["rows"] == [] and data["big"] == {"label": "Guthaben", "value": "18,40 $"}
+
+
 @pytest.mark.parametrize("provider", ["anthropic-api", "openai-api"])
 def test_cost_budget_row(ai, fake_http, provider):
     fake_http(TWO_PAGES[provider])
@@ -518,6 +559,27 @@ def test_copilot_empty_and_over_allowance(ai, fake_http):
     over = ai.fetch({**COPILOT, "key": "other"}, cost_ctx())
     assert over["rows"][0]["text"] == "320 / 300" and over["rows"][0]["percent"] > 100
     assert over["big"]["value"] == "0"
+
+
+def test_copilot_remaining(ai, fake_http):
+    fake_http([gh_usage(200, 12)])
+    data = ai.fetch({**COPILOT, "show": "remaining"}, cost_ctx())
+    assert data["rows"] == [{"label": "Premium-Requests", "reset": "1.12.",
+                             "percent": pytest.approx(88 / 300 * 100), "text": "88 / 300",
+                             "used": pytest.approx(212 / 300 * 100)}]
+
+
+def test_copilot_remaining_over_allowance_is_zero(ai, fake_http):
+    fake_http([gh_usage(320)])
+    row = ai.fetch({**COPILOT, "show": "remaining"}, cost_ctx())["rows"][0]
+    assert row["percent"] == 0.0 and row["text"] == "0 / 300" and row["used"] > 100
+
+
+def test_budget_remaining_over_budget_is_zero(ai, fake_http):
+    fake_http(TWO_PAGES["openai-api"])
+    row = ai.fetch({**COST["openai-api"], "budget": 15.3333, "show": "remaining"},
+                   cost_ctx())["rows"][0]
+    assert row["percent"] == 0.0 and row["text"] == "0 %" and row["used"] > 100
 
 
 def test_copilot_month_is_utc(ai, fake_http):

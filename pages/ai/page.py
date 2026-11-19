@@ -12,6 +12,7 @@ from types import ModuleType
 from .providers import anthropic_api, claude, copilot, openai_api, xai_api
 
 LANGS = ("de", "en")
+SHOWS = ("used", "remaining")  # show: what the bars count (issue #6)
 
 # Only the claude provider reads pushed data (from the Claude Code status-line script).
 PUSH_KEYS = {"claude": ("rate_limits",)}
@@ -24,7 +25,8 @@ PROVIDERS: dict[str, ModuleType] = {
     "copilot": copilot,
 }
 
-# Template data shared by all providers. rows: [{"label", "reset", "percent": float, "text"}];
+# Template data shared by all providers. rows: [{"label", "reset", "percent": float, "text"}],
+# percent = share used; a row may add "remaining_text" for show: remaining (copilot's counts);
 # big: None or {"label", "value"}; stand: "Stand 13:58" or None; message replaces the body;
 # alert: True turns the header red (a provider could not get its data).
 EMPTY = {"rows": [], "big": None, "stand": None, "message": None, "sub": None, "alert": False}
@@ -36,6 +38,8 @@ def validate(options: dict) -> None:
         raise ValueError(f"provider must be one of: {', '.join(PROVIDERS)}")
     if options.get("lang", "de") not in LANGS:
         raise ValueError("lang must be 'de' or 'en'")
+    if options.get("show", "used") not in SHOWS:
+        raise ValueError("show must be 'used' or 'remaining'")
     title = options.get("title")
     if title is not None and not isinstance(title, str):
         raise ValueError("title must be text")
@@ -46,6 +50,19 @@ def fetch(options: dict, ctx) -> dict:
     lang = options.get("lang", ctx.lang if ctx.lang in LANGS else "de")
     provider = PROVIDERS[options["provider"]]
     data = {**EMPTY, **provider.fetch({**options, "lang": lang}, ctx)}
+    remaining = options.get("show") == "remaining"
+    data["rows"] = [_remaining(row) if remaining else
+                    {k: v for k, v in row.items() if k != "remaining_text"}
+                    for row in data["rows"]]
     data["title"] = options.get("title") or provider.NAME
     data["clock"] = ctx.now.strftime("%H:%M")
     return data
+
+
+def _remaining(row: dict) -> dict:
+    """Row turned to the share left; "used" keeps the share used for the bar color."""
+    used = row["percent"]
+    left = max(0.0, 100.0 - used)
+    text = row.get("remaining_text") or f"{round(left)} %"
+    rest = {k: v for k, v in row.items() if k != "remaining_text"}
+    return {**rest, "percent": left, "text": text, "used": used}

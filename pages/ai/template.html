@@ -25,7 +25,7 @@
 {%- for r in rows %}
   <div class="row">
     <div class="line"><span class="label">{{ r.label }}</span><span class="reset">{{ r.reset }}</span></div>
-    {{ ui.bar(r.percent, r.text) }}
+    {{ ui.bar(r.percent, r.text, used=r.used) }}
   </div>
 {%- endfor %}
 </div>
