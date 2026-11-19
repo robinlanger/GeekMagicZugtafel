@@ -195,6 +195,20 @@ async def test_template_renders_claude(ai):
 
 
 @pytest.mark.browser
+async def test_claude_alert_title_is_readable():
+    from glancebox.frames import _jinja_env
+    from glancebox.render import Renderer
+
+    html = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html").render(
+        title="Anthropic API", clock="14:05", message="Keine Daten", sub="Stand 14:05",
+        alert=True, theme="claude", stand=None, big=None, rows=[])
+    async with Renderer() as r:
+        img = Image.open(io.BytesIO(await r.render_html(html))).convert("RGB")
+    title = [img.getpixel((x, y)) for x in range(7, 130) for y in range(8, 26)]
+    assert max(sum(p) for p in title) > 600  # light text, not orange (sum ~423) on dark red
+
+
+@pytest.mark.browser
 async def test_other_providers_keep_the_plain_look():
     from glancebox.frames import _jinja_env
     from glancebox.render import Renderer
