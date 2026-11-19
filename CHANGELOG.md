@@ -6,11 +6,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1]
+
+Server update; the firmware is unchanged (no need to update the display). Update the Docker
+image as described in docs/en/updating.md.
+
 ### Added
+- ai page: option `show: remaining` shows how much of a limit is left instead of used. The bar
+  starts full at 100 % and drains towards 0 %; the color still follows what is used, so red
+  always means little is left. Over-use shows `0 %`, a reset window `100 %`, copilot shows what
+  is left of the allowance (`88 / 300`). Default stays `used`. (#6)
 - Project website at https://robinlanger.github.io/glancebox/ (English) and `/de/` (German):
   a landing page and a guided five-step setup, built from `docs/` with MkDocs Material and
   published by `.github/workflows/pages.yml`. It loads nothing from other hosts.
 - The docs parity check also compares front-matter keys between English and German.
+
+### Changed
+- ai page: `claude` and `anthropic-api` appear in Claude's colors, dark like claude.ai: warm
+  charcoal background, the title in Claude orange (serif), orange bars that turn red from 75 %
+  used. Colors only, no logo. The other providers and pages keep their look.
 
 ## [0.5.0]
 

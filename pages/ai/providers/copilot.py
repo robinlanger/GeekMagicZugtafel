@@ -91,7 +91,9 @@ def fetch(options: dict, ctx) -> dict:
     return {
         "rows": [{"label": texts[unit], "reset": _cost.next_month(ctx.now, lang),
                   "percent": used / allowance * 100,
-                  "text": f"{_count(used, lang)} / {_count(allowance, lang)}"}],
+                  "text": f"{_count(used, lang)} / {_count(allowance, lang)}",
+                  "remaining_text": f"{_count(max(allowance - used, 0), lang)} / "
+                                    f"{_count(allowance, lang)}"}],
         "big": {"label": texts["left"], "value": _count(max(allowance - used, 0), lang)},
         "stand": f"{_cost.TEXT[lang]['asof']} {stand:%H:%M}",
     }

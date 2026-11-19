@@ -54,4 +54,4 @@ def fetch(options: dict, ctx) -> dict:
         cents = sum(float(row["cost"]["amount"]) for page in pages for row in page["data"])
         return cents / 100, _parse_time(pages[-1].get("data_refreshed_at"))
 
-    return _cost.show("anthropic-api", options, ctx, "month", load)
+    return {**_cost.show("anthropic-api", options, ctx, "month", load), "theme": "claude"}

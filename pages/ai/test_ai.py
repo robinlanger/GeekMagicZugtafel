@@ -56,6 +56,41 @@ def test_validate_unknown_provider(ai):
     ai.validate({"provider": "claude", "lang": "en", "title": "Claude Max"})
 
 
+def test_validate_show(ai):
+    ai.validate({"provider": "claude", "show": "remaining"})
+    ai.validate({"provider": "claude", "show": "used"})
+    with pytest.raises(ValueError, match="show"):
+        ai.validate({"provider": "claude", "show": "left"})
+
+
+def test_claude_remaining(ai):
+    data = ai.fetch({**OPTIONS, "show": "remaining"}, ctx(limits()))
+    assert data["rows"] == [
+        {"label": "5 Stunden", "reset": "in 2:13", "percent": 58.0, "text": "58 %", "used": 42.0},
+        {"label": "Woche", "reset": "Do 09:00", "percent": 19.0, "text": "19 %", "used": 81.0},
+    ]
+
+
+def test_claude_remaining_after_reset_is_full(ai):
+    past = (NOW - timedelta(minutes=1)).timestamp()
+    row = ai.fetch({**OPTIONS, "show": "remaining"}, ctx(limits(five=(97.0, past))))["rows"][0]
+    assert (row["percent"], row["text"], row["used"]) == (100.0, "100 %", 0.0)
+
+
+def test_bar_level_uses_used_value():
+    from glancebox.frames import _jinja_env
+
+    tpl = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html")
+    base = {"title": "Claude", "clock": "14:05", "message": None, "sub": None,
+            "alert": False, "stand": None, "big": None, "theme": None}
+    low = tpl.render(**base, rows=[{"label": "Woche", "reset": "", "percent": 5.0,
+                                    "text": "5 %", "used": 95.0}])
+    assert "ui-fill ui-bad" in low and "width:5.0%" in low
+    full = tpl.render(**base, rows=[{"label": "Woche", "reset": "", "percent": 100.0,
+                                     "text": "100 %", "used": 0.0}])
+    assert "ui-fill ui-ok" in full
+
+
 def test_claude_no_data_yet(ai):
     data = ai.fetch(OPTIONS, ctx(None))
     assert data["title"] == "Claude" and data["clock"] == "14:05"
@@ -119,29 +154,101 @@ def test_claude_no_windows_in_push(ai):
         assert data["stand"] == "Stand 13:58"
 
 
+def _has(img, rgb, tol=40):
+    return any(all(abs(a - b) < tol for a, b in zip(img.getpixel((x, y)), rgb, strict=True))
+               for x in range(0, 240, 3) for y in range(34, 232, 3))
+
+
+def _bg(img):
+    """Background at the left edge, beside the bars."""
+    return img.getpixel((2, 120))
+
+
+def _near(rgb, want, tol=12):
+    return all(abs(a - b) < tol for a, b in zip(rgb, want, strict=True))
+
+
+CLAUDE_BG, CLAUDE_ORANGE, CLAUDE_RED = (0x26, 0x26, 0x24), (0xD9, 0x77, 0x57), (0xE5, 0x53, 0x4B)
+GREEN = (60, 200, 110)
+
+
 @pytest.mark.browser
 async def test_template_renders_claude(ai):
+    from glancebox.render import MAX_JPEG_BYTES, Renderer
+
     cfg = AppConfig(interval=30, timezone="Europe/Berlin", lang="de",
                     pages=(), pages_dirs=(PAGES_DIR,))
     page = PageConfig(index=0, type="ai", options=OPTIONS, duration=30, refresh=30)
-    from glancebox.render import Renderer
-
     async with Renderer() as r:
         inbox = PushInbox()
         empty = Image.open(io.BytesIO(
             await render_page(page, ai, cfg, r, NOW.timestamp(), inbox))).convert("RGB")
         inbox.put("claude", limits(five=(42.0, IN_2H13), seven=(95.0, THURSDAY_9)), RECEIVED)
-        full = Image.open(io.BytesIO(
-            await render_page(page, ai, cfg, r, NOW.timestamp(), inbox))).convert("RGB")
+        jpeg = await render_page(page, ai, cfg, r, NOW.timestamp(), inbox)
+        full = Image.open(io.BytesIO(jpeg)).convert("RGB")
     assert empty.size == full.size == (240, 240)
+    assert len(jpeg) <= MAX_JPEG_BYTES
     assert empty.convert("L").getextrema()[1] > 150  # the notice is visible
+    assert _near(_bg(empty), CLAUDE_BG) and _near(_bg(full), CLAUDE_BG)  # notice too
+    assert _has(full, CLAUDE_ORANGE, 20) and _has(full, CLAUDE_RED, 20)  # 42 % orange, 95 % red
+    assert not _has(full, GREEN) and not _has(empty, GREEN)
 
-    def has(img, rgb):
-        return any(all(abs(a - b) < 40 for a, b in zip(img.getpixel((x, y)), rgb, strict=True))
-                   for x in range(0, 240, 3) for y in range(34, 232, 3))
 
-    assert has(full, (60, 200, 110)) and has(full, (240, 70, 60))  # green 42 %, red 95 %
-    assert not has(empty, (60, 200, 110))
+@pytest.mark.browser
+async def test_claude_alert_title_is_readable():
+    from glancebox.frames import _jinja_env
+    from glancebox.render import Renderer
+
+    html = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html").render(
+        title="Anthropic API", clock="14:05", message="Keine Daten", sub="Stand 14:05",
+        alert=True, theme="claude", stand=None, big=None, rows=[])
+    async with Renderer() as r:
+        img = Image.open(io.BytesIO(await r.render_html(html))).convert("RGB")
+    title = [img.getpixel((x, y)) for x in range(7, 130) for y in range(8, 26)]
+    assert max(sum(p) for p in title) > 600  # light text, not orange (sum ~423) on dark red
+
+
+@pytest.mark.browser
+async def test_other_providers_keep_the_plain_look():
+    from glancebox.frames import _jinja_env
+    from glancebox.render import Renderer
+
+    html = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html").render(
+        title="OpenAI API", clock="14:05", message=None, sub=None, alert=False, theme=None,
+        stand="Stand 14:05", big={"label": "Diesen Monat", "value": "18,40 $"},
+        rows=[{"label": "Budget", "reset": "1.12.", "percent": 36.8, "text": "37 %"}])
+    async with Renderer() as r:
+        img = Image.open(io.BytesIO(await r.render_html(html))).convert("RGB")
+    assert _has(img, GREEN) and _near(_bg(img), (8, 10, 14))
+    assert "DejaVu Serif" not in html
+
+
+def test_theme_flag(ai, fake_http):
+    assert ai.fetch(OPTIONS, ctx(None))["theme"] == "claude"  # the notice too
+    assert ai.fetch(OPTIONS, ctx(limits()))["theme"] == "claude"
+    fake_http(TWO_PAGES["openai-api"])
+    assert ai.fetch(COST["openai-api"], cost_ctx())["theme"] is None
+
+
+def test_anthropic_api_theme_and_alert(ai, fake_http):
+    fake_http(TWO_PAGES["anthropic-api"])
+    assert ai.fetch(COST["anthropic-api"], cost_ctx())["theme"] == "claude"
+    fake_http([], error=http_error(401, "theme-key"))
+    data = ai.fetch({**COST["anthropic-api"], "key": "theme-key"}, cost_ctx())
+    assert data["alert"] is True and data["theme"] == "claude"
+
+
+def test_claude_theme_html():
+    from glancebox.frames import _jinja_env
+
+    tpl = _jinja_env([PAGES_DIR / "ai"]).get_template("template.html")
+    base = {"title": "Claude", "clock": "14:05", "message": None, "sub": None, "alert": False,
+            "stand": "Stand 13:58", "big": None,
+            "rows": [{"label": "Woche", "reset": "", "percent": 42.0, "text": "42 %"}]}
+    themed = tpl.render(**base, theme="claude")
+    assert "font-family:'DejaVu Serif'" in themed and "#262624" in themed.upper()
+    plain = tpl.render(**base, theme=None)
+    assert "DejaVu Serif" not in plain and "#262624" not in plain.upper()
 
 
 # --- cost providers: anthropic-api, openai-api, xai-api -------------------------------------
@@ -326,6 +433,12 @@ def test_xai_balance(ai, fake_http):
     fake_http([xai_balance("250")])
     owed = ai.fetch({**COST["xai-api"], "key": "third"}, cost_ctx())
     assert owed["big"]["value"] == "-2,50 $"
+
+
+def test_xai_remaining_has_no_rows(ai, fake_http):
+    fake_http(TWO_PAGES["xai-api"])
+    data = ai.fetch({**COST["xai-api"], "show": "remaining"}, cost_ctx())
+    assert data["rows"] == [] and data["big"] == {"label": "Guthaben", "value": "18,40 $"}
 
 
 @pytest.mark.parametrize("provider", ["anthropic-api", "openai-api"])
@@ -518,6 +631,27 @@ def test_copilot_empty_and_over_allowance(ai, fake_http):
     over = ai.fetch({**COPILOT, "key": "other"}, cost_ctx())
     assert over["rows"][0]["text"] == "320 / 300" and over["rows"][0]["percent"] > 100
     assert over["big"]["value"] == "0"
+
+
+def test_copilot_remaining(ai, fake_http):
+    fake_http([gh_usage(200, 12)])
+    data = ai.fetch({**COPILOT, "show": "remaining"}, cost_ctx())
+    assert data["rows"] == [{"label": "Premium-Requests", "reset": "1.12.",
+                             "percent": pytest.approx(88 / 300 * 100), "text": "88 / 300",
+                             "used": pytest.approx(212 / 300 * 100)}]
+
+
+def test_copilot_remaining_over_allowance_is_zero(ai, fake_http):
+    fake_http([gh_usage(320)])
+    row = ai.fetch({**COPILOT, "show": "remaining"}, cost_ctx())["rows"][0]
+    assert row["percent"] == 0.0 and row["text"] == "0 / 300" and row["used"] > 100
+
+
+def test_budget_remaining_over_budget_is_zero(ai, fake_http):
+    fake_http(TWO_PAGES["openai-api"])
+    row = ai.fetch({**COST["openai-api"], "budget": 15.3333, "show": "remaining"},
+                   cost_ctx())["rows"][0]
+    assert row["percent"] == 0.0 and row["text"] == "0 %" and row["used"] > 100
 
 
 def test_copilot_month_is_utc(ai, fake_http):
