@@ -53,6 +53,10 @@ def _reset_text(resets_at: float, now: datetime, lang: str) -> str:
 
 
 def fetch(options: dict, ctx) -> dict:
+    return {**_fetch(options, ctx), "theme": "claude"}  # the claude.ai look, notices too
+
+
+def _fetch(options: dict, ctx) -> dict:
     lang = options["lang"]
     texts = TEXT[lang]
     pushed = ctx.pushed(CHANNEL)

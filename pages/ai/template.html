@@ -12,6 +12,21 @@
 .line .reset{flex:none;font-size:13px;color:var(--muted);white-space:nowrap;}
 .stand{position:absolute;left:0;width:240px;bottom:12px;text-align:center;font-size:12px;line-height:14px;color:var(--muted);}
 </style>
+{%- if theme == "claude" %}
+{#- The claude.ai dark look: colors only, no logo. Orange bars, red from 75 % used. #}
+<style>
+{{ serif_face_css() | safe }}
+:root{--bg:#262624;--header-bg:#1F1E1D;--fg:#FAF9F5;--muted:#A8A69C;--divider:#3A3936;}
+html,body{background:#262624;color:#FAF9F5;}
+.ui-hdr{border-bottom:1px solid #3A3936;}
+.ui-title{color:#D97757;font-family:'DejaVu Serif',serif;}
+.ui-clock{color:#FAF9F5;}
+.ui-bar{border-radius:6px;}
+.ui-fill.ui-ok{background:#D97757;}
+.ui-fill.ui-warn,.ui-fill.ui-bad{background:#E5534B;}
+.ui-bar-text{text-shadow:0 0 2px #262624,0 1px 3px rgba(38,38,36,.8);}
+</style>
+{%- endif %}
 {% endblock %}
 {% block body %}
 {{ ui.header(title, clock, alert=alert) }}

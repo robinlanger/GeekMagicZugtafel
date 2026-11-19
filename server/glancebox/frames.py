@@ -19,7 +19,7 @@ from PIL import Image
 from .config import AppConfig, PageConfig
 from .pages import PageContext, PageType
 from .push import PushInbox
-from .render import SIZE, font_face_css
+from .render import SIZE, font_face_css, serif_face_css
 
 log = logging.getLogger(__name__)
 
@@ -97,6 +97,7 @@ def _jinja_env(extra_dirs: list) -> jinja2.Environment:
         autoescape=True,
     )
     env.globals["font_face_css"] = font_face_css()  # base.html uses it as a string
+    env.globals["serif_face_css"] = serif_face_css  # a function: only called where needed
     return env
 
 

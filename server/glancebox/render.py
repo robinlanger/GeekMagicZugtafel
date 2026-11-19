@@ -43,6 +43,14 @@ def font_face_css() -> str:
     return "\n".join(rules)
 
 
+@cache
+def serif_face_css() -> str:
+    """@font-face rule for DejaVu Serif Bold; only the pages that use it embed it (~470 KB)."""
+    data = base64.b64encode((FONTS_DIR / "DejaVuSerif-Bold.ttf").read_bytes()).decode("ascii")
+    return ("@font-face{font-family:'DejaVu Serif';font-weight:bold;font-style:normal;"
+            f"src:url(data:font/ttf;base64,{data}) format('truetype');}}")
+
+
 def encode_jpeg(png: bytes) -> bytes:
     """Encode PNG bytes as baseline JPEG, lowering quality until it fits."""
     img = Image.open(io.BytesIO(png)).convert("RGB")

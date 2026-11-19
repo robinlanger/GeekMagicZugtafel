@@ -28,8 +28,10 @@ PROVIDERS: dict[str, ModuleType] = {
 # Template data shared by all providers. rows: [{"label", "reset", "percent": float, "text"}],
 # percent = share used; a row may add "remaining_text" for show: remaining (copilot's counts);
 # big: None or {"label", "value"}; stand: "Stand 13:58" or None; message replaces the body;
-# alert: True turns the header red (a provider could not get its data).
-EMPTY = {"rows": [], "big": None, "stand": None, "message": None, "sub": None, "alert": False}
+# alert: True turns the header red (a provider could not get its data);
+# theme: None or "claude" (the claude.ai dark look, set by the claude and anthropic-api providers).
+EMPTY = {"rows": [], "big": None, "stand": None, "message": None, "sub": None, "alert": False,
+         "theme": None}
 
 
 def validate(options: dict) -> None:
