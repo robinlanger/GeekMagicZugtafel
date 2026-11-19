@@ -17,6 +17,10 @@ How much of an AI plan or budget you have used. Each page shows one provider, wh
 
 For each limit there is a line with its name and the time of the reset on the right, and below it a wide bar with the value inside. The bar is green, orange from 75 % and red from 90 %.
 
+**Used or left:** by default the bars count up, how much is used. With `show: remaining` they count down instead: the bar starts full at `100 %` and drains towards `0 %`, so `58 %` means 58 % are still left. The color still follows what is used, so red always means little is left. More than used up shows `0 %`, a window that has been reset shows `100 %`, and for `copilot` the text shows what is left of the allowance, for example `88 / 300`. `xai-api` has no bar, so the option changes nothing there.
+
+**Claude look:** `claude` and `anthropic-api` appear in Claude's colors, dark like claude.ai: the title in Claude orange, orange bars that turn red from 75 % used. This happens automatically; the other providers keep the normal look.
+
 For `claude`:
 
 - **Reset:** less than a day away as `in 2:13` (hours:minutes), otherwise as weekday and time, for example `Thu 09:00`. If the reset time has already passed, the bar shows `0 %` and `reset`.
@@ -28,7 +32,7 @@ For `claude`:
 For `anthropic-api`, `openai-api` and `xai-api`:
 
 - **Amount:** large in the middle, as `$18.40` (`This month`) or, for `xai-api`, `Balance`. The month is the calendar month in UTC, the way the providers bill.
-- **Budget:** with `budget: 50` a bar `Budget` appears below the amount, with the share of the budget already spent and the day it starts again (`Dec 1`). Above 100 % the bar stays full and the text shows the real value, for example `120 %`.
+- **Budget:** with `budget: 50` a bar `Budget` appears below the amount, with the share of the budget already spent and the day it starts again (`Dec 1`). Above 100 % the bar stays full and the text shows the real value, for example `120 %` (with `show: remaining`: an empty bar and `0 %`).
 - **Age:** at the bottom `As of 14:05` shows when the server last got the values. For `anthropic-api` it is the time of Anthropic's data export, which is updated about every 4 hours.
 - **Only every 5 minutes:** cost data changes slowly. The server keeps a successful answer for 5 minutes, whatever `refresh` says. After a failure it asks again after 1 minute at the earliest.
 - **No data:** if the provider cannot be reached or refuses the key, the header turns red and the page shows `No data` with the time, never an old amount.
@@ -91,6 +95,7 @@ For the API costs, with the key in `.env` (see [Setup](#setup)):
 | `username` | | Only `copilot`, and required there: your GitHub user name. |
 | `monthly_allowance` | | Only `copilot`, and required there: how much your plan includes per month, a positive number such as `1500`. |
 | `unit` | `ai-credits` | Only `copilot`: `ai-credits` (usage-based billing, the normal case) or `premium-requests` (an annual plan that stayed on premium requests). |
+| `show` | `used` | `used`: the bars show how much is used. `remaining`: they show how much is left (100 % → 0 %). See [What it shows](#what-it-shows). |
 | `title` | name of the provider (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`, `GitHub Copilot`) | Header text. |
 | `lang` | top-level `lang` | `de` or `en`. Sets all texts on the page. |
 | `refresh` | `refresh` default | For `claude` we recommend `30`. The page only reads what arrived, so this costs nothing. For the API providers the server keeps a successful answer for 5 minutes anyway. |

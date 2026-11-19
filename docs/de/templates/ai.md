@@ -17,6 +17,10 @@ Wie viel von einem KI-Abo oder -Budget verbraucht ist. Jede Seite zeigt einen An
 
 Für jedes Limit gibt es eine Zeile mit dem Namen und rechts der Zeit des Resets, darunter einen breiten Balken mit dem Wert darin. Der Balken ist grün, ab 75 % orange und ab 90 % rot.
 
+**Verbraucht oder übrig:** Standardmäßig zählen die Balken hoch, wie viel verbraucht ist. Mit `show: remaining` zählen sie stattdessen herunter: Der Balken startet voll bei `100 %` und läuft gegen `0 %`, `58 %` heißt also, 58 % sind noch übrig. Die Farbe richtet sich weiter nach dem Verbrauch, Rot heißt also immer: nur noch wenig übrig. Mehr als aufgebraucht zeigt `0 %`, ein zurückgesetztes Fenster `100 %`, und bei `copilot` zeigt der Text, was vom Kontingent übrig ist, zum Beispiel `88 / 300`. `xai-api` hat keinen Balken, dort ändert die Option nichts.
+
+**Claude-Look:** `claude` und `anthropic-api` erscheinen in Claudes Farben, dunkel wie claude.ai: der Titel in Claude-Orange, orange Balken, die ab 75 % Verbrauch rot werden. Das passiert automatisch; die anderen Anbieter behalten das normale Aussehen.
+
 Für `claude`:
 
 - **Reset:** weniger als einen Tag entfernt als `in 2:13` (Stunden:Minuten), sonst als Wochentag und Uhrzeit, zum Beispiel `Do 09:00`. Ist die Reset-Zeit schon vorbei, zeigt der Balken `0 %` und `zurückgesetzt`.
@@ -28,7 +32,7 @@ Für `claude`:
 Für `anthropic-api`, `openai-api` und `xai-api`:
 
 - **Betrag:** groß in der Mitte, als `18,40 $` (`Diesen Monat`) oder, bei `xai-api`, `Guthaben`. Der Monat ist der Kalendermonat in UTC, so wie die Anbieter abrechnen.
-- **Budget:** mit `budget: 50` erscheint unter dem Betrag ein Balken `Budget` mit dem Anteil, der schon verbraucht ist, und dem Tag, an dem er neu beginnt (`1.12.`). Über 100 % bleibt der Balken voll, und der Text zeigt den echten Wert, zum Beispiel `120 %`.
+- **Budget:** mit `budget: 50` erscheint unter dem Betrag ein Balken `Budget` mit dem Anteil, der schon verbraucht ist, und dem Tag, an dem er neu beginnt (`1.12.`). Über 100 % bleibt der Balken voll, und der Text zeigt den echten Wert, zum Beispiel `120 %` (mit `show: remaining`: ein leerer Balken und `0 %`).
 - **Alter:** unten zeigt `Stand 14:05`, wann der Server die Werte zuletzt bekommen hat. Bei `anthropic-api` ist es die Zeit des Datenexports von Anthropic, der etwa alle 4 Stunden aktualisiert wird.
 - **Nur alle 5 Minuten:** Kostendaten ändern sich langsam. Der Server behält eine erfolgreiche Antwort 5 Minuten, egal was bei `refresh` steht. Nach einem Fehler fragt er frühestens nach 1 Minute erneut.
 - **Keine Daten:** ist der Anbieter nicht erreichbar oder lehnt er den Key ab, wird die Kopfzeile rot, und die Seite zeigt `Keine Daten` mit der Uhrzeit, nie einen alten Betrag.
@@ -91,6 +95,7 @@ Für die API-Kosten, mit dem Key in `.env` (siehe [Einrichtung](#einrichtung)):
 | `username` | | Nur `copilot`, dort Pflicht: dein GitHub-Benutzername. |
 | `monthly_allowance` | | Nur `copilot`, dort Pflicht: wie viel dein Abo pro Monat enthält, eine positive Zahl wie `1500`. |
 | `unit` | `ai-credits` | Nur `copilot`: `ai-credits` (nutzungsbasierte Abrechnung, der Normalfall) oder `premium-requests` (ein Jahresabo, das bei Premium-Requests geblieben ist). |
+| `show` | `used` | `used`: Die Balken zeigen, wie viel verbraucht ist. `remaining`: Sie zeigen, wie viel übrig ist (100 % → 0 %). Siehe [Was sie zeigt](#was-sie-zeigt). |
 | `title` | Name des Anbieters (`Claude`, `Anthropic API`, `OpenAI API`, `xAI API`, `GitHub Copilot`) | Text der Kopfzeile. |
 | `lang` | oberstes `lang` | `de` oder `en`. Legt alle Texte der Seite fest. |
 | `refresh` | Standard-`refresh` | Für `claude` empfehlen wir `30`. Die Seite liest nur, was angekommen ist, das kostet nichts. Bei den API-Anbietern behält der Server eine erfolgreiche Antwort ohnehin 5 Minuten. |
