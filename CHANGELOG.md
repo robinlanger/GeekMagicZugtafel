@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0]
+
+Server update with a new way to run it: the Home Assistant add-on. The firmware is unchanged
+(no need to update the display). Docker users update the image as described in
+docs/en/updating.md; Home Assistant OS users can install the add-on, see
+docs/en/home-assistant.md.
+
 ### Added
 - Home Assistant add-on (`ha-addon/`, repository file `repository.yaml`): the server installs from
   the add-on store, starts with a clock + weather playlist using Home Assistant's time zone,
