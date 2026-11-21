@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Home Assistant add-on (`ha-addon/`, repository file `repository.yaml`): the server installs from
+  the add-on store, starts with a clock + weather playlist using Home Assistant's time zone,
+  language and home location, keeps secrets in the add-on form, and shows the display address and
+  page previews in the sidebar (Ingress, behind the HA login). A `homeassistant` page needs no
+  token there. In add-on mode the LAN port serves only frames, push and health.
+
 ## [0.5.1]
 
 Server update; the firmware is unchanged (no need to update the display). Update the Docker
