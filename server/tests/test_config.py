@@ -139,3 +139,32 @@ def test_push_key_must_be_ascii(tmp_path):
 
 def test_push_key_default_none(tmp_path):
     assert load_config(write(tmp_path, "pages:\n  - type: clock\n")).push_key is None
+
+
+def test_defaults_hook_runs_after_env_and_before_validation(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x" * 16)
+    p = tmp_path / "c.yaml"
+    p.write_text("push_key: ${K}\npages:\n  - type: clock\n")
+    seen = {}
+
+    def hook(data):
+        seen.update(data)
+        return {**data, "timezone": "America/New_York", "lang": "en"}
+
+    cfg = load_config(p, defaults=hook)
+    assert seen["push_key"] == "x" * 16
+    assert (cfg.timezone, cfg.lang) == ("America/New_York", "en")
+
+
+def test_no_hook_keeps_old_defaults(tmp_path):
+    p = tmp_path / "c.yaml"
+    p.write_text("pages:\n  - type: clock\n")
+    cfg = load_config(p)
+    assert (cfg.timezone, cfg.lang) == ("Europe/Berlin", "de")
+
+
+def test_defaults_hook_must_return_mapping(tmp_path):
+    p = tmp_path / "c.yaml"
+    p.write_text("pages:\n  - type: clock\n")
+    with pytest.raises(ConfigError):
+        load_config(p, defaults=lambda d: None)
