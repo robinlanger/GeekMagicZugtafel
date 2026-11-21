@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.1]
+
+Server and add-on update; the firmware is unchanged (no need to update the display).
+
+### Changed
+- The example configuration is now `config-example.yaml` (was `config.example.yaml`): Home
+  Assistant read every `config.*.yaml` in the repository as an add-on and logged a warning.
+  Existing `config.yaml` files are not affected.
+
+### Fixed
+- Home Assistant add-on: a refused API access (HTTP 401/403) now stops at once with "refused
+  access" instead of being retried and reported as "not reachable".
+- Home Assistant add-on: a repeated name under "More secrets" is ignored with a warning (the first
+  one counts) instead of silently replacing the earlier value.
+- Home Assistant add-on: `timezone:` or `lang:` left empty in `config.yaml` now uses the value from
+  Home Assistant instead of failing.
+
 ## [0.6.0]
 
 Server update with a new way to run it: the Home Assistant add-on. The firmware is unchanged
