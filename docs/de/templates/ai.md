@@ -23,7 +23,7 @@ Für jedes Limit gibt es eine Zeile mit dem Namen und rechts der Zeit des Resets
 
 Für `claude`:
 
-- **Reset:** weniger als einen Tag entfernt als `in 2:13` (Stunden:Minuten), sonst als Wochentag und Uhrzeit, zum Beispiel `Do 09:00`. Ist die Reset-Zeit schon vorbei, zeigt der Balken `0 %` und `zurückgesetzt`.
+- **Reset:** weniger als einen Tag entfernt als `in 2:13` (Stunden:Minuten), sonst als Wochentag und Uhrzeit, zum Beispiel `Do 09:00`. Ist die Reset-Zeit schon vorbei, zeigt der Balken `0 %` und `zurückgesetzt` (mit `show: remaining`: ein voller Balken und `100 %`).
 - **Alter:** unten zeigt die Seite immer, wann die Werte ankamen, zum Beispiel `Stand 13:58`, oder `Stand Sa 13:58`, wenn sie von einem früheren Tag sind.
 - **Noch keine Daten:** bis die ersten Werte ankommen, zeigt die Seite den Hinweis `Noch keine Daten` mit `Statuszeilen-Skript einrichten`.
 - **Keine Limitdaten:** Werte kamen an, aber ohne brauchbare Limits, zum Beispiel nach dem `curl`-Test unter [Wenn etwas nicht stimmt](#wenn-etwas-nicht-stimmt). Die nächste Antwort von Claude Code bringt die echten Werte. Limits hat Claude Code nur mit einem Claude-Abo (Pro oder Max); mit einem API-Key schickt das Skript nichts, und die Seite bleibt bei `Noch keine Daten`.
