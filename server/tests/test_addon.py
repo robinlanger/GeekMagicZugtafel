@@ -255,3 +255,26 @@ def test_connect_url_odd_shapes_do_not_crash():
     get = fake_get({NETWORK_URL: FakeResp(odd),
                     SELF_URL: FakeResp({"result": "ok", "data": {"network": "x"}})})
     assert connect_url("tok", get=get) is None
+
+
+def test_fetch_ha_info_refused_fails_fast():
+    sleeps = []
+    get = fake_get({CONFIG_URL: FakeResp({}, 401)})
+    with pytest.raises(AddonError) as err:
+        fetch_ha_info("tok", get=get, sleep=sleeps.append, attempts=5)
+    assert "refused" in str(err.value) and "401" in str(err.value)
+    assert sleeps == []
+
+
+def test_secrets_env_duplicate_extra_name_warns_first_wins(caplog):
+    caplog.set_level(logging.WARNING)
+    env = secrets_env({"extra_secrets": [{"name": "MY_API", "value": "one"},
+                                         {"name": "MY_API", "value": "two"}]}, {})
+    assert env == {"MY_API": "one"}
+    assert "MY_API" in caplog.text and "two" not in caplog.text
+
+
+def test_ha_defaults_fill_null_values():
+    hook = ha_defaults(HaInfo("America/New_York", "en", 1.0, 2.0), {"SUPERVISOR_TOKEN": "s"})
+    out = hook({"timezone": None, "lang": None, "pages": [{"type": "clock"}]})
+    assert (out["timezone"], out["lang"]) == ("America/New_York", "en")

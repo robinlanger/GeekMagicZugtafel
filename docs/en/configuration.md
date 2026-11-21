@@ -1,6 +1,6 @@
 # Server configuration
 
-The whole server is configured by one file, `config.yaml`. Start from `config.example.yaml`.
+The whole server is configured by one file, `config.yaml`. Start from `config-example.yaml`.
 
 ## Where the file lives
 

@@ -1,6 +1,6 @@
 # Server-Konfiguration
 
-Der ganze Server wird mit einer einzigen Datei eingestellt, `config.yaml`. Als Vorlage dient `config.example.yaml`.
+Der ganze Server wird mit einer einzigen Datei eingestellt, `config.yaml`. Als Vorlage dient `config-example.yaml`.
 
 ## Wo die Datei liegt
 
