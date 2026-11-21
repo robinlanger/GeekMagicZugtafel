@@ -1,4 +1,15 @@
-FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
+ARG TARGETARCH
+FROM mcr.microsoft.com/playwright/python:v1.65.2-noble AS base
+
+# Home Assistant add-on labels (ha-addon/): the Supervisor checks io.hass.arch against the host.
+FROM base AS base-amd64
+LABEL io.hass.arch="amd64"
+FROM base AS base-arm64
+LABEL io.hass.arch="aarch64"
+
+FROM base-${TARGETARCH}
+ARG VERSION=dev
+LABEL io.hass.type="app" io.hass.version="${VERSION}"
 
 # Layout mirrors the repo so glancebox.__version__ finds /app/VERSION (parents[2] of the package).
 WORKDIR /app

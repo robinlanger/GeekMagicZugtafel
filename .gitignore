@@ -11,6 +11,7 @@ zugtafel.png
 
 # Local setup (never commit)
 config.yaml
+!ha-addon/config.yaml
 docker-compose.override.yml
 pages-custom/
 

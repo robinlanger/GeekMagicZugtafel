@@ -1,0 +1,4 @@
+# Home Assistant add-on repository: add https://github.com/robinlanger/glancebox in the add-on store.
+name: Glance Box
+url: https://github.com/robinlanger/glancebox
+maintainer: robinlanger
