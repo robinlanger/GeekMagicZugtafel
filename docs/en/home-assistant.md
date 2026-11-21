@@ -27,7 +27,8 @@ from Home Assistant, so there is nothing to fill in.
 
 ## Connect the display
 
-Open **Glance Box** in the Home Assistant sidebar. The box "Connect your display" shows the server
+On the add-on page click **Open web UI** (switch on **Show in sidebar** there to have it one
+click away). The box "Connect your display" shows the server
 address, for example `http://192.168.x.x:8090`. Enter it in the display's setup portal
 ([Set up Wi-Fi](guide/4-set-up-wifi.md)) or later on its device page.
 
@@ -41,8 +42,8 @@ Server it is `/addon_configs/<id>_glancebox/config.yaml`. It uses the same forma
   from Home Assistant are used. Values you set always win.
 - A `homeassistant` page needs neither `url` nor `token`; it reads from this Home Assistant.
 
-If that folder is empty (the add-on could not save the starter file there), the Glance Box page in
-the sidebar shows the starter content: create `config.yaml` with it in the File editor.
+If that folder is empty (the add-on could not save the starter file there), the add-on's web UI
+shows the starter content: create `config.yaml` with it in the File editor.
 
 Restart the add-on after editing.
 
@@ -61,4 +62,4 @@ need to be written into `config.yaml` in plain text.
   token belongs to the add-on and is revoked when you uninstall it.
 - The **display port (8090) has no login.** It only serves the pictures and accepts pushed data
   with the push key. Keep it in your LAN; do not forward it to the internet.
-- The overview with previews is only in the sidebar, behind your Home Assistant login.
+- The overview with previews is only in the add-on's web UI, behind your Home Assistant login.

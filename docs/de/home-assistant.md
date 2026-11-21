@@ -28,7 +28,8 @@ aus Home Assistant, du musst also nichts ausfüllen.
 
 ## Display verbinden
 
-Öffne **Glance Box** in der Seitenleiste von Home Assistant. Der Kasten „Connect your display“
+Klick auf der Seite des Add-ons auf **Benutzeroberfläche öffnen** (schalte dort **In Seitenleiste
+anzeigen** ein, dann ist sie einen Klick entfernt). Der Kasten „Connect your display“
 zeigt die Server-Adresse, zum Beispiel `http://192.168.x.x:8090`. Trag sie im Setup-Portal des
 Displays ein ([WLAN einrichten](guide/4-set-up-wifi.md)) oder später auf seiner Geräteseite.
 
@@ -42,8 +43,8 @@ Format wie die [Konfiguration](configuration.md) des Docker-Setups, mit zwei Unt
   aus Home Assistant. Was du selbst einträgst, hat immer Vorrang.
 - Eine `homeassistant`-Seite braucht weder `url` noch `token`; sie liest aus diesem Home Assistant.
 
-Ist der Ordner leer (das Add-on konnte die Startdatei dort nicht speichern), zeigt die Glance-Box-Seite
-in der Seitenleiste den Startinhalt: Lege damit im File editor die `config.yaml` an.
+Ist der Ordner leer (das Add-on konnte die Startdatei dort nicht speichern), zeigt die Benutzeroberfläche
+des Add-ons den Startinhalt: Lege damit im File editor die `config.yaml` an.
 
 Starte das Add-on nach dem Bearbeiten neu.
 
@@ -62,4 +63,5 @@ müssen nie im Klartext in der `config.yaml` stehen.
   Zugangs-Token gehört dem Add-on und verfällt, wenn du es deinstallierst.
 - Der **Display-Port (8090) hat keinen Login.** Er liefert nur die Bilder und nimmt Push-Daten mit
   dem Push-Key an. Nutze ihn nur im LAN und gib ihn nicht ins Internet frei.
-- Die Übersicht mit Vorschau gibt es nur in der Seitenleiste, hinter deinem Home-Assistant-Login.
+- Die Übersicht mit Vorschau gibt es nur in der Benutzeroberfläche des Add-ons, hinter deinem
+  Home-Assistant-Login.

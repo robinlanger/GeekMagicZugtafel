@@ -16,7 +16,7 @@ Start the add-on. Without any settings it creates a starter playlist: a **clock*
 **weather** at your Home Assistant home location. Time zone, language (German or English) and
 location come from Home Assistant.
 
-Open **Glance Box** in the sidebar. The box "Connect your display" shows the server address, for
+Click **Open web UI** on this page (switch on **Show in sidebar** to have it one click away). The box "Connect your display" shows the server address, for
 example `http://192.168.x.x:8090`. Enter it in the display's setup portal (or later on its device
 page). The display then shows your pages.
 
@@ -24,7 +24,7 @@ page). The display then shows your pages.
 
 The playlist is `config.yaml` in the add-on's config folder. In the File editor (or Studio Code
 Server) it is under `/addon_configs/<id>_glancebox/config.yaml`. If that folder is empty (the add-on
-could not save the starter file there), the sidebar page shows the starter content: create
+could not save the starter file there), the web UI shows the starter content: create
 `config.yaml` with it in the File editor. Restart the add-on after editing.
 All page types and options are described at <https://robinlanger.github.io/glancebox/templates/>.
 
@@ -65,4 +65,4 @@ Restart the add-on after changing them.
   belongs to this add-on and is revoked when you uninstall it.
 - **Display port (8090) has no login.** It serves only the pictures for the display and accepts
   pushed data with the push key. Keep it in your LAN; do not forward it to the internet.
-- The overview with previews is only in the sidebar, behind your Home Assistant login.
+- The overview with previews is only in the add-on's web UI, behind your Home Assistant login.
