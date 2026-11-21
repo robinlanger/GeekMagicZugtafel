@@ -23,7 +23,9 @@ page). The display then shows your pages.
 ## Change the pages
 
 The playlist is `config.yaml` in the add-on's config folder. In the File editor (or Studio Code
-Server) it is under `/addon_configs/<id>_glancebox/config.yaml`. Restart the add-on after editing.
+Server) it is under `/addon_configs/<id>_glancebox/config.yaml`. If that folder is empty (the add-on
+could not save the starter file there), the sidebar page shows the starter content: create
+`config.yaml` with it in the File editor. Restart the add-on after editing.
 All page types and options are described at <https://robinlanger.github.io/glancebox/templates/>.
 
 Home Assistant entities need no token here: a `homeassistant` page without `url` and `token` reads

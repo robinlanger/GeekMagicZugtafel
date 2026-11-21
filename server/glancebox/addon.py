@@ -8,7 +8,6 @@ the YAML leaves them out. YAML values always win. Secret values are never logged
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 import time
@@ -183,6 +182,21 @@ def _supervisor_data(path: str, token: str, get: Callable[..., Any]) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def fetch_options(token: str, get: Callable[..., Any] = requests.get,
+                  sleep: Callable[[float], None] = time.sleep, attempts: int = 10) -> dict:
+    """The add-on form values (validated by the Supervisor, ``!secret`` resolved)."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return _supervisor_data("/addons/self/options/config", token, get)
+        except (requests.RequestException, ValueError, AttributeError) as e:
+            reason = type(e).__name__
+        log.warning("cannot read the add-on options (%s), attempt %d/%d",
+                    reason, attempt, attempts)
+        if attempt < attempts:
+            sleep(RETRY_PAUSE)
+    raise AddonError("cannot read the add-on options from the Supervisor")
+
+
 def connect_url(token: str, get: Callable[..., Any] = requests.get) -> str | None:
     """Address the display should use (``http://<HA LAN IP>:<host port>``), or None if unknown."""
     try:
@@ -194,11 +208,13 @@ def connect_url(token: str, get: Callable[..., Any] = requests.get) -> str | Non
     ip = None
     for iface in network.get("interfaces") or []:
         if isinstance(iface, dict) and iface.get("primary"):
-            addresses = (iface.get("ipv4") or {}).get("address") or []
-            if addresses:
+            ipv4 = iface.get("ipv4")
+            addresses = ipv4.get("address") if isinstance(ipv4, dict) else None
+            if isinstance(addresses, list) and addresses:
                 ip = str(addresses[0]).split("/")[0]
                 break
-    port = (info.get("network") or {}).get("8080/tcp")
+    ports = info.get("network")
+    port = ports.get("8080/tcp") if isinstance(ports, dict) else None
     if not ip or not isinstance(port, int):
         return None
     return f"http://{ip}:{port}"
@@ -212,22 +228,18 @@ class AddonSetup:
     config_note: str | None
 
 
-def addon_setup(environ: MutableMapping[str, str], options_path: Path, config_path: Path,
+def addon_setup(environ: MutableMapping[str, str], config_path: Path,
                 fallback_dir: Path, get: Callable[..., Any] = requests.get,
                 sleep: Callable[[float], None] = time.sleep) -> AddonSetup:
     """Everything add-on mode needs before ``load_config``. Updates ``environ`` with the form's
     secrets so ``${NAME}`` in the playlist resolves."""
-    try:
-        options = json.loads(options_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        raise AddonError(f"cannot read the add-on options ({options_path})") from None
-    if not isinstance(options, dict):
-        raise AddonError("add-on options must be a mapping")
-    environ.update(secrets_env(options, environ))
+    # /data/options.json is root-only (0600) and we run as pwuser: ask the Supervisor instead.
     token = environ["SUPERVISOR_TOKEN"]
+    options = fetch_options(token, get=get, sleep=sleep)
+    environ.update(secrets_env(options, environ))
     info = fetch_ha_info(token, get=get, sleep=sleep)
     path, own = ensure_config(config_path, fallback_dir)
     note = None if own else (
         f"The starter playlist could not be saved to {config_path}, so it runs from a temporary "
-        "copy. Create config.yaml in the add-on's config folder to keep your pages.")
+        "copy. Create config.yaml in the add-on's config folder (File editor) to keep your pages.")
     return AddonSetup(path, ha_defaults(info, environ), connect_url(token, get=get), note)

@@ -106,7 +106,8 @@ def _add_overview(app: FastAPI, cfg: AppConfig, store: FrameStore, clock: Callab
 
 
 def create_ingress_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = time.time,
-                       *, connect: str | None, config_note: str | None) -> FastAPI:
+                       *, connect: str | None, config_note: str | None,
+                       starter_yaml: str | None = None) -> FastAPI:
     """Overview for the Home Assistant sidebar (Ingress), with the display address to copy.
     Answers only the Supervisor; HA has already checked the user's login."""
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -117,7 +118,8 @@ def create_ingress_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], fl
             return Response("forbidden", status_code=403)
         return await call_next(request)
 
-    _add_overview(app, cfg, store, clock, addon=True, connect=connect, config_note=config_note)
+    _add_overview(app, cfg, store, clock, addon=True, connect=connect, config_note=config_note,
+                  starter_yaml=starter_yaml)
     return app
 
 

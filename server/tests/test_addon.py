@@ -190,8 +190,12 @@ def test_connect_url_supervisor_error():
     assert connect_url("tok", get=get) is None
 
 
-def setup_routes():
+OPTIONS_URL = "http://supervisor/addons/self/options/config"
+
+
+def setup_routes(options=None):
     return fake_get({
+        OPTIONS_URL: FakeResp({"result": "ok", "data": options if options is not None else {}}),
         CONFIG_URL: FakeResp({"time_zone": "Europe/Berlin", "latitude": 50.1, "longitude": 8.6,
                               "language": "de"}),
         NETWORK_URL: FakeResp(NETWORK),
@@ -202,10 +206,15 @@ def setup_routes():
 def test_addon_setup_end_to_end(tmp_path):
     import json
     opts = tmp_path / "options.json"
-    opts.write_text(json.dumps({"push_key": "p" * 16, "extra_secrets": []}))
+    opts.write_text(json.dumps({"push_key": "wrong-source"}))
+    opts.chmod(0o000)  # the Supervisor writes it root-only (0600); we must not read it
     environ = {"SUPERVISOR_TOKEN": "sup"}
-    setup = addon_setup(environ, opts, tmp_path / "config" / "config.yaml", tmp_path / "fb",
-                        get=setup_routes(), sleep=lambda s: None)
+    try:
+        setup = addon_setup(environ, tmp_path / "config" / "config.yaml", tmp_path / "fb",
+                            get=setup_routes({"push_key": "p" * 16, "extra_secrets": []}),
+                            sleep=lambda s: None)
+    finally:
+        opts.chmod(0o600)
     assert setup.config_path == tmp_path / "config" / "config.yaml"
     assert setup.config_path.exists() and setup.config_note is None
     assert environ["GLANCEBOX_PUSH_KEY"] == "p" * 16
@@ -223,9 +232,26 @@ def test_addon_setup_note_when_config_not_writable(tmp_path):
     ro.mkdir()
     ro.chmod(0o500)
     try:
-        setup = addon_setup({"SUPERVISOR_TOKEN": "sup"}, opts, ro / "config.yaml",
+        setup = addon_setup({"SUPERVISOR_TOKEN": "sup"}, ro / "config.yaml",
                             tmp_path / "fb", get=setup_routes(), sleep=lambda s: None)
     finally:
         ro.chmod(0o700)
     assert setup.config_path == tmp_path / "fb" / "config.yaml"
     assert setup.config_note and "could not" in setup.config_note
+
+
+def test_addon_setup_options_api_unreachable_is_clear_error(tmp_path):
+    opts = tmp_path / "options.json"
+    opts.write_text("{}")
+    get = fake_get({OPTIONS_URL: requests.ConnectionError("tok")})
+    with pytest.raises(AddonError) as err:
+        addon_setup({"SUPERVISOR_TOKEN": "tok"}, tmp_path / "c.yaml", tmp_path / "fb",
+                    get=get, sleep=lambda s: None)
+    assert "options" in str(err.value) and "tok" not in str(err.value)
+
+
+def test_connect_url_odd_shapes_do_not_crash():
+    odd = {"result": "ok", "data": {"interfaces": [{"primary": True, "ipv4": "x"}]}}
+    get = fake_get({NETWORK_URL: FakeResp(odd),
+                    SELF_URL: FakeResp({"result": "ok", "data": {"network": "x"}})})
+    assert connect_url("tok", get=get) is None

@@ -32,7 +32,7 @@ def _serve_addon(args) -> int:
     from .app import create_app, create_ingress_app
     from .frames import FrameStore
 
-    setup = addon.addon_setup(os.environ, addon.OPTIONS_PATH, Path(args.config),
+    setup = addon.addon_setup(os.environ, Path(args.config),
                               Path("/tmp/glancebox"))
     cfg = load_config(setup.config_path, defaults=setup.defaults)
     types = load_page_types(cfg.pages_dirs)
@@ -40,7 +40,8 @@ def _serve_addon(args) -> int:
     store = FrameStore(len(cfg.pages))
     lan = create_app(cfg, store, types=types, ui=False)
     ingress = create_ingress_app(cfg, store, connect=setup.connect,
-                                 config_note=setup.config_note)
+                                 config_note=setup.config_note,
+                                 starter_yaml=addon.STARTER_CONFIG if setup.config_note else None)
 
     async def run_both() -> None:
         servers = [uvicorn.Server(uvicorn.Config(lan, host=args.host, port=args.port)),

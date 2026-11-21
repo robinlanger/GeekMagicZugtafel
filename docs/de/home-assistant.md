@@ -42,6 +42,9 @@ Format wie die [Konfiguration](configuration.md) des Docker-Setups, mit zwei Unt
   aus Home Assistant. Was du selbst einträgst, hat immer Vorrang.
 - Eine `homeassistant`-Seite braucht weder `url` noch `token`; sie liest aus diesem Home Assistant.
 
+Ist der Ordner leer (das Add-on konnte die Startdatei dort nicht speichern), zeigt die Glance-Box-Seite
+in der Seitenleiste den Startinhalt: Lege damit im File editor die `config.yaml` an.
+
 Starte das Add-on nach dem Bearbeiten neu.
 
 ## Geheimnisse

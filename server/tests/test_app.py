@@ -231,10 +231,11 @@ def test_push_never_logs_body_or_key(caplog):
     assert key not in caplog.text
 
 
-def ingress_client(peer="172.30.32.2", connect="http://192.168.1.5:8090", note=None):
+def ingress_client(peer="172.30.32.2", connect="http://192.168.1.5:8090", note=None,
+                   starter=None):
     from glancebox.app import create_ingress_app
     app = create_ingress_app(make_cfg(), filled_store(), lambda: NOW, connect=connect,
-                             config_note=note)
+                             config_note=note, starter_yaml=starter)
     return TestClient(app, client=(peer, 5000))
 
 
@@ -274,3 +275,14 @@ def test_ingress_has_no_frame_or_push():
     client = ingress_client()
     assert client.get("/api/v1/frame").status_code == 404
     assert client.post("/api/v1/push/claude", json={}).status_code in (404, 405)
+
+
+def test_ingress_shows_starter_yaml_to_copy_when_not_saved():
+    html = ingress_client(note="could not be saved", starter="pages:\n  - type: clock\n").get("/").text
+    assert '<pre id="starter">' in html and "type: clock" in html
+
+
+def test_copy_works_without_clipboard_api():
+    # navigator.clipboard is missing on plain-http pages (HA is often opened over http).
+    html = ingress_client().get("/").text
+    assert "navigator.clipboard" in html and "getSelection" in html
