@@ -7,6 +7,7 @@ from glancebox.addon import (
     STARTER_CONFIG,
     AddonError,
     HaInfo,
+    addon_setup,
     connect_url,
     ensure_config,
     fetch_ha_info,
@@ -187,3 +188,44 @@ def test_connect_url_port_disabled():
 def test_connect_url_supervisor_error():
     get = fake_get({NETWORK_URL: requests.ConnectionError("x"), SELF_URL: FakeResp({})})
     assert connect_url("tok", get=get) is None
+
+
+def setup_routes():
+    return fake_get({
+        CONFIG_URL: FakeResp({"time_zone": "Europe/Berlin", "latitude": 50.1, "longitude": 8.6,
+                              "language": "de"}),
+        NETWORK_URL: FakeResp(NETWORK),
+        SELF_URL: FakeResp({"result": "ok", "data": {"network": {"8080/tcp": 8090}}}),
+    })
+
+
+def test_addon_setup_end_to_end(tmp_path):
+    import json
+    opts = tmp_path / "options.json"
+    opts.write_text(json.dumps({"push_key": "p" * 16, "extra_secrets": []}))
+    environ = {"SUPERVISOR_TOKEN": "sup"}
+    setup = addon_setup(environ, opts, tmp_path / "config" / "config.yaml", tmp_path / "fb",
+                        get=setup_routes(), sleep=lambda s: None)
+    assert setup.config_path == tmp_path / "config" / "config.yaml"
+    assert setup.config_path.exists() and setup.config_note is None
+    assert environ["GLANCEBOX_PUSH_KEY"] == "p" * 16
+    assert setup.connect == "http://192.168.1.5:8090"
+    cfg = load_config(setup.config_path, defaults=setup.defaults)
+    assert [pg.type for pg in cfg.pages] == ["clock", "weather"]
+    assert cfg.pages[1].options["latitude"] == 50.1
+    assert cfg.push_key == "p" * 16 and cfg.timezone == "Europe/Berlin" and cfg.lang == "de"
+
+
+def test_addon_setup_note_when_config_not_writable(tmp_path):
+    opts = tmp_path / "options.json"
+    opts.write_text("{}")
+    ro = tmp_path / "ro"
+    ro.mkdir()
+    ro.chmod(0o500)
+    try:
+        setup = addon_setup({"SUPERVISOR_TOKEN": "sup"}, opts, ro / "config.yaml",
+                            tmp_path / "fb", get=setup_routes(), sleep=lambda s: None)
+    finally:
+        ro.chmod(0o700)
+    assert setup.config_path == tmp_path / "fb" / "config.yaml"
+    assert setup.config_note and "could not" in setup.config_note

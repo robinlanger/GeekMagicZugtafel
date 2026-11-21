@@ -8,10 +8,11 @@ the YAML leaves them out. YAML values always win. Secret values are never logged
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -201,3 +202,32 @@ def connect_url(token: str, get: Callable[..., Any] = requests.get) -> str | Non
     if not ip or not isinstance(port, int):
         return None
     return f"http://{ip}:{port}"
+
+
+@dataclass
+class AddonSetup:
+    config_path: Path
+    defaults: Callable[[dict], dict]
+    connect: str | None
+    config_note: str | None
+
+
+def addon_setup(environ: MutableMapping[str, str], options_path: Path, config_path: Path,
+                fallback_dir: Path, get: Callable[..., Any] = requests.get,
+                sleep: Callable[[float], None] = time.sleep) -> AddonSetup:
+    """Everything add-on mode needs before ``load_config``. Updates ``environ`` with the form's
+    secrets so ``${NAME}`` in the playlist resolves."""
+    try:
+        options = json.loads(options_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise AddonError(f"cannot read the add-on options ({options_path})") from None
+    if not isinstance(options, dict):
+        raise AddonError("add-on options must be a mapping")
+    environ.update(secrets_env(options, environ))
+    token = environ["SUPERVISOR_TOKEN"]
+    info = fetch_ha_info(token, get=get, sleep=sleep)
+    path, own = ensure_config(config_path, fallback_dir)
+    note = None if own else (
+        f"The starter playlist could not be saved to {config_path}, so it runs from a temporary "
+        "copy. Create config.yaml in the add-on's config folder to keep your pages.")
+    return AddonSetup(path, ha_defaults(info, environ), connect_url(token, get=get), note)
