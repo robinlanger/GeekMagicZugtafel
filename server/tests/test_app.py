@@ -286,3 +286,29 @@ def test_copy_works_without_clipboard_api():
     # navigator.clipboard is missing on plain-http pages (HA is often opened over http).
     html = ingress_client().get("/").text
     assert "navigator.clipboard" in html and "getSelection" in html
+
+
+def test_display_seen_tracks_frame_requests_for_ingress():
+    from glancebox.app import DisplaySeen, create_ingress_app
+    seen = DisplaySeen()
+    store = filled_store()
+    lan = TestClient(create_app(make_cfg(), store, lambda: NOW, start_worker=False, ui=False,
+                                seen=seen))
+    ingress = TestClient(create_ingress_app(make_cfg(), store, lambda: NOW + 4, connect="http://x:8090",
+                                            config_note=None, seen=seen),
+                         client=("172.30.32.2", 5000))
+    assert "Waiting for your display" in ingress.get("/").text
+    lan.get("/api/v1/frame")
+    html = ingress.get("/").text
+    assert "Display connected" in html and "4 s ago" in html
+
+
+def test_display_seen_goes_stale():
+    from glancebox.app import DisplaySeen, create_ingress_app
+    seen = DisplaySeen()
+    seen.mark(NOW - 600)
+    ingress = TestClient(create_ingress_app(make_cfg(), filled_store(), lambda: NOW,
+                                            connect="http://x:8090", config_note=None, seen=seen),
+                         client=("172.30.32.2", 5000))
+    html = ingress.get("/").text
+    assert "Waiting for your display" in html and "10 min ago" in html

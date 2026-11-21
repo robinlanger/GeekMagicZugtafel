@@ -12,6 +12,9 @@ All notable changes to this project are documented here. The format follows
   language and home location, keeps secrets in the add-on form, and shows the display address and
   page previews in the add-on's web UI (Ingress, behind the HA login). A `homeassistant` page needs no
   token there. In add-on mode the LAN port serves only frames, push and health.
+- New look for the server overview (light and dark, same style as the device page). In the
+  add-on it opens with a "Connect your display" card: the address to copy, three setup steps and
+  a live status that shows whether a display is fetching pictures.
 
 ## [0.5.1]
 

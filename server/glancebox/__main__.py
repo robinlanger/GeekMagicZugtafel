@@ -29,7 +29,7 @@ def _serve_addon(args) -> int:
     import uvicorn
 
     from . import addon
-    from .app import create_app, create_ingress_app
+    from .app import DisplaySeen, create_app, create_ingress_app
     from .frames import FrameStore
 
     setup = addon.addon_setup(os.environ, Path(args.config),
@@ -38,10 +38,12 @@ def _serve_addon(args) -> int:
     types = load_page_types(cfg.pages_dirs)
     cfg = validate_config(cfg, types)
     store = FrameStore(len(cfg.pages))
-    lan = create_app(cfg, store, types=types, ui=False)
+    seen = DisplaySeen()
+    lan = create_app(cfg, store, types=types, ui=False, seen=seen)
     ingress = create_ingress_app(cfg, store, connect=setup.connect,
                                  config_note=setup.config_note,
-                                 starter_yaml=addon.STARTER_CONFIG if setup.config_note else None)
+                                 starter_yaml=addon.STARTER_CONFIG if setup.config_note else None,
+                                 seen=seen)
 
     async def run_both() -> None:
         servers = [uvicorn.Server(uvicorn.Config(lan, host=args.host, port=args.port)),

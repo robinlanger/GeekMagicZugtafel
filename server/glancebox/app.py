@@ -75,10 +75,29 @@ async def _read_limited(request: Request, limit: int) -> bytes | None:
 
 
 INGRESS_PEER = "172.30.32.2"  # the Supervisor; Ingress requests come only from here
+SEEN_FRESH_S = 120  # a display that fetched within this time counts as connected
+
+
+class DisplaySeen:
+    """When a display last fetched a frame (RAM only), shown on the add-on page."""
+
+    def __init__(self) -> None:
+        self.last: float | None = None
+
+    def mark(self, now: float) -> None:
+        self.last = now
+
+
+def _ago(seconds: int) -> str:
+    if seconds < 90:
+        return f"{seconds} s ago"
+    if seconds < 5400:
+        return f"{round(seconds / 60)} min ago"
+    return f"{round(seconds / 3600)} h ago"
 
 
 def _add_overview(app: FastAPI, cfg: AppConfig, store: FrameStore, clock: Callable[[], float],
-                  **page_vars) -> None:
+                  seen: DisplaySeen | None = None, **page_vars) -> None:
     """Routes ``/`` (overview) and ``/preview/{index}.jpg``. URLs in the page are relative so
     they also work under the Ingress path prefix."""
 
@@ -101,13 +120,17 @@ def _add_overview(app: FastAPI, cfg: AppConfig, store: FrameStore, clock: Callab
                 "age": None if current is None else int(now - current.rendered_at),
                 "has_frame": current is not None,
             })
-        return _env.get_template("index.html").render(pages=rows, version=__version__,
-                                                      **page_vars)
+        seen_age = None if seen is None or seen.last is None else max(0, int(now - seen.last))
+        return _env.get_template("index.html").render(
+            pages=rows, version=__version__, seen_fresh=seen_age is not None
+            and seen_age <= SEEN_FRESH_S, seen_ago=None if seen_age is None else _ago(seen_age),
+            **page_vars)
 
 
 def create_ingress_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = time.time,
                        *, connect: str | None, config_note: str | None,
-                       starter_yaml: str | None = None) -> FastAPI:
+                       starter_yaml: str | None = None,
+                       seen: DisplaySeen | None = None) -> FastAPI:
     """Overview for the Home Assistant sidebar (Ingress), with the display address to copy.
     Answers only the Supervisor; HA has already checked the user's login."""
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -118,14 +141,14 @@ def create_ingress_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], fl
             return Response("forbidden", status_code=403)
         return await call_next(request)
 
-    _add_overview(app, cfg, store, clock, addon=True, connect=connect, config_note=config_note,
-                  starter_yaml=starter_yaml)
+    _add_overview(app, cfg, store, clock, seen, addon=True, connect=connect,
+                  config_note=config_note, starter_yaml=starter_yaml)
     return app
 
 
 def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = time.time, *,
                types: dict[str, PageType] | None = None, start_worker: bool = True,
-               ui: bool = True) -> FastAPI:
+               ui: bool = True, seen: DisplaySeen | None = None) -> FastAPI:
     """The LAN app. ``ui=False`` (add-on mode) leaves out the overview and previews; the add-on
     serves those only through Ingress (see ``create_ingress_app``)."""
     @contextlib.asynccontextmanager
@@ -170,6 +193,8 @@ def create_app(cfg: AppConfig, store: FrameStore, clock: Callable[[], float] = t
     def frame(request: Request, id: str = "", fw: str = "") -> Response:
         log.debug("frame request id=%s fw=%s", id, fw)
         now = clock()
+        if seen is not None:
+            seen.mark(now)
         index, to_switch = select(durations, store.available(now), now)
         if index is None:
             return jpeg_response(request, store.error_frame, ERROR_NEXT_IN)
