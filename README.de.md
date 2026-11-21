@@ -88,7 +88,7 @@ Beim Flashen wird die Firmware deines Geräts ersetzt. Das machst du auf eigene 
    ```sh
    git clone https://github.com/robinlanger/glancebox.git
    cd glancebox
-   cp config.example.yaml config.yaml
+   cp config-example.yaml config.yaml
    mkdir pages-custom
    ```
 

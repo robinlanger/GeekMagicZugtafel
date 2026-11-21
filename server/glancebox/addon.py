@@ -69,7 +69,7 @@ def secrets_env(options: dict, environ: Mapping[str, str]) -> dict[str, str]:
         name, value = item.get("name"), item.get("value")
         if not isinstance(name, str) or not EXTRA_NAME_RE.match(name):
             log.warning("extra secret %r ignored: name must be A-Z, 0-9 and _", name)
-        elif name in environ or name in reserved:
+        elif name in environ or name in reserved or name in env:
             log.warning("extra secret %s ignored: this name is already in use", name)
         elif isinstance(value, str) and value:
             env[name] = value
@@ -132,8 +132,10 @@ def ha_defaults(info: HaInfo, environ: Mapping[str, str]) -> Callable[[dict], di
 
     def hook(data: dict) -> dict:
         out = dict(data)
-        out.setdefault("timezone", info.time_zone)
-        out.setdefault("lang", lang_from_ha(info.language))
+        if out.get("timezone") is None:
+            out["timezone"] = info.time_zone
+        if out.get("lang") is None:
+            out["lang"] = lang_from_ha(info.language)
         push_key = environ.get(SECRET_FIELDS["push_key"])
         if push_key and "push_key" not in out:
             out["push_key"] = push_key
@@ -158,6 +160,9 @@ def fetch_ha_info(token: str, get: Callable[..., Any] = requests.get,
     for attempt in range(1, attempts + 1):
         try:
             resp = get(f"{SUPERVISOR_CORE}/api/config", headers=_headers(token), timeout=TIMEOUT)
+            if resp.status_code in (401, 403):
+                raise AddonError(
+                    f"Home Assistant API refused access (HTTP {resp.status_code})")
             if resp.status_code < 500:
                 resp.raise_for_status()
                 data = resp.json()

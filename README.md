@@ -88,7 +88,7 @@ Flashing replaces the firmware on your device. You do this at your own risk. The
    ```sh
    git clone https://github.com/robinlanger/glancebox.git
    cd glancebox
-   cp config.example.yaml config.yaml
+   cp config-example.yaml config.yaml
    mkdir pages-custom
    ```
 

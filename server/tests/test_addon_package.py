@@ -61,6 +61,9 @@ def test_translations_cover_schema():
 def test_only_one_addon_config():
     files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
                            check=True).stdout.split()
-    configs = [f for f in files if Path(f).name in ("config.yaml", "config.yml", "config.json")
+    # The Supervisor reads every config.*.(yaml|yml|json) as an add-on (it warned about
+    # config.example.yaml), so no other file may match that pattern.
+    configs = [f for f in files if Path(f).name.startswith("config.")
+               and Path(f).suffix in (".yaml", ".yml", ".json")
                and not any(part.startswith(".") for part in Path(f).parts)]
     assert configs == ["ha-addon/config.yaml"]

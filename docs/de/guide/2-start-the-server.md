@@ -12,7 +12,7 @@ Der Server rendert deine Seiten und schickt sie als Bilder an das Display. Er l√
     ```sh
     git clone https://github.com/robinlanger/glancebox.git
     cd glancebox
-    cp config.example.yaml config.yaml
+    cp config-example.yaml config.yaml
     mkdir pages-custom
     ```
 
