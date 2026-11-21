@@ -11,13 +11,38 @@ body{font-family:sans-serif;margin:16px;background:#fafafa;color:#222}
 .page img,.page .none{width:240px;height:240px;display:block;background:#ddd}
 .err{color:#b00020;font-size:13px;word-break:break-word}
 .meta{font-size:13px;color:#555}
+.connect{background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px 16px;margin:0 0 20px;max-width:520px}
+.connect code{font-size:16px;background:#f0f0f0;padding:2px 6px;border-radius:4px}
+.connect button{margin-left:8px}
 </style>
 </head>
 <body>
 <h1>Glance Box {{ version }}</h1>
+{% if addon %}
+<div class="connect">
+  <strong>Connect your display</strong>
+  {% if connect %}
+  <p>Server address: <code id="addr">{{ connect }}</code><button type="button" id="copy">Copy</button></p>
+  <p class="meta">Enter it in the display's setup portal (or on its device page).</p>
+  {% else %}
+  <p>The server address could not be determined. Check that the add-on's network port is enabled
+  (Configuration tab, Network) and use http://&lt;Home Assistant IP&gt;:&lt;that port&gt;.</p>
+  {% endif %}
+  {% if config_note %}<p class="err">{{ config_note }}</p>{% endif %}
+  <p class="meta">Change the pages in config.yaml in the add-on's config folder
+  (File editor: /addon_configs/…_glancebox/), then restart the add-on.
+  <a href="https://robinlanger.github.io/glancebox/" target="_blank" rel="noopener">Docs</a></p>
+</div>
+{% if connect %}<script>
+document.getElementById("copy").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("addr").textContent);
+  this.textContent = "Copied";
+});
+</script>{% endif %}
+{% endif %}
 {% for p in pages %}
 <div class="page">
-  {% if p.has_frame %}<img src="/preview/{{ p.index }}.jpg" alt="page {{ p.index }}" width="240" height="240">
+  {% if p.has_frame %}<img src="preview/{{ p.index }}.jpg" alt="page {{ p.index }}" width="240" height="240">
   {% else %}<div class="none"></div>{% endif %}
   <div><strong>#{{ p.index }}</strong> {{ p.type }}</div>
   <div class="meta">{% if p.age is not none %}age {{ p.age }} s{% else %}no frame{% endif %}</div>
