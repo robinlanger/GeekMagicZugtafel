@@ -106,6 +106,8 @@ Flashing replaces the firmware on your device. You do this at your own risk. The
 
 4. **Set it up.** Join the `GlanceBox-XXXX` Wi-Fi, choose your network, enter the server address and an update password: [docs/en/setup.md](docs/en/setup.md). The display restarts and shows your first page.
 
+**Home Assistant OS?** Run the server as an add-on instead of step 1: [docs/en/home-assistant.md](docs/en/home-assistant.md).
+
 ## Documentation
 
 | Topic | English | Deutsch |
@@ -113,6 +115,7 @@ Flashing replaces the firmware on your device. You do this at your own risk. The
 | First flash, backup | [flashing.md](docs/en/flashing.md) | [flashing.md](docs/de/flashing.md) |
 | Wi-Fi setup, password | [setup.md](docs/en/setup.md) | [setup.md](docs/de/setup.md) |
 | Server configuration | [configuration.md](docs/en/configuration.md) | [configuration.md](docs/de/configuration.md) |
+| Home Assistant add-on | [home-assistant.md](docs/en/home-assistant.md) | [home-assistant.md](docs/de/home-assistant.md) |
 | Template catalog (pages with previews) | [README.md](docs/en/templates/README.md) | [README.md](docs/de/templates/README.md) |
 | Writing your own pages | [writing-pages.md](docs/en/writing-pages.md) | [writing-pages.md](docs/de/writing-pages.md) |
 | Updating the firmware | [updating.md](docs/en/updating.md) | [updating.md](docs/de/updating.md) |

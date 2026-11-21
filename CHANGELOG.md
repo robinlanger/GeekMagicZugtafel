@@ -6,6 +6,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0]
+
+Server update with a new way to run it: the Home Assistant add-on. The firmware is unchanged
+(no need to update the display). Docker users update the image as described in
+docs/en/updating.md; Home Assistant OS users can install the add-on, see
+docs/en/home-assistant.md.
+
+### Added
+- Home Assistant add-on (`ha-addon/`, repository file `repository.yaml`): the server installs from
+  the add-on store, starts with a clock + weather playlist using Home Assistant's time zone,
+  language and home location, keeps secrets in the add-on form, and shows the display address and
+  page previews in the add-on's web UI (Ingress, behind the HA login). A `homeassistant` page needs no
+  token there. In add-on mode the LAN port serves only frames, push and health.
+- New look for the server overview (light and dark, same style as the device page). In the
+  add-on it opens with a "Connect your display" card: the address to copy, three setup steps and
+  a live status that shows whether a display is fetching pictures.
+
 ## [0.5.1]
 
 Server update; the firmware is unchanged (no need to update the display). Update the Docker

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -109,7 +109,9 @@ def _parse_page(index: int, raw: Any, interval: int) -> PageConfig:
     return PageConfig(index, page_type, options, duration, refresh, refresh_explicit)
 
 
-def load_config(path: Path) -> AppConfig:
+def load_config(path: Path, defaults: Callable[[dict], dict] | None = None) -> AppConfig:
+    """Load ``path``. ``defaults`` (add-on mode) may fill in missing keys of the top-level mapping
+    after ``${NAME}`` expansion and before validation; YAML values must win."""
     path = Path(path)
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -120,6 +122,10 @@ def load_config(path: Path) -> AppConfig:
     if not isinstance(data, dict):
         raise ConfigError(f"{path}: top level must be a mapping")
     data = expand_env(data, "", os.environ)
+    if defaults is not None:
+        data = defaults(data)
+        if not isinstance(data, dict):
+            raise ConfigError(f"{path}: defaults hook must return a mapping")
 
     unknown = sorted(set(data) - _TOP_LEVEL_KEYS, key=str)
     if unknown:

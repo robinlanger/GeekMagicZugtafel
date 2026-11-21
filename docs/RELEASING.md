@@ -5,7 +5,10 @@ file. A release is a `vX.Y.Z` tag; the `release` workflow does the rest.
 
 ## Checklist
 
-1. **Bump the version.** Edit `VERSION` and add a `## [X.Y.Z]` section to `CHANGELOG.md`
+1. **Bump the version.** Edit `VERSION`, set the same `version` in `ha-addon/config.yaml`
+   (the Home Assistant add-on pulls the image tag of that version; the store offers the new
+   version as soon as it is on `main`, so push the tag right after merging, and never merge an
+   `ha-addon/` version whose image lacks what the add-on needs), and add a `## [X.Y.Z]` section to `CHANGELOG.md`
    (the workflow publishes exactly that section as the release notes). Check it locally:
    `python3 tools/changelog_section.py "$(cat VERSION)"`.
 2. **Never change the flash layout in an OTA release.** `board_build.ldscript` and the

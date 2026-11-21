@@ -94,6 +94,7 @@ plugins:
             Device page & night mode: Geräteseite & Nachtmodus
             Updating: Updates
             Configuration: Konfiguration
+            Home Assistant add-on: Home-Assistant-Add-on
             Templates: Vorlagen
             Overview: Übersicht
             Your own pages: Eigene Seiten
@@ -113,6 +114,7 @@ nav:
           - Device page & night mode: setup.md
           - Updating: updating.md
           - Configuration: configuration.md
+          - Home Assistant add-on: home-assistant.md
   - Templates:
       - Overview: templates/README.md
       - bahn: templates/bahn.md

@@ -1,0 +1,21 @@
+configuration:
+  push_key:
+    name: Push key
+    description: Only for the Claude usage page (ai, provider claude). At least 16 characters; the same key goes into the status-line script on your computer. Used in config.yaml automatically.
+  anthropic_admin_key:
+    name: Anthropic admin key
+    description: For the ai page with provider anthropic-api. Use it in config.yaml as ${ANTHROPIC_ADMIN_KEY}.
+  openai_admin_key:
+    name: OpenAI admin key
+    description: For the ai page with provider openai-api. Use it in config.yaml as ${OPENAI_ADMIN_KEY}.
+  xai_management_key:
+    name: xAI management key
+    description: For the ai page with provider xai-api. Use it in config.yaml as ${XAI_MANAGEMENT_KEY}.
+  github_copilot_token:
+    name: GitHub Copilot token
+    description: For the ai page with provider copilot. Use it in config.yaml as ${GITHUB_COPILOT_TOKEN}.
+  extra_secrets:
+    name: More secrets
+    description: Secrets for your own pages. NAME in capital letters (A-Z, 0-9, _), used in config.yaml as ${NAME}.
+network:
+  8080/tcp: Port the display fetches its pictures from (no login, keep it in your LAN)

@@ -11,6 +11,7 @@ import sys
 import time
 from pathlib import Path
 
+from .addon import AddonError
 from .config import ConfigError, load_config
 from .pages import load_page_types, validate_config
 from .render import RenderError
@@ -24,12 +25,45 @@ def _load(path: str):
     return validate_config(cfg, types), types
 
 
+def _serve_addon(args) -> int:
+    import uvicorn
+
+    from . import addon
+    from .app import DisplaySeen, create_app, create_ingress_app
+    from .frames import FrameStore
+
+    setup = addon.addon_setup(os.environ, Path(args.config),
+                              Path("/tmp/glancebox"))
+    cfg = load_config(setup.config_path, defaults=setup.defaults)
+    types = load_page_types(cfg.pages_dirs)
+    cfg = validate_config(cfg, types)
+    store = FrameStore(len(cfg.pages))
+    seen = DisplaySeen()
+    lan = create_app(cfg, store, types=types, ui=False, seen=seen)
+    ingress = create_ingress_app(cfg, store, connect=setup.connect,
+                                 config_note=setup.config_note,
+                                 starter_yaml=addon.STARTER_CONFIG if setup.config_note else None,
+                                 seen=seen)
+
+    async def run_both() -> None:
+        servers = [uvicorn.Server(uvicorn.Config(lan, host=args.host, port=args.port)),
+                   uvicorn.Server(uvicorn.Config(ingress, host=args.host,
+                                                 port=args.ingress_port))]
+        await asyncio.gather(*(s.serve() for s in servers))
+
+    asyncio.run(run_both())
+    return 0
+
+
 def _serve(args) -> int:
     import uvicorn
 
+    from . import addon
     from .app import create_app
     from .frames import FrameStore
 
+    if addon.is_addon(os.environ):
+        return _serve_addon(args)
     cfg, types = _load(args.config)
     app = create_app(cfg, FrameStore(len(cfg.pages)), types=types)
     uvicorn.run(app, host=args.host, port=args.port)
@@ -72,6 +106,8 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--config", default=default_cfg)
     serve.add_argument("--host", default="0.0.0.0")
     serve.add_argument("--port", type=int, default=8080)
+    serve.add_argument("--ingress-port", type=int, default=8099,
+                       help="Home Assistant add-on only: port for the Ingress overview")
     serve.set_defaults(func=_serve)
     render = sub.add_parser("render", help="render one page once")
     render.add_argument("index", type=int)
@@ -85,6 +121,9 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as e:
         print(e, file=sys.stderr)
         return 2
+    except AddonError as e:
+        print(f"Home Assistant add-on: {e}", file=sys.stderr)
+        return 1
     except RenderError as e:
         print(e, file=sys.stderr)
         return 1

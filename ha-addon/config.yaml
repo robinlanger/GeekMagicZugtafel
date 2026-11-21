@@ -1,0 +1,38 @@
+# Home Assistant add-on for the Glance Box server. Uses the same image as the Docker setup.
+# version must equal the repo-root VERSION (checked by server/tests/test_addon_package.py).
+name: Glance Box
+version: "0.6.0"
+slug: glancebox
+description: Server for the Glance Box display (GeekMagic SmallTV Ultra) - any HTML page on a tiny Wi-Fi screen
+url: https://github.com/robinlanger/glancebox
+image: ghcr.io/robinlanger/glancebox
+arch:
+  - amd64
+  - aarch64
+startup: application
+init: true
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:monitor
+panel_admin: true
+homeassistant_api: true
+hassio_api: true
+hassio_role: default
+map:
+  - type: app_config
+    read_only: false
+ports:
+  8080/tcp: 8090
+ports_description:
+  8080/tcp: Port the display fetches its pictures from (no login, keep it in your LAN)
+options:
+  extra_secrets: []
+schema:
+  push_key: password?
+  anthropic_admin_key: password?
+  openai_admin_key: password?
+  xai_management_key: password?
+  github_copilot_token: password?
+  extra_secrets:
+    - name: match(^[A-Z][A-Z0-9_]*$)
+      value: password

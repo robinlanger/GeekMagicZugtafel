@@ -106,6 +106,8 @@ Beim Flashen wird die Firmware deines Geräts ersetzt. Das machst du auf eigene 
 
 4. **Einrichten.** Verbinde dich mit dem WLAN `GlanceBox-XXXX`, wähle dein Netzwerk, gib die Serveradresse und ein Update-Passwort ein: [docs/de/setup.md](docs/de/setup.md). Das Display startet neu und zeigt deine erste Seite.
 
+**Home Assistant OS?** Statt Schritt 1 läuft der Server auch als Add-on: [docs/de/home-assistant.md](docs/de/home-assistant.md).
+
 ## Dokumentation
 
 | Thema | English | Deutsch |
@@ -113,6 +115,7 @@ Beim Flashen wird die Firmware deines Geräts ersetzt. Das machst du auf eigene 
 | Erstes Flashen, Sicherung | [flashing.md](docs/en/flashing.md) | [flashing.md](docs/de/flashing.md) |
 | WLAN-Einrichtung, Passwort | [setup.md](docs/en/setup.md) | [setup.md](docs/de/setup.md) |
 | Server-Konfiguration | [configuration.md](docs/en/configuration.md) | [configuration.md](docs/de/configuration.md) |
+| Home-Assistant-Add-on | [home-assistant.md](docs/en/home-assistant.md) | [home-assistant.md](docs/de/home-assistant.md) |
 | Vorlagen-Katalog (Seiten mit Vorschau) | [README.md](docs/en/templates/README.md) | [README.md](docs/de/templates/README.md) |
 | Eigene Seiten schreiben | [writing-pages.md](docs/en/writing-pages.md) | [writing-pages.md](docs/de/writing-pages.md) |
 | Firmware aktualisieren | [updating.md](docs/en/updating.md) | [updating.md](docs/de/updating.md) |

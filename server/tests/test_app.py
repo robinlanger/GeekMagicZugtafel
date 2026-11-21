@@ -79,7 +79,7 @@ def test_preview_and_healthz_and_index():
     h = client.get("/healthz").json()
     assert h["pages_ok"] == 2 and h["version"]
     html = client.get("/").text
-    assert "/preview/0.jpg" in html and "boom" in html
+    assert "preview/0.jpg" in html and "boom" in html
 
 
 def test_cli_bad_config_exits_2(tmp_path):
@@ -229,3 +229,86 @@ def test_push_never_logs_body_or_key(caplog):
                     headers={"Authorization": f"Bearer {auth}"})
     assert "sensitive-body" not in caplog.text
     assert key not in caplog.text
+
+
+def ingress_client(peer="172.30.32.2", connect="http://192.168.1.5:8090", note=None,
+                   starter=None):
+    from glancebox.app import create_ingress_app
+    app = create_ingress_app(make_cfg(), filled_store(), lambda: NOW, connect=connect,
+                             config_note=note, starter_yaml=starter)
+    return TestClient(app, client=(peer, 5000))
+
+
+def test_ui_false_hides_overview():
+    client = TestClient(create_app(make_cfg(), filled_store(), lambda: NOW, start_worker=False,
+                                   ui=False))
+    assert client.get("/").status_code == 404
+    assert client.get("/preview/0.jpg").status_code == 404
+    assert client.get("/api/v1/frame").status_code == 200
+
+
+def test_overview_uses_relative_preview_urls():
+    client, _ = make_client(filled_store())
+    html = client.get("/").text
+    assert 'src="preview/0.jpg"' in html and 'src="/preview' not in html
+
+
+def test_ingress_rejects_other_peers():
+    assert ingress_client(peer="192.168.1.9").get("/").status_code == 403
+    assert ingress_client(peer="192.168.1.9").get("/preview/0.jpg").status_code == 403
+
+
+def test_ingress_shows_connect_box():
+    client = ingress_client()
+    r = client.get("/")
+    assert r.status_code == 200 and "http://192.168.1.5:8090" in r.text
+    assert client.get("/preview/0.jpg").content == b"jpeg0"
+
+
+def test_ingress_without_address_and_with_note():
+    html = ingress_client(connect=None, note="starter playlist could not be saved").get("/").text
+    assert "could not be determined" in html
+    assert "starter playlist could not be saved" in html
+
+
+def test_ingress_has_no_frame_or_push():
+    client = ingress_client()
+    assert client.get("/api/v1/frame").status_code == 404
+    assert client.post("/api/v1/push/claude", json={}).status_code in (404, 405)
+
+
+def test_ingress_shows_starter_yaml_to_copy_when_not_saved():
+    html = ingress_client(note="could not be saved", starter="pages:\n  - type: clock\n").get("/").text
+    assert '<pre id="starter">' in html and "type: clock" in html
+
+
+def test_copy_works_without_clipboard_api():
+    # navigator.clipboard is missing on plain-http pages (HA is often opened over http).
+    html = ingress_client().get("/").text
+    assert "navigator.clipboard" in html and "getSelection" in html
+
+
+def test_display_seen_tracks_frame_requests_for_ingress():
+    from glancebox.app import DisplaySeen, create_ingress_app
+    seen = DisplaySeen()
+    store = filled_store()
+    lan = TestClient(create_app(make_cfg(), store, lambda: NOW, start_worker=False, ui=False,
+                                seen=seen))
+    ingress = TestClient(create_ingress_app(make_cfg(), store, lambda: NOW + 4, connect="http://x:8090",
+                                            config_note=None, seen=seen),
+                         client=("172.30.32.2", 5000))
+    assert "Waiting for your display" in ingress.get("/").text
+    lan.get("/api/v1/frame")
+    html = ingress.get("/").text
+    assert "Display connected" in html and "4 s ago" in html
+
+
+def test_display_seen_goes_stale():
+    from glancebox.app import DisplaySeen, create_ingress_app
+    seen = DisplaySeen()
+    seen.mark(NOW - 600)
+    ingress = TestClient(create_ingress_app(make_cfg(), filled_store(), lambda: NOW,
+                                            connect="http://x:8090", config_note=None, seen=seen),
+                         client=("172.30.32.2", 5000))
+    html = ingress.get("/").text
+    assert "Waiting for your display" in html and "10 min ago" in html
