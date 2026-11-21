@@ -1,9 +1,15 @@
 import logging
 
+import pytest
+import requests
+
 from glancebox.addon import (
     STARTER_CONFIG,
+    AddonError,
     HaInfo,
+    connect_url,
     ensure_config,
+    fetch_ha_info,
     ha_defaults,
     is_addon,
     lang_from_ha,
@@ -101,3 +107,83 @@ def test_starter_config_validates(tmp_path):
     validate_config(cfg, load_page_types(cfg.pages_dirs))
     assert [pg.type for pg in cfg.pages] == ["clock", "weather"]
     assert cfg.pages[1].options["latitude"] == 50.0
+
+
+class FakeResp:
+    def __init__(self, data, status=200):
+        self.data, self.status_code = data, status
+
+    def json(self):
+        return self.data
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"{self.status_code}")
+
+
+def fake_get(routes, calls=None):
+    def get(url, headers=None, timeout=None, **kw):
+        if calls is not None:
+            calls.append((url, headers, timeout))
+        hit = routes[url]
+        if isinstance(hit, Exception):
+            raise hit
+        return hit
+    return get
+
+
+CONFIG_URL = "http://supervisor/core/api/config"
+NETWORK_URL = "http://supervisor/network/info"
+SELF_URL = "http://supervisor/addons/self/info"
+
+
+def test_fetch_ha_info_parses():
+    calls = []
+    get = fake_get({CONFIG_URL: FakeResp({"time_zone": "Europe/Berlin", "latitude": 50.1,
+                                          "longitude": 8.6, "language": "de"})}, calls)
+    assert fetch_ha_info("tok", get=get) == HaInfo("Europe/Berlin", "de", 50.1, 8.6)
+    assert calls[0][1]["Authorization"] == "Bearer tok"
+    assert calls[0][2] == 5
+
+
+def test_fetch_ha_info_without_language():
+    get = fake_get({CONFIG_URL: FakeResp({"time_zone": "UTC", "latitude": 1, "longitude": 2})})
+    assert fetch_ha_info("tok", get=get).language is None
+
+
+def test_fetch_ha_info_retries_then_fails():
+    sleeps = []
+    get = fake_get({CONFIG_URL: requests.ConnectionError("refused tok")})
+    with pytest.raises(AddonError) as err:
+        fetch_ha_info("tok", get=get, sleep=sleeps.append, attempts=3)
+    assert len(sleeps) == 2
+    assert "tok" not in str(err.value)
+
+
+def test_fetch_ha_info_retries_on_5xx_then_succeeds():
+    answers = iter([FakeResp({}, 502), FakeResp({"time_zone": "UTC", "latitude": 1,
+                                                  "longitude": 2})])
+    info = fetch_ha_info("tok", get=lambda *a, **k: next(answers), sleep=lambda s: None)
+    assert info.time_zone == "UTC"
+
+
+NETWORK = {"result": "ok", "data": {"interfaces": [
+    {"interface": "docker0", "primary": False, "ipv4": {"address": ["172.30.32.1/23"]}},
+    {"interface": "eth0", "primary": True, "ipv4": {"address": ["192.168.1.5/24"]}}]}}
+
+
+def test_connect_url():
+    get = fake_get({NETWORK_URL: FakeResp(NETWORK),
+                    SELF_URL: FakeResp({"result": "ok", "data": {"network": {"8080/tcp": 8090}}})})
+    assert connect_url("tok", get=get) == "http://192.168.1.5:8090"
+
+
+def test_connect_url_port_disabled():
+    get = fake_get({NETWORK_URL: FakeResp(NETWORK),
+                    SELF_URL: FakeResp({"result": "ok", "data": {"network": {"8080/tcp": None}}})})
+    assert connect_url("tok", get=get) is None
+
+
+def test_connect_url_supervisor_error():
+    get = fake_get({NETWORK_URL: requests.ConnectionError("x"), SELF_URL: FakeResp({})})
+    assert connect_url("tok", get=get) is None

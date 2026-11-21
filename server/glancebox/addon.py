@@ -10,14 +10,21 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+import requests
 
 log = logging.getLogger(__name__)
 
 OPTIONS_PATH = Path("/data/options.json")
 SUPERVISOR_CORE = "http://supervisor/core"
+SUPERVISOR = "http://supervisor"
+TIMEOUT = 5
+RETRY_PAUSE = 3
 
 # Add-on form field -> environment variable the playlist refers to as ${NAME}.
 SECRET_FIELDS: dict[str, str] = {
@@ -90,6 +97,10 @@ def ensure_config(path: Path, fallback_dir: Path) -> tuple[Path, bool]:
     return fallback, False
 
 
+class AddonError(Exception):
+    """Add-on mode cannot start (message is safe to show: no secrets)."""
+
+
 @dataclass(frozen=True)
 class HaInfo:
     time_zone: str
@@ -131,3 +142,62 @@ def ha_defaults(info: HaInfo, environ: Mapping[str, str]) -> Callable[[dict], di
         return out
 
     return hook
+
+
+def _headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def fetch_ha_info(token: str, get: Callable[..., Any] = requests.get,
+                  sleep: Callable[[float], None] = time.sleep, attempts: int = 10) -> HaInfo:
+    """Time zone, language and home location from Home Assistant Core (via the Supervisor).
+
+    Retries while Core is not reachable (it may still be starting); the error never carries the
+    token or a response body.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = get(f"{SUPERVISOR_CORE}/api/config", headers=_headers(token), timeout=TIMEOUT)
+            if resp.status_code < 500:
+                resp.raise_for_status()
+                data = resp.json()
+                return HaInfo(str(data["time_zone"]), data.get("language"),
+                              float(data["latitude"]), float(data["longitude"]))
+            reason = f"HTTP {resp.status_code}"
+        except requests.RequestException as e:
+            reason = type(e).__name__
+        except (KeyError, TypeError, ValueError):
+            raise AddonError("Home Assistant API returned an unexpected config") from None
+        log.warning("Home Assistant API not reachable (%s), attempt %d/%d",
+                    reason, attempt, attempts)
+        if attempt < attempts:
+            sleep(RETRY_PAUSE)
+    raise AddonError("Home Assistant API not reachable at startup")
+
+
+def _supervisor_data(path: str, token: str, get: Callable[..., Any]) -> dict:
+    resp = get(f"{SUPERVISOR}{path}", headers=_headers(token), timeout=TIMEOUT)
+    resp.raise_for_status()
+    data = resp.json().get("data")
+    return data if isinstance(data, dict) else {}
+
+
+def connect_url(token: str, get: Callable[..., Any] = requests.get) -> str | None:
+    """Address the display should use (``http://<HA LAN IP>:<host port>``), or None if unknown."""
+    try:
+        network = _supervisor_data("/network/info", token, get)
+        info = _supervisor_data("/addons/self/info", token, get)
+    except (requests.RequestException, ValueError, AttributeError) as e:
+        log.warning("cannot determine the display address (%s)", type(e).__name__)
+        return None
+    ip = None
+    for iface in network.get("interfaces") or []:
+        if isinstance(iface, dict) and iface.get("primary"):
+            addresses = (iface.get("ipv4") or {}).get("address") or []
+            if addresses:
+                ip = str(addresses[0]).split("/")[0]
+                break
+    port = (info.get("network") or {}).get("8080/tcp")
+    if not ip or not isinstance(port, int):
+        return None
+    return f"http://{ip}:{port}"
